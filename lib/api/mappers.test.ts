@@ -24,7 +24,6 @@ const apiCluster: ApiCluster = {
   articleIds: ["a1", "a2"],
   articles: [],
   relatedClusterIds: [],
-  draftId: null,
   articleCount: 2,
   sourceCount: 2,
 };

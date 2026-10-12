@@ -19,7 +19,6 @@ type Stats = {
   clusters_last_7d: number;
   total_sources: number;
   active_sources: number;
-  total_drafts: number;
   last_pipeline_run: PipelineRunSummary | null;
 };
 
@@ -32,7 +31,6 @@ const L = {
     last7d: "Last 7 days",
     sources: "Sources",
     totalSources: "total",
-    drafts: "Drafts",
     lastPipeline: "Last Pipeline Run",
     viewAll: "View all →",
     running: "Running",
@@ -45,7 +43,6 @@ const L = {
       { href: "/admin/sources",       label: "Source health" },
       { href: "/admin/clusters",      label: "Cluster quality" },
       { href: "/admin/articles",      label: "Browse articles" },
-      { href: "/admin/drafts",        label: "Manage drafts" },
       { href: "/admin/pipeline-runs", label: "Pipeline history" },
     ],
     loadFailed: "Failed to load:",
@@ -59,7 +56,6 @@ const L = {
     last7d: "近 7 天",
     sources: "信源",
     totalSources: "共",
-    drafts: "Drafts",
     lastPipeline: "最近一次 Pipeline",
     viewAll: "查看全部 →",
     running: "运行中",
@@ -72,7 +68,6 @@ const L = {
       { href: "/admin/sources",       label: "信源健康状态" },
       { href: "/admin/clusters",      label: "Cluster 质量检查" },
       { href: "/admin/articles",      label: "浏览文章" },
-      { href: "/admin/drafts",        label: "Draft 管理" },
       { href: "/admin/pipeline-runs", label: "Pipeline 历史" },
     ],
     loadFailed: "加载失败：",
@@ -155,8 +150,8 @@ export function DashboardClient() {
       </h1>
 
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 animate-pulse rounded-xl bg-zinc-100" />
           ))}
         </div>
@@ -164,7 +159,7 @@ export function DashboardClient() {
         <p className="text-sm text-red-600">{t.loadFailed}{error}</p>
       ) : stats ? (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatCard
               title={t.totalArticles}
               value={stats.total_articles.toLocaleString()}
@@ -182,11 +177,6 @@ export function DashboardClient() {
               value={stats.active_sources}
               sub={`${t.totalSources} ${stats.total_sources}`}
               href="/admin/sources"
-            />
-            <StatCard
-              title={t.drafts}
-              value={stats.total_drafts}
-              href="/admin/drafts"
             />
           </div>
 

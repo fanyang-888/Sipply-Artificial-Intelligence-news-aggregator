@@ -12,7 +12,6 @@ from app.db import Base
 
 if TYPE_CHECKING:
     from app.models.article import Article
-    from app.models.draft import Draft
 
 
 class Cluster(Base):
@@ -70,4 +69,3 @@ class Cluster(Base):
     )
 
     articles: Mapped[list[Article]] = relationship("Article", back_populates="cluster")
-    drafts: Mapped[list[Draft]] = relationship("Draft", back_populates="cluster")

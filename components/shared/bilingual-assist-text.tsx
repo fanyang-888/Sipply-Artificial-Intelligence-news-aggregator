@@ -95,31 +95,6 @@ export function BilingualAssistTakeawayItem({ value, lang }: TakeawayProps) {
   );
 }
 
-/** Hook / lead line (draft body). */
-export function BilingualAssistLead({
-  value,
-  lang,
-  className = "text-lg font-medium leading-snug text-foreground",
-}: {
-  value: LocalizedString;
-  lang: Lang;
-  className?: string;
-}) {
-  if (lang !== "zh" || !isBilingual(value) || !value.zh) {
-    return <p className={className}>{pickLocalized(value, lang)}</p>;
-  }
-  return (
-    <div className={className}>
-      <p className={`leading-snug ${zhPrimary}`}>{value.zh}</p>
-      <p
-        className={`mt-2 border-t [border-color:var(--border)] pt-2 leading-snug ${enMuted} ${zhBlockContinuity}`}
-      >
-        {value.en}
-      </p>
-    </div>
-  );
-}
-
 /** Page title: ZH first (primary), EN below (muted reference) in Chinese mode. */
 export function BilingualAssistHeading({
   value,
@@ -195,7 +170,7 @@ type BilingualTrustNoteProps = {
   children: ReactNode;
 };
 
-/** Dashed note shown in Chinese UI mode on story/draft pages (bilingual assist disclaimer). */
+/** Dashed note shown in Chinese UI mode on story pages (bilingual assist disclaimer). */
 export function BilingualTrustNote({ children }: BilingualTrustNoteProps) {
   return (
     <p

@@ -177,7 +177,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         return 1
 
     # ------------------------------------------------------------------
-    # Stages 2–10: synchronous
+    # Stages 2–8: synchronous
     # ------------------------------------------------------------------
     from scripts import (
         filter_articles,
@@ -187,8 +187,6 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         dedup_clusters,
         summarize,
         translate_clusters,
-        generate_draft,
-        translate_drafts,
         send_digest_email,
     )
 
@@ -200,8 +198,6 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         ("dedup_clusters",        lambda: dedup_clusters.main([])),
         ("summarize",             lambda: summarize.main([])),
         ("translate_clusters",    lambda: translate_clusters.main(["--batch-size", "50"])),
-        ("generate_draft",        lambda: generate_draft.main([])),
-        ("translate_drafts",      lambda: translate_drafts.main(["--batch-size", "20"])),
     ]
     if send_email:
         stages.append(("send_digest_email", lambda: send_digest_email.main([])))

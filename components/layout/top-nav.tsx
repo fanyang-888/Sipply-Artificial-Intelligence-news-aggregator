@@ -54,7 +54,6 @@ export function TopNav() {
   const pathname = usePathname();
   const onArchive = pathname === "/archive";
   const onDigest = pathname === "/";
-  const onDraft = pathname.startsWith("/draft");
 
   return (
     <header
@@ -90,7 +89,6 @@ export function TopNav() {
           {[
             { href: "/", label: t.nav.dailyDigest, active: onDigest },
             { href: "/archive", label: t.nav.archive, active: onArchive },
-            { href: "/#draft-of-the-day", label: t.nav.draftOfDay, active: onDraft },
           ].map(({ href, label, active }) => (
             <Link
               key={href}

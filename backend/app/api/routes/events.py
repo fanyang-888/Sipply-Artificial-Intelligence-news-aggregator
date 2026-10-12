@@ -1,11 +1,7 @@
 """POST /api/events — client-side event tracking.
 
 Tracked event types:
-  draft_copied            — user copied a draft to clipboard
-  draft_shared_linkedin   — user clicked LinkedIn share
-  draft_shared_x          — user clicked X (Twitter) share
   cluster_viewed          — user opened a cluster page
-  draft_viewed            — user opened a draft page
 
 Two sinks (both best-effort; failures are swallowed so the client never errors):
   1. Postgres `events` table — durable, per-device rows for behaviour/retention/NSM.
@@ -25,13 +21,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["events"])
 
-_ALLOWED_TYPES = frozenset({
-    "draft_copied",
-    "draft_shared_linkedin",
-    "draft_shared_x",
-    "cluster_viewed",
-    "draft_viewed",
-})
+_ALLOWED_TYPES = frozenset({"cluster_viewed"})
 
 _DAILY_TTL = 90 * 86_400  # 90 days in seconds
 

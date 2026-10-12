@@ -26,7 +26,7 @@ Open [http://localhost:8000/health](http://localhost:8000/health).
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `DATABASE_URL` | ✅ | SQLAlchemy URL (`postgresql+psycopg://…`) |
-| `OPENAI_API_KEY` | ✅ | GPT-4o calls (filter / cluster / summarise / draft) |
+| `OPENAI_API_KEY` | ✅ | GPT-4o calls (filter / cluster / summarise) |
 | `APP_ENV` | ✅ | `development` or `production` |
 | `SOURCE_FETCH_USER_AGENT` | ✅ | User-Agent sent when fetching articles |
 | `REDIS_URL` | optional | Redis cache (graceful no-op fallback if absent) |
@@ -54,8 +54,6 @@ python -m scripts.update_cluster_status # new/escalating/peaking/ongoing/fading
 python -m scripts.dedup_clusters        # merge cross-day duplicate clusters
 python -m scripts.summarize             # GPT-4o summaries + audience blocks
 python -m scripts.translate_clusters    # EN → ZH for all cluster fields
-python -m scripts.generate_draft        # GPT-4o newsletter draft
-python -m scripts.translate_drafts      # EN → ZH for all draft fields
 ```
 
 ---
@@ -66,12 +64,10 @@ python -m scripts.translate_drafts      # EN → ZH for all draft fields
 |--------|------|-------------|
 | GET | `/health` | Liveness check |
 | GET | `/health/db` | Readiness check (DB ping) |
-| GET | `/api/digest/today` | Featured cluster + top 9 + draft id |
+| GET | `/api/digest/today` | Featured cluster + top 9; `?device_id=&role=` re-ranks per reader |
 | GET | `/api/clusters` | Paginated cluster list |
 | GET | `/api/clusters/{id}` | Cluster with articles + related cluster ids |
 | GET | `/api/search` | Full-text search (clusters + articles) |
-| GET | `/api/drafts/today` | Latest draft |
-| GET | `/api/drafts/{id}` | Single draft; `?role=pm\|developer\|student` |
 | GET | `/api/pipeline-runs` | Pipeline run history |
 | POST | `/api/auth/login` | Get JWT token |
 | POST | `/api/admin/trigger-pipeline` | Trigger pipeline (JWT required) |
@@ -86,7 +82,7 @@ python -m scripts.translate_drafts      # EN → ZH for all draft fields
 | `articles` | Ingested articles — full text, scores, cluster assignment |
 | `ingest_url_states` | Per-URL fetch state (403 backoff counters, retry_at) |
 | `clusters` | Story clusters — summaries, takeaways, audience blocks (EN + ZH) |
-| `drafts` | LLM-generated newsletter drafts (EN + ZH) |
+| `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written |
 | `pipeline_runs` | Run history with per-stage timing and status |
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
@@ -139,7 +135,5 @@ scripts/
 ├── dedup_clusters.py
 ├── summarize.py
 ├── translate_clusters.py
-├── generate_draft.py
-├── translate_drafts.py
 └── seed_sources.py
 ```

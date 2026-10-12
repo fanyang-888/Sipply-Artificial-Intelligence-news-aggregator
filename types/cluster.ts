@@ -31,5 +31,4 @@ export type Cluster = {
   articleIds: string[];
   articles?: Article[];
   relatedClusterIds: string[];
-  draftId?: string;
 };

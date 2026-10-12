@@ -7,20 +7,16 @@ from app.api.schemas import (
     AudienceBlocks,
     ArchiveClusterRow,
     ClusterResponse,
-    DraftResponse,
-    LocalizedStr,
     format_dt,
     freshness_label,
     localized,
     localized_bilingual,
 )
 from app.models.cluster import Cluster
-from app.models.draft import Draft
 
 
 def cluster_to_response(
     cluster: Cluster,
-    draft_id: str | None = None,
     related_cluster_ids: list[str] | None = None,
 ) -> ClusterResponse:
     tags: list[str] = cluster.tags or []
@@ -85,67 +81,8 @@ def cluster_to_response(
         articleIds=article_ids,
         articles=articles_in_cluster,
         relatedClusterIds=related_cluster_ids or [],
-        draftId=draft_id,
         articleCount=cluster.article_count or 0,
         sourceCount=cluster.source_count or 0,
-    )
-
-
-_ROLE_FIELDS: dict[str, tuple[str, str]] = {
-    "pm":        ("why_it_matters_pm",       "why_it_matters_pm_zh"),
-    "developer": ("why_it_matters_dev",      "why_it_matters_dev_zh"),
-    "student":   ("why_it_matters_students", "why_it_matters_students_zh"),
-}
-
-
-def draft_to_response(draft: Draft, role: str | None = None) -> DraftResponse:
-    takeaways_raw: list[str] = draft.takeaways or []
-    takeaways_zh: list[str] = getattr(draft, "takeaways_zh", None) or []
-    takeaways = []
-    for i, t in enumerate(takeaways_raw):
-        zh_t = takeaways_zh[i] if i < len(takeaways_zh) else None
-        takeaways.append(localized_bilingual(t, zh_t))
-    while len(takeaways) < 3:
-        takeaways.append(localized(""))
-
-    cluster_title = ""
-    cluster_title_zh = None
-    cluster_why_it_matters: str | None = None
-    cluster_why_it_matters_zh: str | None = None
-
-    if draft.cluster:
-        cluster_title = draft.cluster.representative_title or ""
-        cluster_title_zh = getattr(draft.cluster, "representative_title_zh", None)
-
-        # Role-specific audience block — fall back to generic if field is empty
-        if role and role in _ROLE_FIELDS:
-            en_field, zh_field = _ROLE_FIELDS[role]
-            cluster_why_it_matters = (
-                getattr(draft.cluster, en_field, None)
-                or draft.cluster.why_it_matters
-            )
-            cluster_why_it_matters_zh = (
-                getattr(draft.cluster, zh_field, None)
-                or getattr(draft.cluster, "why_it_matters_zh", None)
-            )
-        else:
-            cluster_why_it_matters = draft.cluster.why_it_matters
-            cluster_why_it_matters_zh = getattr(draft.cluster, "why_it_matters_zh", None)
-
-    return DraftResponse(
-        id=str(draft.id),
-        clusterId=str(draft.cluster_id) if draft.cluster_id else None,
-        draftType="linkedin",
-        title=localized_bilingual(cluster_title or "Draft", cluster_title_zh),
-        generatedAt=format_dt(draft.generated_at),
-        hook=localized_bilingual(draft.hook, getattr(draft, "hook_zh", None), ""),
-        summaryBlock=localized_bilingual(draft.summary_text, getattr(draft, "summary_text_zh", None), ""),
-        takeaways=takeaways,
-        careerInterpretationBlock=localized_bilingual(draft.career_take, getattr(draft, "career_take_zh", None), ""),
-        audienceWhyItMattersBlock=localized_bilingual(cluster_why_it_matters, cluster_why_it_matters_zh, ""),
-        closingBlock=localized_bilingual(draft.closing, getattr(draft, "closing_zh", None)) if draft.closing else None,
-        fullText=draft.full_text or "",
-        role=role,
     )
 
 

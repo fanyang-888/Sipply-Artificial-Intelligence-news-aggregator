@@ -76,4 +76,4 @@ def test_content_stages_run_every_time(run):
     content_stages = list(skipped_run)
     _, email_run, _ = run(20)
     assert [s for s in email_run if s != "send_digest_email"] == content_stages
-    assert len(content_stages) == 10
+    assert len(content_stages) == 8

@@ -1,9 +1,8 @@
 """Pydantic response schemas that match the frontend TypeScript types.
 
 The frontend expects LocalizedString = { en: string; zh?: string }.
-Cluster and draft fields are translated to Chinese by the pipeline
-(translate_clusters.py, translate_drafts.py) and returned as bilingual
-LocalizedStr objects. The frontend falls back to `en` when `zh` is absent.
+Cluster fields are translated to Chinese by the pipeline
+(translate_clusters.py) and returned as bilingual LocalizedStr objects. The frontend falls back to `en` when `zh` is absent.
 """
 
 from __future__ import annotations
@@ -102,7 +101,6 @@ class ClusterResponse(BaseModel):
     articleIds: list[str]
     articles: list[ArticleInCluster] = []
     relatedClusterIds: list[str]
-    draftId: str | None
     articleCount: int
     sourceCount: int
 
@@ -111,29 +109,8 @@ class DigestResponse(BaseModel):
     date: str
     featured: ClusterResponse | None
     topClusters: list[ClusterResponse]
-    draftId: str | None
     # True when topClusters were re-ordered for this reader (history and/or role)
     personalized: bool = False
-
-
-# ---------------------------------------------------------------------------
-# Draft schemas
-# ---------------------------------------------------------------------------
-
-class DraftResponse(BaseModel):
-    id: str
-    clusterId: str | None
-    draftType: str = "linkedin"
-    title: LocalizedStr
-    generatedAt: str | None
-    hook: LocalizedStr
-    summaryBlock: LocalizedStr
-    takeaways: list[LocalizedStr]
-    careerInterpretationBlock: LocalizedStr
-    audienceWhyItMattersBlock: LocalizedStr
-    closingBlock: LocalizedStr | None
-    fullText: str
-    role: str | None = None  # "pm" | "developer" | "student" | None (generic)
 
 
 # ---------------------------------------------------------------------------

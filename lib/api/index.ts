@@ -7,7 +7,6 @@ import { apiFetch, apiPost } from "./client";
 import type {
   ApiCluster,
   ApiDigest,
-  ApiDraft,
   ApiSearchResponse,
 } from "./types";
 
@@ -68,19 +67,6 @@ export async function fetchSearch(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Drafts
-// ---------------------------------------------------------------------------
-
-export async function fetchTodayDraft(): Promise<ApiDraft | null> {
-  return apiFetch<ApiDraft | null>("/api/drafts/today");
-}
-
-export async function fetchDraft(id: string, role?: string): Promise<ApiDraft> {
-  const qs = role ? `?role=${encodeURIComponent(role)}` : "";
-  return apiFetch<ApiDraft>(`/api/drafts/${id}${qs}`);
-}
-
-// ---------------------------------------------------------------------------
 // Subscribe
 // ---------------------------------------------------------------------------
 
@@ -89,4 +75,4 @@ export async function postSubscribe(email: string): Promise<{ status: string }> 
 }
 
 // Re-export types for convenience
-export type { ApiCluster, ApiDigest, ApiDraft, ApiSearchResponse } from "./types";
+export type { ApiCluster, ApiDigest, ApiSearchResponse } from "./types";

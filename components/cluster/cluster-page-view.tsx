@@ -7,7 +7,6 @@ import { TakeawayList } from "@/components/cluster/takeaway-list";
 import { WhyItMattersSection } from "@/components/cluster/why-it-matters-section";
 import { CoveredSourcesList } from "@/components/cluster/covered-sources-list";
 import { RelatedStories } from "@/components/cluster/related-stories";
-import { DraftAction } from "@/components/cluster/draft-action";
 import { ClusterStoryFooter } from "@/components/cluster/cluster-story-footer";
 import {
   BilingualAssistBody,
@@ -35,9 +34,8 @@ export function ClusterPageView({
   return (
     <article>
       <ClusterBreadcrumbs clusterTitle={cluster.title} />
-      <DraftAction draftId={cluster.draftId} variant="prominent" className="mb-6" />
 
-      <div className="lg:grid lg:grid-cols-[1fr_min(17rem,34%)] lg:gap-8 lg:items-stretch">
+      <div className="max-w-3xl">
         <div className="min-w-0">
           <ClusterHeader cluster={cluster} articles={articles} />
 
@@ -59,14 +57,6 @@ export function ClusterPageView({
           <RelatedStories clusters={related} />
           <ClusterStoryFooter nextCluster={nextCluster} />
         </div>
-
-        {cluster.draftId ? (
-          <aside className="mt-8 hidden min-w-0 lg:mt-0 lg:block">
-            <div className="lg:sticky lg:top-24">
-              <DraftAction draftId={cluster.draftId} variant="compact" />
-            </div>
-          </aside>
-        ) : null}
       </div>
     </article>
   );
