@@ -14,7 +14,6 @@ export const zh: Translations = {
     titleBrand: "Sipply",
     titleHome: "每日摘要",
     titleArchive: "资料库",
-    titleStoryFallback: "故事",
     titleRadar: "趋势雷达",
   },
   home: {

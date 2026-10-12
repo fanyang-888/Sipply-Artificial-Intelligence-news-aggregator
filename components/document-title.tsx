@@ -24,8 +24,6 @@ export function DocumentTitle() {
       pagePart = t.meta.titleArchive;
     } else if (pathname === "/radar") {
       pagePart = t.meta.titleRadar;
-    } else if (pathname.startsWith("/cluster/")) {
-      pagePart = t.meta.titleStoryFallback;
     }
 
     document.title = `${pagePart} | ${brand}`;

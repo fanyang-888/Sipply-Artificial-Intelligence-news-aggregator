@@ -14,7 +14,6 @@ export const en: Translations = {
     titleBrand: "Sipply",
     titleHome: "Daily Digest",
     titleArchive: "Archive",
-    titleStoryFallback: "Story",
     titleRadar: "Trend Radar",
   },
   home: {

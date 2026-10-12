@@ -19,7 +19,6 @@ export type Translations = {
     titleBrand: string;
     titleHome: string;
     titleArchive: string;
-    titleStoryFallback: string;
     titleRadar: string;
   };
   home: {

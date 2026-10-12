@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Trend Radar",
   description:
     "What the AI community is discussing right now: Hacker News, news and video signals grouped into topics and scored by volume, engagement and velocity.",
+  alternates: { canonical: "/radar" },
 };
 
 async function loadRadar(): Promise<ApiRadar | null> {
