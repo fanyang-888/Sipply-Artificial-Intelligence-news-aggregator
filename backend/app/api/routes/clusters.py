@@ -1,14 +1,15 @@
-"""Cluster routes: GET /api/clusters, GET /api/clusters/{id}."""
+"""Cluster routes: GET /api/clusters, GET /api/clusters/index, GET /api/clusters/{id}."""
 
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.mappers import cluster_to_response
-from app.api.schemas import ClusterResponse
+from app.api.schemas import ClusterResponse, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
 from app.models.cluster import Cluster
@@ -61,6 +62,31 @@ def list_clusters(
     )
 
     return results
+
+
+class ClusterIndexEntry(BaseModel):
+    id: str
+    lastSeenAt: str | None
+
+
+_INDEX_CACHE_KEY = "ai_tool:clusters:index"
+
+
+# Declared before /{cluster_id} so "index" isn't parsed as an id
+@router.get("/index", response_model=list[ClusterIndexEntry])
+def cluster_index(db: Session = Depends(get_db)):
+    """Every public story's id and last update, newest first — one light query for the sitemap."""
+    cached = cache_get(_INDEX_CACHE_KEY)
+    if cached is not None:
+        return JSONResponse(content=cached)
+    rows = db.execute(
+        select(Cluster.id, Cluster.last_seen_at)
+        .where(Cluster.representative_title_zh.isnot(None))
+        .order_by(Cluster.last_seen_at.desc().nullslast())
+    ).all()
+    data = [{"id": str(cid), "lastSeenAt": format_dt(seen)} for cid, seen in rows]
+    cache_set(_INDEX_CACHE_KEY, data)
+    return JSONResponse(content=data)
 
 
 @router.get("/{cluster_id}", response_model=ClusterResponse)

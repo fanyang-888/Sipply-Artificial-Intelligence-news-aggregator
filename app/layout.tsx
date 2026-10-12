@@ -4,9 +4,12 @@ import { AppProviders } from "@/components/app-providers";
 import { TopNav } from "@/components/layout/top-nav";
 import { PageShell } from "@/components/layout/page-shell";
 import { Ticker } from "@/components/layout/ticker";
+import { SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Resolves relative canonical / Open Graph URLs to the canonical origin
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Sipply — Daily AI Intelligence",
     template: "%s | Sipply",

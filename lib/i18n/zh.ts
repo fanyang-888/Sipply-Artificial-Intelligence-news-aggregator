@@ -10,7 +10,7 @@ export const zh: Translations = {
     mainAria: "主导航",
   },
   meta: {
-    titleBrand: "Personal AI Intelligence",
+    titleBrand: "Sipply",
     titleHome: "每日摘要",
     titleArchive: "资料库",
     titleStoryFallback: "故事",

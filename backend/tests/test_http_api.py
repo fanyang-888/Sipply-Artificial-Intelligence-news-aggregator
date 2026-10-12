@@ -48,3 +48,24 @@ def test_digest_featured_is_top_ranked(client, make_cluster, monkeypatch):
     body = client.get("/api/digest/today").json()
     assert body["featured"]["id"] == str(top.id)
     assert [c["title"]["en"] for c in body["topClusters"]] == ["second", "third"]
+
+
+def test_cluster_index_lists_public_stories_newest_first(client, make_cluster, days_ago, monkeypatch):
+    monkeypatch.setattr("app.api.routes.clusters.cache_get", lambda key: None)
+    monkeypatch.setattr("app.api.routes.clusters.cache_set", lambda key, value: None)
+    old = make_cluster(title="old", last_seen_at=days_ago(3))
+    new = make_cluster(title="new", last_seen_at=days_ago(0))
+    hidden = make_cluster(title="untranslated", title_zh=None)
+
+    body = client.get("/api/clusters/index").json()
+    ids = [row["id"] for row in body]
+    assert str(hidden.id) not in ids
+    assert ids.index(str(new.id)) < ids.index(str(old.id))
+    assert set(body[0]) == {"id", "lastSeenAt"}
+
+
+def test_cluster_index_route_is_not_shadowed_by_id_route(client, monkeypatch):
+    monkeypatch.setattr("app.api.routes.clusters.cache_get", lambda key: None)
+    monkeypatch.setattr("app.api.routes.clusters.cache_set", lambda key, value: None)
+    assert client.get("/api/clusters/index").status_code == 200
+    assert client.get("/api/clusters/not-a-uuid").status_code == 422

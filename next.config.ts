@@ -33,7 +33,23 @@ const securityHeaders = [
   },
 ];
 
+// Bots that need <head> metadata in the first bytes (no streamed metadata).
+// Next's default list (next/dist/shared/lib/router/utils/html-bots.js, 16.2) —
+// setting this option replaces it, so it is copied — plus AI search/assistant crawlers.
+const HTML_LIMITED_BOTS = new RegExp(
+  [
+    "[\\w-]+-Google|Google-[\\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou",
+    "bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot",
+    "facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp",
+    "SkypeUriPreview|Yeti|googleweblight",
+    "GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-SearchBot|Claude-User|anthropic-ai",
+    "PerplexityBot|Perplexity-User|CCBot|Amazonbot|meta-externalagent",
+  ].join("|"),
+  "i",
+);
+
 const nextConfig: NextConfig = {
+  htmlLimitedBots: HTML_LIMITED_BOTS,
   ...(pagesBasePath
     ? { basePath: pagesBasePath, assetPrefix: pagesBasePath }
     : {}),

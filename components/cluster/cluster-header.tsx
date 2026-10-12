@@ -7,7 +7,7 @@ import {
 } from "@/components/shared/bilingual-assist-text";
 import { useI18n } from "@/lib/i18n";
 import { uiPageTitle, uiMetaTextSm } from "@/lib/ui/classes";
-import { formatShortDateTime } from "@/lib/utils/format-date";
+import { LocalDateTime } from "@/components/shared/local-date-time";
 import { formatRelevancePercent } from "@/lib/utils/cluster-sources";
 import {
   estimateClusterReadMinutes,
@@ -61,7 +61,7 @@ export function ClusterHeader({ cluster, articles }: ClusterHeaderProps) {
         <div className="flex flex-wrap gap-x-2 sm:col-span-2">
           <dt className="font-medium [color:var(--text-muted)]">{t.cluster.headerLastUpdated}</dt>
           <dd className="font-medium text-foreground">
-            {formatShortDateTime(cluster.lastSeenAt, lang)}
+            <LocalDateTime iso={cluster.lastSeenAt} lang={lang} />
           </dd>
         </div>
         <div className="flex flex-wrap gap-x-2">
@@ -78,7 +78,9 @@ export function ClusterHeader({ cluster, articles }: ClusterHeaderProps) {
         </div>
         <div className="flex flex-wrap gap-x-2 sm:col-span-2 text-xs [color:var(--text-muted)]">
           <dt className="font-medium">{t.cluster.headerFirstSeen}</dt>
-          <dd>{formatShortDateTime(cluster.firstSeenAt, lang)}</dd>
+          <dd>
+            <LocalDateTime iso={cluster.firstSeenAt} lang={lang} />
+          </dd>
         </div>
       </dl>
     </header>
