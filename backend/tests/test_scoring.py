@@ -41,6 +41,32 @@ def test_recency_accepts_naive_datetimes_as_utc():
     assert _score_recency(naive) == 5.0
 
 
+def _catalog():
+    import yaml
+
+    from app.source_catalog.loader import _DEFAULT_FILE
+
+    return yaml.safe_load(_DEFAULT_FILE.read_text(encoding="utf-8"))["sources"]
+
+
+def test_every_official_lab_in_the_catalog_gets_top_credibility():
+    # Regression: DeepMind, Hugging Face and Meta AI were keyed by slugs the
+    # catalog doesn't use, so they silently scored the 3.0 default
+    labs = {row["slug"] for row in _catalog() if row["type"] == "company_news"}
+    assert {"deepmind-blog", "huggingface-blog", "meta-ai-blog"} <= labs
+    for slug in labs:
+        assert _score_source_credibility(SimpleNamespace(slug=slug)) == 5.0, slug
+
+
+def test_credibility_keys_are_catalog_slugs_or_known_future_sources():
+    from app.services.scoring import _SOURCE_CREDIBILITY
+
+    catalog = {row["slug"] for row in _catalog()}
+    not_yet_added = {"nvidia", "artificial-analysis", "epoch-ai", "the-batch", "the-rundown-ai"}
+    # A key outside both sets is a typo that never matches any source
+    assert set(_SOURCE_CREDIBILITY) - catalog == not_yet_added
+
+
 def test_source_credibility_known_and_unknown():
     assert _score_source_credibility(SimpleNamespace(slug="openai-news")) == 5.0
     assert _score_source_credibility(SimpleNamespace(slug="  TechCrunch-AI ")) == 3.5

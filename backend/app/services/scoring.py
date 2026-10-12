@@ -43,23 +43,25 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Source credibility priors (slug → 1–5 scale)
+# Keys must match ``slug`` in source_catalog/trusted_sources.yaml exactly — a
+# mismatch silently falls back to the 3.0 default (tests/test_scoring.py checks).
 # ---------------------------------------------------------------------------
 _SOURCE_CREDIBILITY: dict[str, float] = {
     # Tier 5.0 — official AI labs / benchmarking bodies
     "openai-news": 5.0,
     "anthropic-newsroom": 5.0,
-    "google-deepmind": 5.0,
-    "meta-ai": 5.0,
-    "huggingface": 5.0,
-    "nvidia": 5.0,
-    "artificial-analysis": 5.0,
-    "epoch-ai": 5.0,
+    "deepmind-blog": 5.0,
+    "meta-ai-blog": 5.0,
+    "huggingface-blog": 5.0,
+    "nvidia": 5.0,  # not in the catalog yet
+    "artificial-analysis": 5.0,  # not in the catalog yet
+    "epoch-ai": 5.0,  # not in the catalog yet
     # Tier 4.5 — premium curated newsletters
-    "the-batch": 4.5,
+    "the-batch": 4.5,  # not in the catalog yet
     "import-ai": 4.5,
     # Tier 4.0 — curated newsletters
     "tldr-ai": 4.0,
-    "the-rundown-ai": 4.0,
+    "the-rundown-ai": 4.0,  # not in the catalog yet
     # Tier 3.5 — reputable tech press
     "techcrunch-ai": 3.5,
     "venturebeat-ai": 3.5,
