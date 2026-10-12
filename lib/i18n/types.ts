@@ -9,6 +9,7 @@ export type Translations = {
     dailyDigest: string;
     dailyDigestShort: string;
     archive: string;
+    radar: string;
     searchPlaceholder: string;
     searchAria: string;
     mainAria: string;
@@ -19,6 +20,7 @@ export type Translations = {
     titleHome: string;
     titleArchive: string;
     titleStoryFallback: string;
+    titleRadar: string;
   };
   home: {
     title: string;
@@ -75,6 +77,49 @@ export type Translations = {
     freshnessHours: (h: number) => string;
     freshnessDays: (d: number) => string;
     sourceCountLabel: (n: number) => string;
+  };
+  radar: {
+    title: string;
+    description: string;
+    updated: (age: string) => string;
+    signalsInWindow: (n: number, days: number) => string;
+    notConnected: string;
+    filterAria: string;
+    allCategories: string;
+    otherCategory: string;
+    sourceShort: Record<"hn" | "news" | "youtube", string>;
+    risingOnly: string;
+    allSources: string;
+    topicsCount: (n: number) => string;
+    rising: string;
+    signalCount: (n: number) => string;
+    engagement: (n: string) => string;
+    scoreLabel: string;
+    componentVolume: string;
+    componentEngagement: string;
+    componentVelocity: string;
+    componentRecency: string;
+    componentRelevance: string;
+    velocityTitle: (v: string) => string;
+    dailyChartAria: (days: number) => string;
+    topPosts: string;
+    discussion: string;
+    askedInTopic: string;
+    questionsTitle: string;
+    questionsDesc: (days: number) => string;
+    noQuestions: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    noMatchTitle: string;
+    noMatchDesc: string;
+    unavailableTitle: string;
+    unavailableDesc: string;
+    methodTitle: string;
+    methodBody: string;
+    justNow: string;
+    age: (unit: "m" | "h" | "d", value: number) => string;
+    pointsComments: (points: number, comments: number) => string;
+    views: (n: string) => string;
   };
   channels: ChannelLabels;
   cluster: {

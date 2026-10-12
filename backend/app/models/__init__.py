@@ -3,6 +3,16 @@ from app.models.cluster import Cluster
 from app.models.event import Event
 from app.models.ingest_url_state import IngestUrlState
 from app.models.pipeline_run import PipelineRun
+from app.models.signal import Signal, SignalTopic
 from app.models.source import Source
 
-__all__ = ["Article", "Cluster", "Event", "IngestUrlState", "PipelineRun", "Source"]
+__all__ = [
+    "Article",
+    "Cluster",
+    "Event",
+    "IngestUrlState",
+    "PipelineRun",
+    "Signal",
+    "SignalTopic",
+    "Source",
+]

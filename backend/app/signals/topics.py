@@ -1,0 +1,375 @@
+"""Build Trend Radar topics: group recent signals, score each group 0–100.
+
+Grouping reuses the story clustering (TF-IDF cosine + union-find, see
+app.services.clustering.tfidf_groups) on signal titles. The threshold was
+tuned on 777 real HN stories (14 days, 8 AI keywords): at 0.30 the biggest
+group chained three unrelated model launches together; 0.40 keeps each event
+in one group; 0.45 starts splitting the same event apart. Single-link groups
+can still chain different stories through shared words once news headlines
+join in ("…over safety concerns"). A chained group is big *and* loose, so a
+group above MAX_GROUP_SIZE whose titles sit far from their centroid (cohesion
+below MIN_COHESION) is re-grouped on its own at a stricter threshold. On
+3,790 real signals this split a 129-title blob of unrelated launches while
+keeping a 58-title single story (cohesion 0.62) whole.
+
+Score (0–100) = 0.25·volume + 0.25·engagement + 0.25·velocity
+              + 0.10·recency + 0.15·relevance
+  volume      — log-scaled signal count, plus a bonus when several source
+                families (HN, news, YouTube) carry the topic
+  engagement  — log-scaled points + comments + likes
+  velocity    — daily rate over the last 3 days vs the days before
+  recency     — age of the newest signal
+  relevance   — the article relevance model (models/scorer.pkl) on the label
+
+Topics are rebuilt from scratch on every run, in one transaction.
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from sqlalchemy import delete, select, update
+from sqlalchemy.orm import Session
+
+from app.models.signal import Signal, SignalTopic
+from app.services.clustering import tfidf_groups
+from app.signals.base import source_family, strip_hn_prefix
+from app.signals.topic_tags import tag_titles
+
+logger = logging.getLogger(__name__)
+
+SIMILARITY_THRESHOLD = 0.40
+DATE_PROXIMITY_DAYS = 5
+MAX_GROUP_SIZE = 20
+MIN_COHESION = 0.58
+REFINE_STEP = 0.10
+RECENT_DAYS = 3
+# Baseline rate (signals/day) added to both sides of the velocity ratio
+VELOCITY_PRIOR_PER_DAY = 0.5
+MIN_GROUP_SIZE = 2
+# A lone post still counts as a topic when the community piled onto it
+SINGLETON_MIN_ENGAGEMENT = 100
+MAX_TOPICS = 60
+RETENTION_DAYS = 60
+RISING_MIN_RATIO = 2.0
+RISING_MIN_RECENT = 3
+
+WEIGHTS = {"volume": 0.25, "engagement": 0.25, "velocity": 0.25, "recency": 0.10, "relevance": 0.15}
+
+_VECTORIZER: dict[str, Any] = {"stop_words": "english", "sublinear_tf": True}
+
+RelevanceFn = Callable[[str], float]
+
+
+# ---------------------------------------------------------------------------
+# Pure helpers
+# ---------------------------------------------------------------------------
+
+def engagement_of(sig: Any) -> int:
+    """Points + comments + likes; news items have none of these."""
+    return int((sig.points or 0) + (sig.num_comments or 0) + (sig.like_count or 0))
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def daily_counts(dates: list[datetime], now: datetime, window_days: int) -> list[int]:
+    """Signals per 24h bucket, oldest first; the last bucket is the 24h before ``now``."""
+    counts = [0] * window_days
+    for dt in dates:
+        age_days = int((now - _aware(dt)).total_seconds() // 86400)
+        if 0 <= age_days < window_days:
+            counts[window_days - 1 - age_days] += 1
+    return counts
+
+
+def velocity_ratio(counts: list[int], recent_days: int = RECENT_DAYS) -> float:
+    """Daily rate in the last ``recent_days`` ÷ daily rate before, smoothed.
+
+    A baseline rate is added to both sides so a single brand-new post reads
+    as mild growth (1.7×), not an infinite surge; 1.0 means flat.
+    """
+    prior_days = len(counts) - recent_days
+    if prior_days <= 0:
+        return 1.0
+    c = VELOCITY_PRIOR_PER_DAY
+    recent_rate = sum(counts[-recent_days:]) / recent_days
+    prior_rate = sum(counts[:-recent_days]) / prior_days
+    return round((recent_rate + c) / (prior_rate + c), 2)
+
+
+def _log_scale(value: float, full_at: float) -> float:
+    """0 at 0, 100 at ``full_at`` and beyond, logarithmic in between."""
+    if value <= 0:
+        return 0.0
+    return min(100.0, 100.0 * math.log1p(value) / math.log1p(full_at))
+
+
+def recency_score(last_seen: datetime, now: datetime) -> float:
+    age_hours = (now - _aware(last_seen)).total_seconds() / 3600
+    if age_hours <= 24:
+        return 100.0
+    if age_hours <= 72:
+        return 70.0
+    if age_hours <= 24 * 7:
+        return 40.0
+    return 15.0
+
+
+def score_components(
+    *,
+    signal_count: int,
+    families: int,
+    active_families: int,
+    engagement: int,
+    velocity: float,
+    last_seen: datetime,
+    now: datetime,
+    relevance: float,
+) -> dict[str, float]:
+    diversity = (families - 1) / max(1, active_families - 1) * 100.0
+    volume = 0.75 * _log_scale(signal_count, 25) + 0.25 * min(100.0, diversity)
+    # velocity 1 (flat) → 36, 3 → 71, 6+ → 100
+    velocity_score = min(100.0, 100.0 * math.log2(1 + velocity) / math.log2(7))
+    return {
+        "volume": round(volume, 1),
+        "engagement": round(_log_scale(engagement, 3000), 1),
+        "velocity": round(velocity_score, 1),
+        "recency": recency_score(last_seen, now),
+        "relevance": round(max(0.0, min(100.0, relevance)), 1),
+    }
+
+
+def total_score(components: dict[str, float]) -> float:
+    return round(sum(WEIGHTS[k] * components[k] for k in WEIGHTS), 1)
+
+
+def top_terms(matrix: Any, indices: list[int], feature_names: list[str], k: int = 4) -> list[str]:
+    """Highest summed TF-IDF terms across a group's titles."""
+    weights = matrix[indices].sum(axis=0).A1
+    order = weights.argsort()[::-1]
+    return [feature_names[i] for i in order[:k] if weights[i] > 0]
+
+
+def cohesion(matrix: Any, indices: list[int]) -> float:
+    """Mean cosine similarity of the group's (L2-normalized) rows to their centroid."""
+    import numpy as np
+
+    rows = matrix[indices]
+    centroid = np.asarray(rows.mean(axis=0)).ravel()
+    norm = float(np.linalg.norm(centroid))
+    if norm == 0:
+        return 0.0
+    return float(np.mean(rows @ centroid) / norm)
+
+
+def refine_groups(
+    groups: list[list[int]],
+    texts: list[str],
+    dates: list[datetime],
+    matrix: Any,
+    *,
+    threshold: float = SIMILARITY_THRESHOLD,
+) -> list[list[int]]:
+    """Re-group big, loose groups on their own (fresh IDF) at a stricter threshold."""
+    out: list[list[int]] = []
+    for group in groups:
+        next_threshold = threshold + REFINE_STEP
+        if (
+            len(group) <= MAX_GROUP_SIZE
+            or next_threshold >= 0.9
+            or cohesion(matrix, group) >= MIN_COHESION
+        ):
+            out.append(group)
+            continue
+        sub = tfidf_groups(
+            [texts[i] for i in group],
+            [dates[i] for i in group],
+            threshold=next_threshold,
+            date_proximity_days=DATE_PROXIMITY_DAYS,
+            vectorizer_kwargs=_VECTORIZER,
+        )
+        if sub is None:
+            out.append(group)
+            continue
+        out.extend(
+            refine_groups(
+                [[group[j] for j in s] for s in sub[0]], texts, dates, matrix, threshold=next_threshold
+            )
+        )
+    return out
+
+
+def default_relevance_fn() -> RelevanceFn:
+    """Relevance 0–100 from the article model; a flat 50 when the model is missing."""
+    from app.services.ml_scorer import get_ml_scorer
+
+    scorer = get_ml_scorer()
+    if scorer is None:
+        return lambda title: 50.0
+
+    def _fn(title: str) -> float:
+        p = scorer.predict(title, "")
+        return (((p["audience_fit"] + p["practical_relevance"]) / 2) - 1) / 4 * 100
+
+    return _fn
+
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TopicDraft:
+    label: str
+    topic_tag: str
+    keywords: list[str]
+    signal_ids: list[Any]
+    signal_count: int
+    source_counts: dict[str, int]
+    engagement: int
+    components: dict[str, float]
+    score: float
+    velocity: float
+    rising: bool
+    daily_counts: list[int]
+    first_seen_at: datetime
+    last_seen_at: datetime
+
+
+def draft_topics(
+    signals: list[Any],
+    *,
+    now: datetime,
+    window_days: int,
+    active_families: int,
+    relevance_fn: RelevanceFn,
+) -> tuple[list[TopicDraft], int]:
+    """Group and score signals (pure, no DB). Returns (top drafts, group count)."""
+    if not signals:
+        return [], 0
+    texts = [strip_hn_prefix(s.title) for s in signals]
+    dates = [_aware(s.published_at) for s in signals]
+    result = tfidf_groups(
+        texts,
+        dates,
+        threshold=SIMILARITY_THRESHOLD,
+        date_proximity_days=DATE_PROXIMITY_DAYS,
+        vectorizer_kwargs=_VECTORIZER,
+    )
+    if result is None:
+        return [], 0
+    groups, matrix, feature_names = result
+    groups = refine_groups(groups, texts, dates, matrix)
+
+    drafts: list[TopicDraft] = []
+    for indices in groups:
+        members = [signals[i] for i in indices]
+        engagement = sum(engagement_of(s) for s in members)
+        if len(members) < MIN_GROUP_SIZE and engagement < SINGLETON_MIN_ENGAGEMENT:
+            continue
+        dates = [_aware(s.published_at) for s in members]
+        counts = daily_counts(dates, now, window_days)
+        ratio = velocity_ratio(counts)
+        recent = sum(counts[-RECENT_DAYS:])
+        families = Counter(source_family(s.source_kind) for s in members)
+        lead = max(members, key=lambda s: (engagement_of(s), _aware(s.published_at)))
+        components = score_components(
+            signal_count=len(members),
+            families=len(families),
+            active_families=active_families,
+            engagement=engagement,
+            velocity=ratio,
+            last_seen=max(dates),
+            now=now,
+            relevance=relevance_fn(lead.title),
+        )
+        drafts.append(
+            TopicDraft(
+                label=lead.title,
+                topic_tag=tag_titles([s.title for s in members]),
+                keywords=top_terms(matrix, indices, feature_names),
+                signal_ids=[s.id for s in members],
+                signal_count=len(members),
+                source_counts=dict(families),
+                engagement=engagement,
+                components=components,
+                score=total_score(components),
+                velocity=ratio,
+                rising=ratio >= RISING_MIN_RATIO and recent >= RISING_MIN_RECENT,
+                daily_counts=counts,
+                first_seen_at=min(dates),
+                last_seen_at=max(dates),
+            )
+        )
+    drafts.sort(key=lambda d: (-d.score, -d.engagement))
+    return drafts[:MAX_TOPICS], len(groups)
+
+
+def build_topics(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    window_days: int = 14,
+    active_families: int = 2,
+    relevance_fn: RelevanceFn | None = None,
+) -> dict[str, int]:
+    """Replace all signal_topics with a fresh build over the last ``window_days``."""
+    now = now or datetime.now(timezone.utc)
+    signals = list(
+        db.execute(
+            select(Signal).where(Signal.published_at >= now - timedelta(days=window_days))
+        ).scalars().all()
+    )
+    drafts, n_groups = draft_topics(
+        signals,
+        now=now,
+        window_days=window_days,
+        active_families=active_families,
+        relevance_fn=relevance_fn or default_relevance_fn(),
+    )
+
+    # FK ON DELETE SET NULL clears signals.topic_id for the old topics
+    db.execute(delete(SignalTopic))
+    for d in drafts:
+        topic = SignalTopic(
+            label=d.label,
+            topic_tag=d.topic_tag,
+            keywords=d.keywords,
+            signal_count=d.signal_count,
+            source_counts=d.source_counts,
+            engagement=d.engagement,
+            score=d.score,
+            score_components=d.components,
+            velocity=d.velocity,
+            rising=d.rising,
+            daily_counts=d.daily_counts,
+            first_seen_at=d.first_seen_at,
+            last_seen_at=d.last_seen_at,
+        )
+        db.add(topic)
+        db.flush()
+        db.execute(update(Signal).where(Signal.id.in_(d.signal_ids)).values(topic_id=topic.id))
+    pruned = db.execute(
+        delete(Signal).where(Signal.published_at < now - timedelta(days=RETENTION_DAYS))
+    ).rowcount or 0
+    db.commit()
+    # Old topics were deleted in SQL; drop any stale ORM copies
+    db.expire_all()
+
+    summary = {
+        "signals": len(signals),
+        "groups": n_groups,
+        "topics": len(drafts),
+        "rising": sum(1 for d in drafts if d.rising),
+        "pruned": pruned,
+    }
+    logger.info("signal topics built %s", summary)
+    return summary

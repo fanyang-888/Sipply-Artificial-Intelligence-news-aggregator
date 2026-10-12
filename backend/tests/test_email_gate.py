@@ -76,4 +76,40 @@ def test_content_stages_run_every_time(run):
     content_stages = list(skipped_run)
     _, email_run, _ = run(20)
     assert [s for s in email_run if s != "send_digest_email"] == content_stages
-    assert len(content_stages) == 8
+    assert len(content_stages) == 10
+
+
+@pytest.fixture
+def run_with_failure(monkeypatch):
+    """Like ``run`` but the named stage fails; returns (exit code, recorded results)."""
+    recorded: dict = {}
+
+    def _run(failing: str):
+        def fake_stage(name, fn):
+            return name != failing, 0.01
+
+        def fake_finish(run_id, *, status, stage_results, total_elapsed_sec):
+            recorded.update(stage_results, _status=status)
+
+        monkeypatch.setattr(rp, "_run_stage", fake_stage)
+        monkeypatch.setattr(rp, "_create_run", lambda triggered_by: "run-id")
+        monkeypatch.setattr(rp, "_finish_run", fake_finish)
+        monkeypatch.setattr(rp, "_install_timeout", lambda sec: None)
+        recorded.clear()
+        return rp.main(triggered_by="manual"), recorded
+
+    return _run
+
+
+@pytest.mark.parametrize("stage", ["ingest_signals", "build_signal_topics"])
+def test_trend_radar_failure_does_not_fail_the_pipeline(run_with_failure, stage):
+    code, recorded = run_with_failure(stage)
+    assert code == 0
+    assert recorded["_status"] == "success"
+    assert recorded[stage]["status"] == "failed"  # still visible in the admin run log
+
+
+def test_news_stage_failure_still_fails_the_pipeline(run_with_failure):
+    code, recorded = run_with_failure("summarize")
+    assert code == 1
+    assert recorded["_status"] == "failed"

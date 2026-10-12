@@ -45,6 +45,13 @@ SIMILARITY_THRESHOLD = 0.28   # TF-IDF cosine similarity to link two articles
 DATE_PROXIMITY_DAYS = 5       # articles > N days apart → cannot share an event cluster
 EVENT_MAX_DAYS = 3            # cluster date span <= N days → "event", else "theme"
 
+_ARTICLE_VECTORIZER: dict[str, Any] = {
+    "max_features": 8000,
+    "ngram_range": (1, 2),
+    "stop_words": "english",
+    "min_df": 1,
+}
+
 
 # ---------------------------------------------------------------------------
 # Union-Find (path compression + rank)
@@ -147,16 +154,91 @@ def _build_corpus(articles: list[Article]) -> list[str]:
     return docs
 
 
-def _dates_compatible(a: Article, b: Article) -> bool:
-    """True if the two articles are within DATE_PROXIMITY_DAYS of each other."""
-    da, db_ = a.published_at, b.published_at
+def _within_days(da: datetime | None, db_: datetime | None, days: float) -> bool:
+    """True if the two datetimes are at most ``days`` apart; unknown dates always match."""
     if da is None or db_ is None:
         return True  # unknown dates → allow grouping
     if da.tzinfo is None:
         da = da.replace(tzinfo=timezone.utc)
     if db_.tzinfo is None:
         db_ = db_.replace(tzinfo=timezone.utc)
-    return abs((da - db_).total_seconds()) <= DATE_PROXIMITY_DAYS * 86400
+    return abs((da - db_).total_seconds()) <= days * 86400
+
+
+def _dates_compatible(a: Article, b: Article) -> bool:
+    """True if the two articles are within DATE_PROXIMITY_DAYS of each other."""
+    return _within_days(a.published_at, b.published_at, DATE_PROXIMITY_DAYS)
+
+
+# ---------------------------------------------------------------------------
+# Text grouping (shared with the Trend Radar signal topics)
+# ---------------------------------------------------------------------------
+
+def tfidf_groups(
+    texts: list[str],
+    dates: list[datetime | None],
+    *,
+    threshold: float,
+    date_proximity_days: float,
+    vectorizer_kwargs: dict[str, Any] | None = None,
+) -> tuple[list[list[int]], Any, list[str]] | None:
+    """Single-link groups of texts by TF-IDF cosine similarity.
+
+    Two texts are linked when their similarity is >= ``threshold`` and their
+    dates are within ``date_proximity_days``; links are transitive. Every
+    index lands in exactly one group (singletons included), and groups come
+    back ordered by their smallest member index.
+
+    Returns ``(groups, tfidf_matrix, feature_names)``, or None when the corpus
+    has no usable terms.
+    """
+    # Import here to avoid top-level sklearn cost at app startup
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
+
+    n = len(texts)
+    if n == 0:
+        return None
+    vectorizer = TfidfVectorizer(**(vectorizer_kwargs or {}))
+    try:
+        tfidf_matrix = vectorizer.fit_transform(texts)
+    except ValueError:
+        return None
+
+    uf = _UnionFind(n)
+
+    # Compute similarity in chunks to avoid huge memory for large n
+    chunk = 64
+    for start in range(0, n, chunk):
+        end = min(start + chunk, n)
+        sims = cosine_similarity(tfidf_matrix[start:end], tfidf_matrix)  # (chunk, n)
+        rows, cols = np.nonzero(sims >= threshold)
+        for i_local, j in zip(rows.tolist(), cols.tolist()):
+            i_global = start + i_local
+            if j > i_global and _within_days(dates[i_global], dates[j], date_proximity_days):
+                uf.union(i_global, j)
+
+    return list(uf.groups().values()), tfidf_matrix, vectorizer.get_feature_names_out().tolist()
+
+
+def group_texts(
+    texts: list[str],
+    dates: list[datetime | None],
+    *,
+    threshold: float,
+    date_proximity_days: float,
+    vectorizer_kwargs: dict[str, Any] | None = None,
+) -> list[list[int]] | None:
+    """Index groups from :func:`tfidf_groups`, or None when the corpus is unusable."""
+    result = tfidf_groups(
+        texts,
+        dates,
+        threshold=threshold,
+        date_proximity_days=date_proximity_days,
+        vectorizer_kwargs=vectorizer_kwargs,
+    )
+    return result[0] if result is not None else None
 
 
 def run_clustering(db: Session) -> dict[str, int]:
@@ -171,42 +253,20 @@ def run_clustering(db: Session) -> dict[str, int]:
 
     logger.info("clustering: %d eligible articles", len(articles))
 
-    # Import here to avoid top-level sklearn cost at app startup
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
-
-    corpus = _build_corpus(articles)
-    vectorizer = TfidfVectorizer(
-        max_features=8000,
-        ngram_range=(1, 2),
-        stop_words="english",
-        min_df=1,
+    groups = group_texts(
+        _build_corpus(articles),
+        [a.published_at for a in articles],
+        threshold=SIMILARITY_THRESHOLD,
+        date_proximity_days=DATE_PROXIMITY_DAYS,
+        vectorizer_kwargs=_ARTICLE_VECTORIZER,
     )
-    try:
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-    except ValueError:
+    if groups is None:
         logger.warning("clustering: TF-IDF failed (empty corpus?)")
         return {"articles_processed": 0, "clusters_created": 0}
 
-    n = len(articles)
-    uf = _UnionFind(n)
-
-    # Compute similarity in chunks to avoid huge memory for large n
-    chunk = 64
-    for start in range(0, n, chunk):
-        end = min(start + chunk, n)
-        sims = cosine_similarity(tfidf_matrix[start:end], tfidf_matrix)  # (chunk, n)
-        for i_local, i_global in enumerate(range(start, end)):
-            for j in range(i_global + 1, n):
-                sim = float(sims[i_local, j])
-                if sim >= SIMILARITY_THRESHOLD and _dates_compatible(articles[i_global], articles[j]):
-                    uf.union(i_global, j)
-
-    groups = uf.groups()
     clusters_created = 0
 
-    for root, indices in groups.items():
+    for indices in groups:
         group_articles = [articles[i] for i in indices]
 
         # Determine cluster type

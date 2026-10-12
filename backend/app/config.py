@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     redis_url: SecretStr | None = None
     admin_api_key: SecretStr | None = None
+    # Trend Radar YouTube source; the source is skipped while this is unset
+    youtube_api_key: SecretStr | None = None
 
     # JWT auth
     jwt_secret: SecretStr | None = None

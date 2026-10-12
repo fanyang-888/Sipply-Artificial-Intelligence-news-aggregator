@@ -77,3 +77,71 @@ export type ApiArchiveClusterRow = {
   sourceCount: number;
   sourceNames: string[];
 };
+
+// ---------------------------------------------------------------------------
+// Trend Radar
+// ---------------------------------------------------------------------------
+
+export type RadarSourceKey = "hn" | "news" | "youtube";
+
+export type ApiRadarSignal = {
+  id: string;
+  title: string;
+  url: string;
+  discussionUrl: string | null;
+  source: RadarSourceKey;
+  kind: "hn_story" | "hn_ask" | "gnews_item" | "yt_video";
+  outlet: string | null;
+  author: string | null;
+  points: number | null;
+  numComments: number | null;
+  viewCount: number | null;
+  likeCount: number | null;
+  publishedAt: string | null;
+  topicId: string | null;
+};
+
+export type ApiRadarScoreComponents = {
+  volume: number;
+  engagement: number;
+  velocity: number;
+  recency: number;
+  relevance: number;
+};
+
+export type ApiRadarTopic = {
+  id: string;
+  label: string;
+  topicTag: string;
+  keywords: string[];
+  score: number;
+  components: ApiRadarScoreComponents;
+  /** Daily rate over the last 3 days ÷ daily rate before (1 = flat). */
+  velocity: number;
+  rising: boolean;
+  signalCount: number;
+  sourceCounts: Partial<Record<RadarSourceKey, number>>;
+  engagement: number;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  /** Signals per day across the radar window, oldest first. */
+  dailyCounts: number[];
+  signals: ApiRadarSignal[];
+  questions: ApiRadarSignal[];
+};
+
+export type ApiRadarSource = {
+  key: RadarSourceKey;
+  label: string;
+  active: boolean;
+  signalCount: number;
+  lastFetchedAt: string | null;
+};
+
+export type ApiRadar = {
+  generatedAt: string | null;
+  windowDays: number;
+  sources: ApiRadarSource[];
+  topics: ApiRadarTopic[];
+  questions: ApiRadarSignal[];
+};

@@ -30,6 +30,7 @@ Open [http://localhost:8000/health](http://localhost:8000/health).
 | `APP_ENV` | ✅ | `development` or `production` |
 | `SOURCE_FETCH_USER_AGENT` | ✅ | User-Agent sent when fetching articles |
 | `REDIS_URL` | optional | Redis cache (graceful no-op fallback if absent) |
+| `YOUTUBE_API_KEY` | optional | Trend Radar YouTube source (skipped while unset) |
 | `JWT_SECRET` | admin only | Signs admin session tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin only | Login credentials |
 
@@ -54,7 +55,13 @@ python -m scripts.update_cluster_status # new/escalating/peaking/ongoing/fading
 python -m scripts.dedup_clusters        # merge cross-day duplicate clusters
 python -m scripts.summarize             # GPT-4o summaries + audience blocks
 python -m scripts.translate_clusters    # EN → ZH for all cluster fields
+python -m scripts.ingest_signals        # Trend Radar: HN / Google News / YouTube signals
+python -m scripts.build_signal_topics   # Trend Radar: group + score signal topics
 ```
+
+The two Trend Radar stages are best-effort: if HN or Google News is down, the
+run records them as failed but the news pipeline still counts as a success.
+Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 
 ---
 
@@ -68,6 +75,7 @@ python -m scripts.translate_clusters    # EN → ZH for all cluster fields
 | GET | `/api/clusters` | Paginated cluster list |
 | GET | `/api/clusters/{id}` | Cluster with articles + related cluster ids |
 | GET | `/api/search` | Full-text search (clusters + articles) |
+| GET | `/api/radar` | Trend Radar topics, score breakdown, daily counts, top questions |
 | GET | `/api/pipeline-runs` | Pipeline run history |
 | POST | `/api/auth/login` | Get JWT token |
 | POST | `/api/admin/trigger-pipeline` | Trigger pipeline (JWT required) |
@@ -84,6 +92,8 @@ python -m scripts.translate_clusters    # EN → ZH for all cluster fields
 | `clusters` | Story clusters — summaries, takeaways, audience blocks (EN + ZH) |
 | `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written |
 | `pipeline_runs` | Run history with per-stage timing and status |
+| `signals` | Trend Radar posts/news/videos with live engagement numbers |
+| `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run |
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
 On Railway, migrations run automatically at startup in a background thread.
@@ -122,6 +132,7 @@ app/
 ├── models/         SQLAlchemy ORM models
 ├── schemas/        Pydantic request/response schemas
 ├── services/       Pipeline business logic
+├── signals/        Trend Radar sources (HN, Google News, YouTube) + topic scoring
 └── source_catalog/ trusted_sources.yaml
 
 migrations/         Alembic migration scripts
@@ -135,5 +146,7 @@ scripts/
 ├── dedup_clusters.py
 ├── summarize.py
 ├── translate_clusters.py
+├── ingest_signals.py           Trend Radar signals
+├── build_signal_topics.py      Trend Radar topics
 └── seed_sources.py
 ```

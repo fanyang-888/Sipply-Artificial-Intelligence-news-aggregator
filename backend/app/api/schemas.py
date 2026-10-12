@@ -138,3 +138,61 @@ class SearchResponse(BaseModel):
     query: str
     clusters: list[ArchiveClusterRow]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Trend Radar schemas
+# ---------------------------------------------------------------------------
+
+class RadarSignal(BaseModel):
+    id: str
+    title: str
+    url: str
+    discussionUrl: str | None = None
+    source: str  # "hn" | "news" | "youtube"
+    kind: str  # "hn_story" | "hn_ask" | "gnews_item" | "yt_video"
+    outlet: str | None = None
+    author: str | None = None
+    points: int | None = None
+    numComments: int | None = None
+    viewCount: int | None = None
+    likeCount: int | None = None
+    publishedAt: str | None
+    topicId: str | None = None
+
+
+class RadarTopic(BaseModel):
+    id: str
+    label: str
+    topicTag: str
+    keywords: list[str]
+    score: float
+    components: dict[str, float]
+    velocity: float
+    rising: bool
+    signalCount: int
+    sourceCounts: dict[str, int]
+    engagement: int
+    firstSeenAt: str | None
+    lastSeenAt: str | None
+    # Signals per day across the radar window, oldest first
+    dailyCounts: list[int]
+    signals: list[RadarSignal]
+    questions: list[RadarSignal]
+
+
+class RadarSource(BaseModel):
+    key: str
+    label: str
+    active: bool
+    signalCount: int
+    lastFetchedAt: str | None
+
+
+class RadarResponse(BaseModel):
+    generatedAt: str | None
+    windowDays: int
+    sources: list[RadarSource]
+    topics: list[RadarTopic]
+    # Question-shaped signals across all sources: what people are asking
+    questions: list[RadarSignal]

@@ -21,6 +21,8 @@ export function DocumentTitle() {
 
     if (pathname === "/archive") {
       pagePart = t.meta.titleArchive;
+    } else if (pathname === "/radar") {
+      pagePart = t.meta.titleRadar;
     } else if (pathname.startsWith("/cluster/")) {
       pagePart = t.meta.titleStoryFallback;
     }
