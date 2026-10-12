@@ -53,6 +53,7 @@ export function TopNav() {
   const { t } = useI18n();
   const pathname = usePathname();
   const onArchive = pathname === "/archive";
+  const onRadar = pathname === "/radar";
   const onDigest = pathname === "/";
 
   return (
@@ -89,6 +90,7 @@ export function TopNav() {
           {[
             { href: "/", label: t.nav.dailyDigest, active: onDigest },
             { href: "/archive", label: t.nav.archive, active: onArchive },
+            { href: "/radar", label: t.nav.radar, active: onRadar },
           ].map(({ href, label, active }) => (
             <Link
               key={href}
@@ -133,6 +135,20 @@ export function TopNav() {
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </Link>
+          {/* Trend Radar — mobile (the desktop nav links are hidden below sm) */}
+          <Link
+            href="/radar"
+            className="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg"
+            style={{
+              background: onRadar ? "var(--accent)" : "var(--surface)",
+              border: "1px solid var(--border)",
+            }}
+            aria-label={t.nav.radar}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke={onRadar ? "var(--bg)" : "var(--accent)"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+              <path d="M19.07 4.93A10 10 0 1 0 22 12" /><path d="M16.24 7.76A6 6 0 1 0 18 12" /><circle cx="12" cy="12" r="1.5" /><line x1="12" y1="12" x2="19" y2="5" />
             </svg>
           </Link>
           <ThemeToggle />

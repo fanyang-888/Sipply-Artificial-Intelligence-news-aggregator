@@ -7,6 +7,7 @@ import { apiFetch, apiPost } from "./client";
 import type {
   ApiCluster,
   ApiDigest,
+  ApiRadar,
   ApiSearchResponse,
 } from "./types";
 
@@ -67,6 +68,15 @@ export async function fetchSearch(params: {
 }
 
 // ---------------------------------------------------------------------------
+// Trend Radar
+// ---------------------------------------------------------------------------
+
+/** Server-side: cached for 5 minutes, the same lifetime as the API's own cache. */
+export async function fetchRadar(limit = 40): Promise<ApiRadar> {
+  return apiFetch<ApiRadar>(`/api/radar?limit=${limit}`, { next: { revalidate: 300 } });
+}
+
+// ---------------------------------------------------------------------------
 // Subscribe
 // ---------------------------------------------------------------------------
 
@@ -75,4 +85,4 @@ export async function postSubscribe(email: string): Promise<{ status: string }> 
 }
 
 // Re-export types for convenience
-export type { ApiCluster, ApiDigest, ApiSearchResponse } from "./types";
+export type { ApiCluster, ApiDigest, ApiRadar, ApiSearchResponse } from "./types";

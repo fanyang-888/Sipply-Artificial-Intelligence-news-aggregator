@@ -38,6 +38,11 @@ _PIPELINE_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_TIMEOUT_MINUTES", "90")) * 6
 _DIGEST_EMAIL_HOUR_UTC = int(os.getenv("DIGEST_EMAIL_HOUR_UTC", "20"))
 
 
+# Trend Radar stages depend on third-party APIs; their failure is recorded in
+# stage_results but doesn't mark the news pipeline as failed.
+_BEST_EFFORT_STAGES = frozenset({"ingest_signals", "build_signal_topics"})
+
+
 def _is_digest_email_run(started_at: datetime, triggered_by: str) -> bool:
     """Only the scheduled run at the email hour sends; manual runs never do unless forced."""
     return triggered_by == "cron" and started_at.hour == _DIGEST_EMAIL_HOUR_UTC
@@ -177,7 +182,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         return 1
 
     # ------------------------------------------------------------------
-    # Stages 2–8: synchronous
+    # Stages 2–10: synchronous
     # ------------------------------------------------------------------
     from scripts import (
         filter_articles,
@@ -187,6 +192,8 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         dedup_clusters,
         summarize,
         translate_clusters,
+        ingest_signals,
+        build_signal_topics,
         send_digest_email,
     )
 
@@ -198,6 +205,8 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         ("dedup_clusters",        lambda: dedup_clusters.main([])),
         ("summarize",             lambda: summarize.main([])),
         ("translate_clusters",    lambda: translate_clusters.main(["--batch-size", "50"])),
+        ("ingest_signals",        lambda: ingest_signals.main([])),
+        ("build_signal_topics",   lambda: build_signal_topics.main([])),
     ]
     if send_email:
         stages.append(("send_digest_email", lambda: send_digest_email.main([])))
@@ -209,7 +218,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
             "status": "ok" if ok else "failed",
             "elapsed_sec": round(elapsed, 2),
         }
-        if not ok:
+        if not ok and name not in _BEST_EFFORT_STAGES:
             failures.append(name)
             # Continue — later stages can still run on already-processed rows.
 

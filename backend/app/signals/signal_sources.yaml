@@ -1,0 +1,61 @@
+# Trend Radar signal sources — keyword searches over community + news sources.
+#
+# Every source is free: Hacker News (Algolia search API) and Google News RSS
+# need no key; YouTube needs YOUTUBE_API_KEY and is skipped without it.
+# The pipeline runs 4×/day; request counts below are per run.
+
+# Topics are built from signals published in the last N days
+window_days: 14
+# After the first (backfill) run, each run only re-fetches the last N days,
+# which also refreshes points/comments on recent posts
+refresh_overlap_days: 2
+
+hn:
+  enabled: true
+  min_points: 3          # stories below this are mostly unread
+  ask_min_points: 1      # Ask HN threads are the "what people ask" signal; keep more of them
+  hits_per_page: 100
+  max_pages: 5           # per query and tag; only the backfill run needs more than one
+  queries:               # ~1 request per query × 2 tags in a steady-state run
+    - LLM
+    - OpenAI
+    - Anthropic
+    - Claude
+    - Gemini
+    - GPT
+    - DeepSeek
+    - Llama
+    - Mistral
+    - Qwen
+    - AI agent
+    - AI coding
+    - AI regulation
+    - AI safety
+
+gnews:
+  enabled: true
+  hl: en-US
+  gl: US
+  ceid: "US:en"
+  queries:               # 1 request each; Google News returns at most 100 items per query
+    - OpenAI
+    - Anthropic
+    - Google Gemini
+    - DeepSeek
+    - AI agent
+    - AI regulation
+    - AI startup funding
+    - open source AI model
+
+youtube:
+  enabled: true          # still skipped while YOUTUBE_API_KEY is unset
+  # Daily quota is 10,000 units: search.list = 100, videos.list = 1.
+  # 4 runs × (5 searches + 5 stats calls) ≈ 2,020 units/day.
+  max_units_per_run: 600
+  max_results: 25
+  queries:
+    - AI agent
+    - Claude AI
+    - ChatGPT
+    - Gemini AI
+    - AI coding
