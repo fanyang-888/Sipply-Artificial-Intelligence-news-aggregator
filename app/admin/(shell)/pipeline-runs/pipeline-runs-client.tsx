@@ -19,7 +19,7 @@ type PipelineRun = {
 const STAGE_ORDER = [
   "ingest_full_articles","filter_articles","score_articles","cluster_articles",
   "update_cluster_status","dedup_clusters","summarize","translate_clusters",
-  "ingest_signals","build_signal_topics","send_digest_email",
+  "ingest_signals","build_signal_topics","translate_signals","send_digest_email",
 ];
 
 const STAGE_LABEL: Record<string, string> = {
@@ -27,6 +27,7 @@ const STAGE_LABEL: Record<string, string> = {
   cluster_articles: "Cluster", update_cluster_status: "Status", dedup_clusters: "Dedup",
   summarize: "Summarize", translate_clusters: "Translate clusters",
   ingest_signals: "Radar signals", build_signal_topics: "Radar topics",
+  translate_signals: "Radar 中文",
   send_digest_email: "Email",
 };
 

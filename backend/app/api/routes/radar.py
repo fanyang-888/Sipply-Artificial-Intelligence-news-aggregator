@@ -32,6 +32,7 @@ def _signal_out(s: Signal) -> RadarSignal:
     return RadarSignal(
         id=str(s.id),
         title=s.title,
+        titleZh=s.title_zh,
         url=s.url,
         discussionUrl=s.discussion_url,
         source=source_family(s.source_kind),
@@ -76,6 +77,8 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
             RadarTopic(
                 id=str(t.id),
                 label=t.label,
+                # The label is the lead post's title, so its translation is that post's
+                labelZh=next((s.title_zh for s in ranked if s.title == t.label and s.title_zh), None),
                 topicTag=t.topic_tag,
                 keywords=t.keywords or [],
                 score=t.score,
