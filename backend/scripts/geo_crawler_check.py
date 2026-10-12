@@ -112,6 +112,9 @@ def run(site: str, ua: str, api: str, story_id: str | None) -> dict[str, Any]:
         home.pop("_html")
         archive = page_report(client, f"{site}/archive")
         archive.pop("_html")
+        radar = page_report(client, f"{site}/radar")
+        radar_html = radar.pop("_html")
+        radar["topics_in_html"] = radar_html.count("<details")
         story = story_report(client, site, api, story_id)
 
         robots_status, robots = text_report(client, f"{site}/robots.txt")
@@ -123,6 +126,7 @@ def run(site: str, ua: str, api: str, story_id: str | None) -> dict[str, Any]:
         "user_agent": ua,
         "home": home,
         "archive": archive,
+        "radar": radar,
         "story": story,
         "robots_txt": {
             "status": robots_status,
@@ -141,7 +145,7 @@ def run(site: str, ua: str, api: str, story_id: str | None) -> dict[str, Any]:
 
 def print_report(r: dict[str, Any]) -> None:
     print(f"GEO crawler check — {r['site']}\nUA: {r['user_agent']}\n")
-    for name in ("home", "archive", "story"):
+    for name in ("home", "archive", "radar", "story"):
         p = r[name]
         print(f"[{name}] {p.get('url', '')}")
         for k, v in p.items():

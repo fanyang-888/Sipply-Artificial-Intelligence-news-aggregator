@@ -88,6 +88,7 @@ describe("buildLlmsTxt", () => {
     const txt = buildLlmsTxt({ date: "", featured: cluster("f", "Featured"), topClusters: [cluster("t1", "Second")] });
     expect(txt.startsWith("# Sipply\n\n> ")).toBe(true);
     expect(txt).toContain("- [Daily Digest](https://www.sipply.dev/)");
+    expect(txt).toContain("- [Trend Radar](https://www.sipply.dev/radar)");
     expect(txt).toContain("- [Featured](https://www.sipply.dev/cluster/f): A summary.");
     expect(txt).toContain("- [Second](https://www.sipply.dev/cluster/t1)");
     expect(txt).toContain("(https://www.sipply.dev/sitemap.xml)");

@@ -15,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   return [
     { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
+    { url: `${SITE_URL}/radar`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE_URL}/archive`, changeFrequency: "daily", priority: 0.6 },
     ...stories.map((s) => ({
       url: storyUrl(s.id),
