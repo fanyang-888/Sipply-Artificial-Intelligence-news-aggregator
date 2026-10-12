@@ -17,10 +17,12 @@ export function formatDigestDate(
   }).format(date);
 }
 
-export function formatShortDateTime(iso: string, lang: Lang = "en"): string {
+/** Pass a timeZone (e.g. "UTC") for output that must match between server and browser. */
+export function formatShortDateTime(iso: string, lang: Lang = "en", timeZone?: string): string {
   const date = new Date(iso);
   return new Intl.DateTimeFormat(localeForLang[lang], {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone,
   }).format(date);
 }

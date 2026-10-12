@@ -11,7 +11,7 @@ export const en: Translations = {
     mainAria: "Main",
   },
   meta: {
-    titleBrand: "Personal AI Intelligence",
+    titleBrand: "Sipply",
     titleHome: "Daily Digest",
     titleArchive: "Archive",
     titleStoryFallback: "Story",

@@ -6,8 +6,7 @@ import { useI18n } from "@/lib/i18n";
 
 /**
  * Sets document.title from the current route and language.
- * Cluster pages fall back to a generic title since the
- * per-entity title requires a loaded API response.
+ * Story pages are left alone: their headline title comes from the server.
  */
 export function DocumentTitle() {
   const pathname = usePathname();
@@ -15,6 +14,8 @@ export function DocumentTitle() {
 
   useEffect(() => {
     if (!i18nReady) return;
+    // Story pages keep the headline title rendered by the server (generateMetadata)
+    if (pathname.startsWith("/cluster/")) return;
 
     const brand = t.meta.titleBrand;
     let pagePart = t.meta.titleHome;

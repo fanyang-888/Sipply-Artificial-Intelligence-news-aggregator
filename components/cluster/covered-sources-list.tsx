@@ -2,7 +2,7 @@
 
 import { SectionTitle } from "@/components/shared/section-title";
 import { useI18n } from "@/lib/i18n";
-import { formatShortDateTime } from "@/lib/utils/format-date";
+import { LocalDateTime } from "@/components/shared/local-date-time";
 import type { Article } from "@/types/article";
 
 type CoveredSourcesListProps = {
@@ -30,7 +30,6 @@ export function CoveredSourcesList({ articles }: CoveredSourcesListProps) {
       <ul className="space-y-4 text-sm">
         {articles.map((art) => {
           const outlet = art.organizationName ?? "—";
-          const published = formatShortDateTime(art.publishedAt, lang);
 
           return (
             <li
@@ -50,7 +49,9 @@ export function CoveredSourcesList({ articles }: CoveredSourcesListProps) {
               </a>
               <p className="mt-2 leading-relaxed [color:var(--text-muted)]">{art.excerpt}</p>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs [color:var(--text-muted)]">
-                <span>{published}</span>
+                <span>
+                  <LocalDateTime iso={art.publishedAt} lang={lang} />
+                </span>
                 {art.credibilityLabel ? (
                   <span>
                     {t.cluster.credibilityPrefix} {art.credibilityLabel}

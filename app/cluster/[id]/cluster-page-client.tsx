@@ -9,20 +9,34 @@ import { useI18n } from "@/lib/i18n";
 import { fetchCluster } from "@/lib/api";
 import { apiClusterToCluster } from "@/lib/api/mappers";
 import { trackEvent } from "@/lib/api/track";
+import type { ApiCluster } from "@/lib/api/types";
 import type { Cluster } from "@/types/cluster";
 
-export function ClusterPageClient() {
+type ClusterPageClientProps = {
+  /** Server-fetched story; null when the server couldn't reach the API (fetch here instead). */
+  initial: { cluster: ApiCluster; related: ApiCluster[] } | null;
+};
+
+export function ClusterPageClient({ initial }: ClusterPageClientProps) {
   const { id } = useParams<{ id: string }>();
   const { t } = useI18n();
 
-  const [cluster, setCluster] = useState<Cluster | null>(null);
-  const [related, setRelated] = useState<Cluster[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cluster, setCluster] = useState<Cluster | null>(() =>
+    initial ? apiClusterToCluster(initial.cluster) : null,
+  );
+  const [related, setRelated] = useState<Cluster[]>(() =>
+    initial ? initial.related.map(apiClusterToCluster) : [],
+  );
+  const [loading, setLoading] = useState(initial === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     trackEvent("cluster_viewed", id);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || initial) return;
     let cancelled = false;
 
     async function load() {
@@ -55,7 +69,7 @@ export function ClusterPageClient() {
 
     load();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, initial]);
 
   if (loading) return <LoadingState layout="detail" />;
 
