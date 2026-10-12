@@ -1,13 +1,12 @@
 /**
- * Map API wire types (ApiCluster, ApiDraft, …) to the frontend domain types
- * (Cluster, Draft) used by existing components.
+ * Map API wire types (ApiCluster, …) to the frontend domain types
+ * (Cluster) used by existing components.
  */
 
 import type { Article } from "@/types/article";
 import type { Cluster } from "@/types/cluster";
-import type { Draft } from "@/types/draft";
 import type { LocalizedString } from "@/types/localized";
-import type { ApiArchiveClusterRow, ApiCluster, ApiDraft } from "./types";
+import type { ApiArchiveClusterRow, ApiCluster } from "./types";
 
 /** Build a bilingual LocalizedString. zh defaults to "" (falls back to en in pickLocalized). */
 function ls(en: string, zh?: string | null): LocalizedString {
@@ -53,7 +52,6 @@ export function apiClusterToCluster(c: ApiCluster): Cluster {
       organizationName: a.sourceName ?? undefined,
     })),
     relatedClusterIds: c.relatedClusterIds,
-    draftId: c.draftId ?? undefined,
   };
 }
 
@@ -84,33 +82,5 @@ export function archiveRowToCluster(
     audience: { pm: ls(""), developer: ls(""), studentJobSeeker: ls("") },
     articleIds: new Array<string>(Math.max(row.sourceCount, 0)).fill(""),
     relatedClusterIds: [],
-  };
-}
-
-export function apiDraftToDraft(d: ApiDraft): Draft {
-  const rawTakeaways = d.takeaways.slice(0, 3).map((t) => ls(t.en, t.zh));
-  while (rawTakeaways.length < 3) rawTakeaways.push(ls(""));
-  const takeaways = rawTakeaways as [LocalizedString, LocalizedString, LocalizedString];
-
-  return {
-    id: d.id,
-    clusterId: d.clusterId ?? "",
-    draftType: "linkedin",
-    title: ls(d.title.en, d.title.zh),
-    generatedAt: d.generatedAt ?? undefined,
-    hook: ls(d.hook.en, d.hook.zh),
-    summaryBlock: ls(d.summaryBlock.en, d.summaryBlock.zh),
-    takeaways,
-    careerInterpretationBlock: ls(
-      d.careerInterpretationBlock.en,
-      d.careerInterpretationBlock.zh,
-    ),
-    audienceWhyItMattersBlock: ls(
-      d.audienceWhyItMattersBlock.en,
-      d.audienceWhyItMattersBlock.zh,
-    ),
-    closingBlock: d.closingBlock
-      ? ls(d.closingBlock.en, d.closingBlock.zh)
-      : undefined,
   };
 }

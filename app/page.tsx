@@ -8,7 +8,6 @@ import { pickLocalized } from "@/lib/utils/localized-string";
 import { uiTextLinkPrimary } from "@/lib/ui/classes";
 import { FeaturedStoryCard } from "@/components/digest/featured-story-card";
 import { ClusterCard } from "@/components/digest/cluster-card";
-import { DraftPreviewCard } from "@/components/digest/draft-preview-card";
 import { DiscoverArchiveCta } from "@/components/digest/quick-archive-entry";
 import { AIBasicCard } from "@/components/digest/ai-basic-card";
 import { SubscribeBar } from "@/components/shared/subscribe-bar";
@@ -21,14 +20,13 @@ import { ErrorState } from "@/components/shared/error-state";
 import { MobileClusterRow } from "@/components/digest/mobile-cluster-row";
 import { RoleSelectorBanner } from "@/components/digest/role-selector-banner";
 import { TopicFilter } from "@/components/shared/topic-filter";
-import { fetchSearch, fetchTodayDigest, fetchTodayDraft } from "@/lib/api";
-import { apiClusterToCluster, apiDraftToDraft, archiveRowToCluster } from "@/lib/api/mappers";
+import { fetchSearch, fetchTodayDigest } from "@/lib/api";
+import { apiClusterToCluster, archiveRowToCluster } from "@/lib/api/mappers";
 import { getDeviceId } from "@/lib/api/track";
 import { topicTagsForGroup, type TopicGroupKey } from "@/lib/constants/topic-groups";
 import { readPreferredRole, usePreferredRole, type Role } from "@/lib/preferred-role";
 import { archiveTopicHref } from "@/lib/utils/archive-url";
 import type { Cluster } from "@/types/cluster";
-import type { Draft } from "@/types/draft";
 
 const CATEGORY_PAGE_SIZE = 12;
 
@@ -49,7 +47,6 @@ export default function HomePage() {
 
   const [featured, setFeatured] = useState<Cluster | null>(null);
   const [topClusters, setTopClusters] = useState<Cluster[]>([]);
-  const [draftOfDay, setDraftOfDay] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -105,17 +102,13 @@ export default function HomePage() {
 
         // Read the role directly: the role hook still reports null during hydration
         const role = readPreferredRole();
-        const [digest, draft] = await Promise.all([
-          fetchTodayDigest({ deviceId: getDeviceId(), role }),
-          fetchTodayDraft().catch(() => null),
-        ]);
+        const digest = await fetchTodayDigest({ deviceId: getDeviceId(), role });
 
         if (cancelled) return;
 
         setFeatured(digest.featured ? apiClusterToCluster(digest.featured) : null);
         setTopClusters(digest.topClusters.map(apiClusterToCluster));
         setPersonalized(Boolean(digest.personalized));
-        setDraftOfDay(draft ? apiDraftToDraft(draft) : null);
         rankedForRoleRef.current = role;
       } catch (e) {
         if (!cancelled) setError((e as Error).message ?? "Failed to load digest");
@@ -151,10 +144,6 @@ export default function HomePage() {
         <span className="[color:var(--accent)]">✦</span> {t.home.personalizedNote}
       </p>
     ) : null;
-
-  const relatedStoryTitle = draftOfDay && featured
-    ? pickLocalized(featured.title, lang)
-    : undefined;
 
   const topicOptions = Array.from(
     new Set(
@@ -268,43 +257,6 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* Draft banner */}
-        {draftOfDay ? (
-          <Link
-            href={`/draft/${draftOfDay.id}`}
-            className="mb-4 flex items-center gap-3 rounded-xl border border-l-[3px] p-3 no-underline"
-            style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              borderLeftColor: "var(--text-dim)",
-              display: "flex",
-            }}
-          >
-            <div className="flex-1 min-w-0">
-              <p
-                className="mb-1"
-                style={{
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 9,
-                  fontWeight: 500,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
-                }}
-              >
-                {t.nav.draftOfDay}
-              </p>
-              <p
-                className="truncate font-semibold leading-snug"
-                style={{ fontSize: 13, color: "var(--text)" }}
-              >
-                {pickLocalized(draftOfDay.title, lang)}
-              </p>
-            </div>
-            <span style={{ color: "var(--text-dim)", fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
-          </Link>
-        ) : null}
-
         {/* Category bar + more stories */}
         {topClusters.length > 1 ? (
           <>
@@ -356,33 +308,15 @@ export default function HomePage() {
       {/* ── Desktop layout (sm+) ── */}
       <div className="hidden sm:block">
         <RoleSelectorBanner />
-        <div className="mb-10 grid gap-8 lg:grid-cols-[1fr_min(18rem,34%)] lg:items-start">
-          <div className="min-w-0">
-            {featured ? (
-              <FeaturedStoryCard cluster={featured} />
-            ) : (
-              <EmptyState
-                title={t.home.emptyFeaturedTitle}
-                description={t.home.emptyFeaturedDesc}
-              />
-            )}
-          </div>
-          <div className="min-w-0">
-            {draftOfDay ? (
-              <DraftPreviewCard
-                draft={draftOfDay}
-                relatedStoryTitle={relatedStoryTitle}
-                variant="aside"
-              />
-            ) : (
-              <div id="draft-of-the-day" className="scroll-mt-24">
-                <EmptyState
-                  title={t.home.emptyDraftTitle}
-                  description={t.home.emptyDraftDesc}
-                />
-              </div>
-            )}
-          </div>
+        <div className="mb-10">
+          {featured ? (
+            <FeaturedStoryCard cluster={featured} />
+          ) : (
+            <EmptyState
+              title={t.home.emptyFeaturedTitle}
+              description={t.home.emptyFeaturedDesc}
+            />
+          )}
         </div>
 
         <SectionBlock>

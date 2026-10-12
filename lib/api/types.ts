@@ -1,7 +1,7 @@
 /**
  * TypeScript types matching the FastAPI response schemas.
  * These are API wire types — components use the existing domain types
- * (Cluster, Draft) after mapping.
+ * (Cluster) after mapping.
  */
 
 import type { LocalizedString } from "@/types/localized";
@@ -43,7 +43,6 @@ export type ApiCluster = {
   articleIds: string[];
   articles: ApiArticleInCluster[];
   relatedClusterIds: string[];
-  draftId: string | null;
   articleCount: number;
   sourceCount: number;
 };
@@ -52,25 +51,8 @@ export type ApiDigest = {
   date: string;
   featured: ApiCluster | null;
   topClusters: ApiCluster[];
-  draftId: string | null;
   /** True when topClusters were re-ordered for this reader. Absent from older cached payloads. */
   personalized?: boolean;
-};
-
-export type ApiDraft = {
-  id: string;
-  clusterId: string | null;
-  draftType: string;
-  title: ApiLocalizedStr;
-  generatedAt: string | null;
-  hook: ApiLocalizedStr;
-  summaryBlock: ApiLocalizedStr;
-  takeaways: ApiLocalizedStr[];
-  careerInterpretationBlock: ApiLocalizedStr;
-  audienceWhyItMattersBlock: ApiLocalizedStr;
-  closingBlock: ApiLocalizedStr | null;
-  fullText: string;
-  role: string | null;
 };
 
 export type ApiSearchResponse = {

@@ -58,12 +58,11 @@ railway run --service personal-ai-intelligence-tool-backend python -m scripts.se
 echo "==> Ingesting articles..."
 railway run --service personal-ai-intelligence-tool-backend python -m scripts.ingest_full_articles
 
-echo "==> Filter / score / cluster / summarize / draft..."
+echo "==> Filter / score / cluster / summarize..."
 railway run --service personal-ai-intelligence-tool-backend python -m scripts.filter_articles
 railway run --service personal-ai-intelligence-tool-backend python -m scripts.score_articles
 railway run --service personal-ai-intelligence-tool-backend python -m scripts.cluster_articles
 railway run --service personal-ai-intelligence-tool-backend python -m scripts.summarize
-railway run --service personal-ai-intelligence-tool-backend python -m scripts.generate_draft
 
 echo ""
 echo "==> All done! Your Railway service URL:"

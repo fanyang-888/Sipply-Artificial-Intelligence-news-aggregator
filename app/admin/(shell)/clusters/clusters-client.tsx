@@ -18,7 +18,6 @@ type ClusterRow = {
   lastSeenAt: string | null;
   articleCount: number;
   sourceCount: number;
-  draftId: string | null;
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
@@ -134,11 +133,6 @@ export function ClustersClient() {
                           <Link href={`/cluster/${c.id}`} target="_blank" className="text-xs" style={{ color: "var(--sp-accent-mid)" }}>
                             {zh ? "查看" : "View"}
                           </Link>
-                          {c.draftId && (
-                            <Link href={`/admin/drafts?highlight=${c.draftId}`} className="text-xs text-zinc-400 hover:text-zinc-600">
-                              Draft
-                            </Link>
-                          )}
                         </div>
                       </td>
                     </tr>

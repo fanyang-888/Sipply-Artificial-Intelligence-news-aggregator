@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // The LinkedIn-draft feature was retired; old shared links land on the digest
+  async redirects() {
+    return [
+      { source: "/draft/:path*", destination: "/", permanent: true },
+      { source: "/admin/drafts", destination: "/admin", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

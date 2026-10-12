@@ -5,8 +5,6 @@ export const en: Translations = {
     dailyDigest: "Daily Digest",
     dailyDigestShort: "Digest",
     archive: "Archive",
-    draftOfDay: "Draft of the Day",
-    draftOfDayShort: "Draft",
     searchPlaceholder: "Search archive…",
     searchAria: "Site search",
     mainAria: "Main",
@@ -16,7 +14,6 @@ export const en: Translations = {
     titleHome: "Daily Digest",
     titleArchive: "Archive",
     titleStoryFallback: "Story",
-    titleDraftFallback: "Draft",
   },
   home: {
     title: "Daily AI Digest",
@@ -24,8 +21,6 @@ export const en: Translations = {
       "Top ranked AI updates with cross-source synthesis and practical context",
     emptyFeaturedTitle: "No featured story",
     emptyFeaturedDesc: "Today's featured story will appear here once the pipeline has run.",
-    emptyDraftTitle: "Draft coming soon",
-    emptyDraftDesc: "The draft of the day will be ready after today's pipeline completes.",
     topClusters: "Top Story Clusters",
     viewAllInsights: "View all daily insights",
     categoryBarAria: "Browse by category",
@@ -41,8 +36,6 @@ export const en: Translations = {
     sourcesPrefix: "Sources:",
     whyItMattersPrefix: "Why it matters:",
     viewStory: "View Story",
-    openDraft: "Open Draft",
-    noDraftLinked: "No draft linked for this cluster.",
     featuredFallback: "Featured",
     formatMoreChannelTypesHidden: (n) =>
       `${n} more ingest channel types not shown`,
@@ -51,11 +44,6 @@ export const en: Translations = {
     srOnlyRelevance: "Relevance",
     formatChannelBadgeAria: (c, label) =>
       `${c === 1 ? "1 source" : `${c} sources`} from ${label}`,
-  },
-  draftPreview: {
-    sectionTitle: "Draft of the Day",
-    relatedStory: "Related story:",
-    openFullDraft: "Open Full Draft",
   },
   discover: {
     title: "Discover in the Archive",
@@ -106,10 +94,6 @@ export const en: Translations = {
     audienceStudent: "Students & job seekers",
     coveredSources: "Covered sources",
     relatedStories: "Related stories",
-    draftSectionTitle: "Draft",
-    draftSectionLead:
-      "Open the linked draft for a shareable brief and career-oriented notes.",
-    openDraft: "Open draft",
     bilingualAssistTrustNote:
       "Chinese text is provided as reading assistance. Refer to the original language for exact wording.",
     sourceOriginalPreservedNote:
@@ -121,11 +105,6 @@ export const en: Translations = {
     headerLastUpdated: "Last updated",
     emptyCoveredSources: "No linked articles in the mock catalog for this cluster.",
     credibilityPrefix: "Credibility:",
-    noDraftLinked:
-      "There is no linked draft for this cluster yet. You can still use the summary and takeaways above.",
-    draftProminentLead:
-      "You have a draft for this cluster—open it to turn this signal into a shareable brief or post.",
-    draftCompactLead: "Continue your draft while you read.",
     breadcrumbAria: "Breadcrumb",
     backToDigest: "Back to Daily Digest",
     nextStory: "Next story",
@@ -137,54 +116,10 @@ export const en: Translations = {
       `${outlets} outlet${outlets === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"} — narrow sourcing (verify claims carefully)`,
     allCaughtUpToday: "You're all caught up for today.",
     caughtUpViewArchive: "View Archive",
-    draftStickyBadge: "Follow draft",
-  },
-  draft: {
-    roleGeneral: "General",
-    draftOfDayPageTitle: "Draft of the Day",
-    draftForStoryPageTitle: (storyTitle) => `Draft for ${storyTitle}`,
-    workingTitleLabel: "Working title",
-    linkedInDraftType: "LinkedIn-style draft",
-    generatedPrefix: "Generated",
-    relatedStorySection: "Related story",
-    viewSourceStory: "View source story",
-    backToStory: "Back to story",
-    clusterNotInCatalog:
-      "This story id is not in the local mock catalog. You can still open the cluster route or return to the digest.",
-    expandRelatedStory: "Show story summary",
-    collapseRelatedStory: "Hide story summary",
-    sectionHook: "Hook",
-    sectionSummary: "Concise update",
-    takeawaysIntro: "Three takeaways",
-    sectionCareerAngle: "Career angle",
-    sectionWhyItMatters: "Why this matters",
-    sectionClosing: "Closing",
-    suggestedHashtags: "Suggested hashtags",
-    copyDraft: "Copy draft",
-    copied: "Copied",
-    shareOnLinkedIn: "Share on LinkedIn",
-    shareOnX: "Post on X",
-    regenerate: "Regenerate draft",
-    formatVariantHint: (variant, total) =>
-      `Variant ${variant} of ${total} (local mock)`,
-    regenerateNoVariants:
-      "No alternate mock variant—content unchanged (local preview only).",
-    copyUnavailable: "Copy unavailable in this browser context.",
-    formatDraftCharacterCount: (current, limit) =>
-      `${current.toLocaleString()} / ${limit.toLocaleString()} characters`,
-    characterCountOverSoftLimit:
-      "Above a comfortable single-post length for many networks—consider trimming.",
-    notesTitle: "Notes",
-    notesBody:
-      "Editing in-app is out of scope for this sprint. Copy the draft and refine in your notes app or doc, then save pointers back in your own workflow.",
-    bilingualAssistTrustNote:
-      "Chinese text is provided as reading assistance. Refer to the original language for exact wording.",
   },
   notFound: {
     clusterTitle: "Story cluster not found",
     clusterMessage: "That cluster id is not in the local mock catalog.",
-    draftTitle: "Draft not found",
-    draftMessage: "That draft id is not in the local mock catalog.",
     backToDigest: "Back to Daily Digest",
   },
   error: {

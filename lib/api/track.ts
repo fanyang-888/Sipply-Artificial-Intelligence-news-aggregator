@@ -7,12 +7,7 @@
  * to an individual browser for retention metrics and personalization.
  */
 
-type EventType =
-  | "draft_copied"
-  | "draft_shared_linkedin"
-  | "draft_shared_x"
-  | "cluster_viewed"
-  | "draft_viewed";
+type EventType = "cluster_viewed";
 
 const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")) ?? "http://localhost:8000";

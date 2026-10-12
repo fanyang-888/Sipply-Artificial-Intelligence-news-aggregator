@@ -21,7 +21,6 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.models.article import Article
 from app.models.cluster import Cluster
-from app.models.draft import Draft
 from app.models.event import Event
 from app.models.pipeline_run import PipelineRun
 from app.models.source import Source
@@ -77,7 +76,6 @@ class StatsResponse(BaseModel):
     clusters_last_7d: int
     total_sources: int
     active_sources: int
-    total_drafts: int
     last_pipeline_run: PipelineRunSummary | None
 
 
@@ -119,7 +117,6 @@ def get_stats(
         db.scalar(select(func.count()).select_from(Source).where(Source.is_active.is_(True)))
         or 0
     )
-    total_drafts = db.scalar(select(func.count()).select_from(Draft)) or 0
 
     last_run = db.execute(
         select(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(1)
@@ -144,7 +141,6 @@ def get_stats(
         clusters_last_7d=clusters_last_7d,
         total_sources=total_sources,
         active_sources=active_sources,
-        total_drafts=total_drafts,
         last_pipeline_run=last_run_summary,
     )
 
@@ -226,10 +222,7 @@ def get_event_stats(
         client = _get_client()
         if client is None:
             return []
-        event_types = [
-            "draft_copied", "draft_shared_linkedin", "draft_shared_x",
-            "cluster_viewed", "draft_viewed",
-        ]
+        event_types = ["cluster_viewed"]
         today = date.today()
         for etype in event_types:
             # Top entities by lifetime count
@@ -255,7 +248,7 @@ def get_event_stats(
 # Product metrics — North Star (Weekly Engaged Readers) + retention
 # ---------------------------------------------------------------------------
 
-_READ_TYPES = ("cluster_viewed", "draft_viewed")
+_READ_TYPES = ("cluster_viewed",)
 
 
 class DailyActive(BaseModel):

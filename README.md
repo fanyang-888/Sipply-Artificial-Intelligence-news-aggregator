@@ -7,7 +7,7 @@
 **Solution:** A production pipeline that ingests, scores, clusters, and summarises AI news into a role-personalised daily brief — automatically, bilingually, at under $1/day.
 
 - Replaced LLM-based scoring with a trained TF-IDF + Ridge model (422 GPT-labelled examples, Pearson r=0.75), cutting per-run inference cost to $0 while covering 44% of the relevance signal — enabling the system to scale to any volume without API cost growth
-- Shipped a complete 11-stage production pipeline (ingest → filter → ML score → cluster → cross-day dedup → summarise → translate → draft → email) running daily on Railway, serving real users a bilingual EN/ZH digest with zero manual intervention
+- Shipped a complete 9-stage production pipeline (ingest → filter → ML score → cluster → status → cross-day dedup → summarise → translate → email) running daily on Railway, serving real users a bilingual EN/ZH digest with zero manual intervention
 - Fine-tuned Qwen2.5-1.5B via LoRA on 780 knowledge-distilled GPT-4o-mini examples (ROUGE-L = 0.37), validating a path to eliminate LLM API dependency entirely at production scale
 
 **Live demo:** [sipply.dev](https://sipply.dev)
@@ -36,16 +36,14 @@ So I built it — including the ingestion pipeline, the ML scoring model, the LL
 | ML signal scoring | Composite 0-100 score: rule-based dimensions (recency, source authority) + TF-IDF Ridge model predicting audience fit, practical relevance, and novelty |
 | Story clustering | TF-IDF + cosine similarity groups related articles into story threads |
 | Cross-day dedup | Stories that evolve across days are merged, not duplicated |
-| Draft generation | GPT-4o-mini writes a LinkedIn-style newsletter draft for the top story |
 | Role personalisation | PM / Developer / Student lenses with tailored "why it matters" context |
-| Bilingual | Every field (title, summary, takeaways, draft) auto-translated to Chinese |
+| Bilingual | Every field (title, summary, takeaways, why it matters) auto-translated to Chinese |
 | Email digest | Daily digest sent to subscribers via Resend; subscribe bar on homepage |
 | Topic filter | Client-side tag filter on homepage; preferences saved to localStorage |
-| Social sharing | One-click LinkedIn and X/Twitter share from any draft page |
 | Dark / light mode | Theme toggle with localStorage persistence; all colours via CSS custom properties |
 | Recency ranking | Digest ranks stories by `score × e^(-0.15 × age_days)` — fresh beats stale |
 | Full-text search | Archive search across all clusters and articles |
-| SEO / Open Graph | Per-page `<title>` and `og:` tags for cluster and draft pages |
+| SEO / Open Graph | Per-page `<title>` and `og:` tags for story pages |
 
 ---
 
@@ -81,16 +79,14 @@ flowchart LR
         direction TB
         S7["7 · Summarize\nGPT-4o-mini\n3-role context"]
         S8["8 · Translate\nClusters to ZH"]
-        S9["9 · Draft\nLinkedIn style\nPM / Dev / Student"]
-        S10["10 · Translate\nDrafts to ZH"]
-        S7 --> S8 --> S9 --> S10
+        S7 --> S8
     end
 
     subgraph DELIVER["Delivery"]
         direction TB
-        S11["11 · Email\nResend API\nto subscribers"]
+        S9["9 · Email\nResend API\nto subscribers"]
         CACHE["Redis cache bust\nai_tool:*"]
-        S11 --> CACHE
+        S9 --> CACHE
     end
 
     SRC --> COLLECT --> SCORE --> GENERATE --> DELIVER
@@ -115,7 +111,7 @@ Each stage is a standalone script in `backend/scripts/`; `run_pipeline.py` orche
 | Cache | Redis | Simple TTL cache; graceful fallback if unavailable |
 | ML scoring | scikit-learn (TF-IDF + Ridge) | Predicts 3 relevance dimensions; trained on 422 GPT-labeled examples |
 | LLM fine-tune | Qwen2.5-1.5B + LoRA | Fine-tuned on 780 summarization examples; ROUGE-L=0.37 vs GPT-4o-mini |
-| AI | OpenAI GPT-4o-mini | summarise · translate · draft (cluster-level only) |
+| AI | OpenAI GPT-4o-mini | summarise · translate (cluster-level only) |
 | Email | Resend | Transactional digest delivery to subscribers |
 | Deployment | Vercel + Railway | Frontend CDN + managed Postgres/Redis/cron |
 | i18n | Custom `useI18n()` hook | Zero-dependency EN/ZH with type-safe translation keys |
@@ -219,8 +215,8 @@ python -m scripts.export_finetune_data --output-dir data/
 ## Project layout
 
 ```
-├── app/                    Next.js pages (digest, cluster, draft, archive, admin)
-├── components/             UI components (digest cards, cluster view, draft view...)
+├── app/                    Next.js pages (digest, cluster, archive, admin)
+├── components/             UI components (digest cards, cluster view, archive...)
 ├── lib/
 │   ├── api/                Type-safe backend API client
 │   ├── i18n/               EN/ZH locale strings with typed keys
@@ -282,7 +278,6 @@ python -m scripts.filter_articles
 python -m scripts.score_articles
 python -m scripts.cluster_articles
 python -m scripts.summarize
-python -m scripts.generate_draft
 ```
 
 ### Tests
@@ -323,7 +318,7 @@ Required environment variables:
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql+psycopg://...`) |
-| `OPENAI_API_KEY` | GPT-4o-mini — summarise, translate, draft |
+| `OPENAI_API_KEY` | GPT-4o-mini — summarise, translate |
 | `RESEND_API_KEY` | Email delivery for daily digest |
 | `REDIS_URL` | Auto-set by Railway Redis plugin |
 | `JWT_SECRET` | Signs admin JWT tokens |
@@ -342,7 +337,7 @@ NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
 ## API highlights
 
 ```bash
-# Today's digest (featured story + top clusters + draft)
+# Today's digest (featured story + top clusters); add ?device_id=&role= to re-rank per reader
 GET /api/digest/today
 
 # All clusters (paginated, ranked by recency-weighted score)
@@ -350,11 +345,6 @@ GET /api/clusters?limit=20&offset=0
 
 # Single cluster with source articles + related stories
 GET /api/clusters/{id}
-
-# Role-personalised draft
-GET /api/drafts/{id}?role=pm          # PM lens
-GET /api/drafts/{id}?role=developer   # Engineer lens
-GET /api/drafts/{id}?role=student     # Student / job-seeker lens
 
 # Full-text search
 GET /api/search?q=GPT-5&type=cluster
@@ -374,7 +364,7 @@ GET /docs
 TF-IDF + cosine similarity runs locally with no API calls, adds zero cost per run, and works well on the short article excerpts we ingest. Vector embeddings would improve recall across semantically similar but lexically different articles — a natural next upgrade.
 
 **Why GPT-4o-mini instead of a larger model?**
-The pipeline runs daily across 13 sources. Filtering and scoring are handled by rule-based logic and a local ML model (zero API cost). GPT-4o-mini is only used for summarisation, translation, and draft generation — keeping total cost under $1/day.
+The pipeline runs daily across 13 sources. Filtering and scoring are handled by rule-based logic and a local ML model (zero API cost). GPT-4o-mini is only used for summarisation and translation — keeping total cost under $1/day.
 
 **Why Redis cache with 5-min TTL?**
 The digest and cluster list endpoints are hit on every page load. Caching avoids repeated Postgres aggregation queries. The pipeline explicitly busts the cache (`ai_tool:*`) after every successful run so stale data never persists beyond one cycle.

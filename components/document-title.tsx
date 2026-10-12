@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 
 /**
  * Sets document.title from the current route and language.
- * Cluster and draft pages fall back to generic titles since the
+ * Cluster pages fall back to a generic title since the
  * per-entity title requires a loaded API response.
  */
 export function DocumentTitle() {
@@ -23,8 +23,6 @@ export function DocumentTitle() {
       pagePart = t.meta.titleArchive;
     } else if (pathname.startsWith("/cluster/")) {
       pagePart = t.meta.titleStoryFallback;
-    } else if (pathname.startsWith("/draft/")) {
-      pagePart = t.meta.titleDraftFallback;
     }
 
     document.title = `${pagePart} | ${brand}`;

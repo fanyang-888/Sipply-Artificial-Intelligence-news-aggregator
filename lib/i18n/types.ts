@@ -9,8 +9,6 @@ export type Translations = {
     dailyDigest: string;
     dailyDigestShort: string;
     archive: string;
-    draftOfDay: string;
-    draftOfDayShort: string;
     searchPlaceholder: string;
     searchAria: string;
     mainAria: string;
@@ -21,15 +19,12 @@ export type Translations = {
     titleHome: string;
     titleArchive: string;
     titleStoryFallback: string;
-    titleDraftFallback: string;
   };
   home: {
     title: string;
     subtitle: string;
     emptyFeaturedTitle: string;
     emptyFeaturedDesc: string;
-    emptyDraftTitle: string;
-    emptyDraftDesc: string;
     topClusters: string;
     viewAllInsights: string;
     categoryBarAria: string;
@@ -43,8 +38,6 @@ export type Translations = {
     sourcesPrefix: string;
     whyItMattersPrefix: string;
     viewStory: string;
-    openDraft: string;
-    noDraftLinked: string;
     featuredFallback: string;
     formatMoreChannelTypesHidden: (extraTypeCount: number) => string;
     srOnlySources: string;
@@ -53,11 +46,6 @@ export type Translations = {
     formatChannelBadgeAria: (count: number, channelLabel: string) => string;
   };
   formatSourceCount: (n: number) => string;
-  draftPreview: {
-    sectionTitle: string;
-    relatedStory: string;
-    openFullDraft: string;
-  };
   discover: {
     title: string;
     bodyBeforeEmphasis: string;
@@ -99,9 +87,6 @@ export type Translations = {
     audienceStudent: string;
     coveredSources: string;
     relatedStories: string;
-    draftSectionTitle: string;
-    draftSectionLead: string;
-    openDraft: string;
     /** Shown in Chinese mode above product-structured story body (bilingual assist disclaimer). */
     bilingualAssistTrustNote: string;
     /** Under covered sources: originals stay in source language. */
@@ -113,9 +98,6 @@ export type Translations = {
     headerLastUpdated: string;
     emptyCoveredSources: string;
     credibilityPrefix: string;
-    noDraftLinked: string;
-    draftProminentLead: string;
-    draftCompactLead: string;
     breadcrumbAria: string;
     backToDigest: string;
     nextStory: string;
@@ -124,48 +106,10 @@ export type Translations = {
     formatSourceDiversityNarrow: (outlets: number, articles: number) => string;
     allCaughtUpToday: string;
     caughtUpViewArchive: string;
-    draftStickyBadge: string;
-  };
-  draft: {
-    roleGeneral: string;
-    draftOfDayPageTitle: string;
-    draftForStoryPageTitle: (storyTitle: string) => string;
-    workingTitleLabel: string;
-    linkedInDraftType: string;
-    generatedPrefix: string;
-    relatedStorySection: string;
-    viewSourceStory: string;
-    backToStory: string;
-    clusterNotInCatalog: string;
-    expandRelatedStory: string;
-    collapseRelatedStory: string;
-    sectionHook: string;
-    sectionSummary: string;
-    takeawaysIntro: string;
-    sectionCareerAngle: string;
-    sectionWhyItMatters: string;
-    sectionClosing: string;
-    suggestedHashtags: string;
-    copyDraft: string;
-    copied: string;
-    shareOnLinkedIn: string;
-    shareOnX: string;
-    regenerate: string;
-    formatVariantHint: (variant: number, total: number) => string;
-    regenerateNoVariants: string;
-    copyUnavailable: string;
-    formatDraftCharacterCount: (current: number, limit: number) => string;
-    characterCountOverSoftLimit: string;
-    notesTitle: string;
-    notesBody: string;
-    /** Same trust line as cluster page when draft UI is in Chinese mode. */
-    bilingualAssistTrustNote: string;
   };
   notFound: {
     clusterTitle: string;
     clusterMessage: string;
-    draftTitle: string;
-    draftMessage: string;
     backToDigest: string;
   };
   error: {

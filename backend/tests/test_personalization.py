@@ -114,7 +114,7 @@ def test_reading_history_counts_distinct_recent_stories(db, make_cluster, make_e
     make_event("me", str(funding.id))            # re-reading the same story counts once
     make_event("me", str(research.id))
     make_event("me", str(old.id), days_ago=45)    # outside the history window
-    make_event("me", str(other.id), type_="draft_viewed")  # not a story view
+    make_event("me", str(other.id), type_="other_event")  # not a story view
     make_event("me", "not-a-uuid")                # client-supplied garbage
     make_event("someone-else", str(other.id))
 
