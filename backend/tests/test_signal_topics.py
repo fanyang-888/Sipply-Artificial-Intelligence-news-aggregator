@@ -282,3 +282,120 @@ def test_run_ingest_end_to_end_with_mocked_sources(db):
     row = db.execute(select(Signal)).scalar_one()
     assert (row.source_kind, row.is_question) == ("hn_ask", True)
     assert db.execute(select(func.count()).select_from(Signal)).scalar_one() == 1
+
+
+# ---------------------------------------------------------------------------
+# Chinese titles (translate_signals)
+# ---------------------------------------------------------------------------
+
+class FakeOpenAI:
+    """Stands in for openai.OpenAI: answers with "<zh>title" for every id it was sent."""
+
+    def __init__(self, drop_ids=()):
+        self.calls: list[list[dict]] = []
+        self.drop_ids = set(drop_ids)
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    def _create(self, **kw):
+        import json
+
+        sent = json.loads(kw["messages"][1]["content"])
+        self.calls.append(sent)
+        rows = [{"id": r["id"], "zh": f"<zh>{r['en']}"} for r in sent if r["id"] not in self.drop_ids]
+        message = SimpleNamespace(content=json.dumps({"translations": rows}))
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=message)],
+            usage=SimpleNamespace(prompt_tokens=100, completion_tokens=200),
+        )
+
+
+def test_translate_batch_maps_answers_back_by_id():
+    from app.signals.translate import translate_batch
+
+    zh, p, c = translate_batch(FakeOpenAI(drop_ids={1}), ["Claude Haiku 5.5", "Missing one", "Ask HN: Why?"])
+    assert zh == ["<zh>Claude Haiku 5.5", None, "<zh>Ask HN: Why?"]
+    assert (p, c) == (100, 200)
+
+
+def test_run_translate_only_visible_untranslated_signals(db):
+    from sqlalchemy import delete, select
+
+    from app.models.signal import Signal
+    from app.signals.store import upsert_signals
+    from app.signals.translate import run_translate
+
+    db.execute(delete(Signal))
+    upsert_signals(
+        db,
+        [
+            item("t1", "OpenAI fires three safety researchers", days=0.5),
+            item("t2", "OpenAI fires safety researchers over leak", days=1.0),
+            item("q1", "How do you evaluate coding agents?", days=1.0, points=1, comments=0),
+            item("x1", "Lonely post nobody sees", days=1.0, points=1, comments=0),
+            item("old", "Why so old?", days=40),
+        ],
+        now=NOW,
+    )
+    T.build_topics(db, now=NOW, relevance_fn=lambda title: 50.0)
+
+    fake = FakeOpenAI()
+    summary = run_translate(db, fake, now=NOW, window_days=14, batch_size=2)
+    rows = {s.external_id: s.title_zh for s in db.execute(select(Signal)).scalars()}
+    # topic members + the question; not the loner, not the out-of-window question
+    assert rows == {
+        "t1": "<zh>OpenAI fires three safety researchers",
+        "t2": "<zh>OpenAI fires safety researchers over leak",
+        "q1": "<zh>How do you evaluate coding agents?",
+        "x1": None,
+        "old": None,
+    }
+    assert summary["translated"] == 3 and summary["failed"] == 0
+    assert [len(c) for c in fake.calls] == [2, 1]  # batches of 2
+    assert summary["cost_usd"] > 0
+
+    # Already-translated titles are never sent again
+    again = FakeOpenAI()
+    assert run_translate(db, again, now=NOW, window_days=14)["pending"] == 0
+    assert again.calls == []
+
+
+def test_upsert_resets_translation_only_when_title_changes(db):
+    from sqlalchemy import select
+
+    from app.models.signal import Signal
+    from app.signals.store import upsert_signals
+
+    upsert_signals(db, [item("z1", "Original title")], now=NOW)
+    row = db.execute(select(Signal).where(Signal.external_id == "z1")).scalar_one()
+    row.title_zh = "原标题"
+    db.flush()
+
+    upsert_signals(db, [item("z1", "Original title", points=50)], now=NOW)
+    db.refresh(row)
+    assert row.title_zh == "原标题"  # same title, new points: keep
+
+    upsert_signals(db, [item("z1", "Edited title")], now=NOW)
+    db.refresh(row)
+    assert row.title_zh is None  # title changed: translate again
+
+
+def test_run_translate_stops_at_the_first_api_error(db):
+    from sqlalchemy import delete
+
+    from app.models.signal import Signal
+    from app.signals.store import upsert_signals
+    from app.signals.translate import run_translate
+
+    db.execute(delete(Signal))
+    upsert_signals(db, [item(f"e{i}", f"How do agents work, part {i}?") for i in range(5)], now=NOW)
+
+    calls = []
+
+    def boom(**kw):
+        calls.append(kw)
+        raise RuntimeError("401 invalid_api_key")
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=boom)))
+    summary = run_translate(db, client, now=NOW, window_days=14, batch_size=2)
+    assert len(calls) == 1  # no retry storm across the other batches
+    assert summary["translated"] == 0 and summary["failed"] == 5

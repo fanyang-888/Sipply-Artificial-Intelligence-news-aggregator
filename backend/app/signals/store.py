@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -58,7 +58,13 @@ def upsert_signals(db: Session, items: list[SignalItem], *, now: datetime | None
         stmt = insert(Signal).values(values[start : start + 500])
         stmt = stmt.on_conflict_do_update(
             constraint="uq_signals_source_kind_external_id",
-            set_={col: stmt.excluded[col] for col in (*_REFRESHED, "fetched_at")},
+            set_={
+                **{col: stmt.excluded[col] for col in (*_REFRESHED, "fetched_at")},
+                # A changed title needs a fresh translation
+                "title_zh": case(
+                    (Signal.title == stmt.excluded.title, Signal.title_zh), else_=None
+                ),
+            },
         )
         db.execute(stmt)
     # Every row is either inserted or updated (rowcount is unreliable for multi-VALUES)

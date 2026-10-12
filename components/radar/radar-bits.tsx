@@ -2,7 +2,7 @@
 
 import type { ApiRadarScoreComponents, ApiRadarSignal } from "@/lib/api/types";
 import { useI18n, type Translations } from "@/lib/i18n";
-import { ageParts, formatCompact, sparklineHeights } from "@/lib/utils/radar";
+import { ageParts, formatCompact, radarTitle, sparklineHeights } from "@/lib/utils/radar";
 
 const UTC_SHORT_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -70,7 +70,8 @@ export function ScoreBreakdown({ components }: { components: ApiRadarScoreCompon
 }
 
 export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: number | null }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const title = radarTitle(signal.title, signal.titleZh, lang);
   const showDiscussion = signal.discussionUrl && signal.discussionUrl !== signal.url;
   return (
     <li className="border-b py-2 last:border-b-0 [border-color:var(--border)]">
@@ -79,8 +80,9 @@ export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: 
         target="_blank"
         rel="noopener noreferrer"
         className="text-[13.5px] font-medium leading-snug text-foreground no-underline hover:[color:var(--accent)]"
+        title={title !== signal.title ? signal.title : undefined}
       >
-        {signal.title}
+        {title}
       </a>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] [color:var(--text-muted)]">
         <span className="font-mono text-[10px] uppercase tracking-[0.08em] [color:var(--accent)]">

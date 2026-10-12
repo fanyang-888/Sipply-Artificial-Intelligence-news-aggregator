@@ -3,6 +3,7 @@
  */
 
 import type { ApiRadarTopic, RadarSourceKey } from "@/lib/api/types";
+import type { Lang } from "@/lib/i18n";
 import { TOPIC_GROUPS, type TopicGroupKey } from "@/lib/constants/topic-groups";
 
 export type RadarFilters = {
@@ -27,6 +28,11 @@ export function filterRadarTopics(topics: ApiRadarTopic[], f: RadarFilters): Api
       (!f.source || (t.sourceCounts[f.source] ?? 0) > 0) &&
       (!f.risingOnly || t.rising),
   );
+}
+
+/** The Chinese title in 中文 mode when one exists, else the original. */
+export function radarTitle(en: string, zh: string | null | undefined, lang: Lang): string {
+  return lang === "zh" && zh ? zh : en;
 }
 
 /** "3.9×" — one decimal under 10, whole numbers above. */

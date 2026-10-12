@@ -6,6 +6,7 @@ import {
   filterRadarTopics,
   formatCompact,
   formatVelocity,
+  radarTitle,
   sparklineHeights,
   topicGroupForTag,
 } from "@/lib/utils/radar";
@@ -14,6 +15,7 @@ function topic(overrides: Partial<ApiRadarTopic>): ApiRadarTopic {
   return {
     id: "t",
     label: "label",
+    labelZh: null,
     topicTag: "Other",
     keywords: [],
     score: 50,
@@ -58,6 +60,14 @@ describe("filterRadarTopics", () => {
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "hn" }))).toEqual(["a", "c"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "news", risingOnly: true }))).toEqual(["a"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "youtube" }))).toEqual([]);
+  });
+});
+
+describe("radarTitle", () => {
+  it("uses the Chinese title only in zh mode, falling back to the original", () => {
+    expect(radarTitle("Claude Haiku 5.5", "Claude Haiku 5.5 发布", "zh")).toBe("Claude Haiku 5.5 发布");
+    expect(radarTitle("Claude Haiku 5.5", "Claude Haiku 5.5 发布", "en")).toBe("Claude Haiku 5.5");
+    expect(radarTitle("Untranslated", null, "zh")).toBe("Untranslated");
   });
 });
 

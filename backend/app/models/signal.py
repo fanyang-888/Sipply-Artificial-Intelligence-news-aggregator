@@ -45,6 +45,8 @@ class Signal(Base):
     # Where people talk about it (the HN thread); None for news/video
     discussion_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    # Simplified Chinese title (translate_signals stage); reset when the title changes
+    title_zh: Mapped[str | None] = mapped_column(Text, nullable=True)
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Publisher (news) or channel (video)

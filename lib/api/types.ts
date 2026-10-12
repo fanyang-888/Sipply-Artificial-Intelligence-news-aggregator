@@ -87,6 +87,8 @@ export type RadarSourceKey = "hn" | "news" | "youtube";
 export type ApiRadarSignal = {
   id: string;
   title: string;
+  /** Simplified Chinese title; null until the translate_signals stage has run. */
+  titleZh: string | null;
   url: string;
   discussionUrl: string | null;
   source: RadarSourceKey;
@@ -112,6 +114,7 @@ export type ApiRadarScoreComponents = {
 export type ApiRadarTopic = {
   id: string;
   label: string;
+  labelZh: string | null;
   topicTag: string;
   keywords: string[];
   score: number;

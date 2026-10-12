@@ -3,7 +3,7 @@
 import type { ApiRadarTopic, RadarSourceKey } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
-import { formatCompact, formatVelocity, topicGroupForTag } from "@/lib/utils/radar";
+import { formatCompact, formatVelocity, radarTitle, topicGroupForTag } from "@/lib/utils/radar";
 import { RadarSignalItem, RadarSparkline, ScoreBreakdown } from "@/components/radar/radar-bits";
 
 const SOURCE_ORDER: RadarSourceKey[] = ["hn", "news", "youtube"];
@@ -26,6 +26,7 @@ export function RadarTopicRow({ topic, rank, windowDays, now }: RadarTopicRowPro
   const group = groupKey ? topicGroupByKey(groupKey) : undefined;
   const score = Math.min(100, Math.max(0, Math.round(topic.score)));
   const sources = SOURCE_ORDER.filter((k) => (topic.sourceCounts[k] ?? 0) > 0);
+  const label = radarTitle(topic.label, topic.labelZh, lang);
 
   return (
     <details className="group mb-2 rounded-[10px] border transition-colors [background:var(--surface)] [border-color:var(--border)] open:[border-color:var(--accent)]">
@@ -38,8 +39,14 @@ export function RadarTopicRow({ topic, rank, windowDays, now }: RadarTopicRowPro
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[14.5px] font-semibold leading-snug text-foreground">{topic.label}</span>
-          {topic.keywords.length > 0 ? (
+          <span
+            className="block text-[14.5px] font-semibold leading-snug text-foreground"
+            title={label !== topic.label ? topic.label : undefined}
+          >
+            {label}
+          </span>
+          {/* Keywords are English terms pulled from the titles; the Chinese title says it better */}
+          {topic.keywords.length > 0 && lang !== "zh" ? (
             <span className="mt-0.5 block truncate text-xs [color:var(--text-muted)]">{topic.keywords.join(" · ")}</span>
           ) : null}
           <span className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] [color:var(--text-muted)]">

@@ -147,6 +147,7 @@ class SearchResponse(BaseModel):
 class RadarSignal(BaseModel):
     id: str
     title: str
+    titleZh: str | None = None
     url: str
     discussionUrl: str | None = None
     source: str  # "hn" | "news" | "youtube"
@@ -164,6 +165,7 @@ class RadarSignal(BaseModel):
 class RadarTopic(BaseModel):
     id: str
     label: str
+    labelZh: str | None = None
     topicTag: str
     keywords: list[str]
     score: float

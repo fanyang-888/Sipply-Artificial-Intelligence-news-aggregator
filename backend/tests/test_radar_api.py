@@ -77,6 +77,7 @@ def test_radar_shape_and_order(client, radar_data):
     assert len(top["dailyCounts"]) == 14
     assert set(top["components"]) == {"volume", "engagement", "velocity", "recency", "relevance"}
     assert top["signals"][0]["title"] == "OpenAI fires three safety researchers"  # by engagement
+    assert top["labelZh"] is None and top["signals"][0]["titleZh"] is None  # not translated yet
     assert top["signals"][0]["discussionUrl"].startswith("https://news.ycombinator.com/item?id=")
     assert [q["title"] for q in top["questions"]] == ["Why did OpenAI fire its safety researchers?"]
 
@@ -98,3 +99,16 @@ def test_radar_empty_before_first_run(client, db):
     body = client.get("/api/radar").json()
     assert body["topics"] == [] and body["questions"] == []
     assert body["generatedAt"] is None
+
+
+def test_radar_returns_chinese_titles(client, radar_data, db):
+    from sqlalchemy import select
+
+    lead = db.execute(select(Signal).where(Signal.external_id == "a1")).scalar_one()
+    lead.title_zh = "OpenAI 解雇三名安全研究员"
+    db.flush()
+
+    top = client.get("/api/radar").json()["topics"][0]
+    assert top["label"] == "OpenAI fires three safety researchers"
+    assert top["labelZh"] == "OpenAI 解雇三名安全研究员"
+    assert top["signals"][0]["titleZh"] == "OpenAI 解雇三名安全研究员"
