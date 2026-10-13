@@ -86,7 +86,7 @@ export type Translations = {
     filterAria: string;
     allCategories: string;
     otherCategory: string;
-    sourceShort: Record<"hn" | "news" | "youtube", string>;
+    sourceShort: Record<"hn" | "news" | "youtube" | "github" | "devto" | "lobsters" | "bluesky" | "threads", string>;
     risingOnly: string;
     allSources: string;
     topicsCount: (n: number) => string;
@@ -119,6 +119,9 @@ export type Translations = {
     age: (unit: "m" | "h" | "d", value: number) => string;
     pointsComments: (points: number, comments: number) => string;
     views: (n: string) => string;
+    stars: (n: string) => string;
+    likesReplies: (likes: string, replies: number) => string;
+    reactionsComments: (reactions: number, comments: number) => string;
   };
   channels: ChannelLabels;
   cluster: {

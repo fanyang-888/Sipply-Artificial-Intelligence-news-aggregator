@@ -2,8 +2,8 @@
  * Pure helpers for the Trend Radar page (filters, formatting, sparkline geometry).
  */
 
-import type { ApiRadarTopic, RadarSourceKey } from "@/lib/api/types";
-import type { Lang } from "@/lib/i18n";
+import type { ApiRadarSignal, ApiRadarTopic, RadarSourceKey } from "@/lib/api/types";
+import type { Lang, Translations } from "@/lib/i18n";
 import { TOPIC_GROUPS, type TopicGroupKey } from "@/lib/constants/topic-groups";
 
 export type RadarFilters = {
@@ -33,6 +33,27 @@ export function filterRadarTopics(topics: ApiRadarTopic[], f: RadarFilters): Api
 /** The Chinese title in 中文 mode when one exists, else the original. */
 export function radarTitle(en: string, zh: string | null | undefined, lang: Lang): string {
   return lang === "zh" && zh ? zh : en;
+}
+
+/**
+ * Each platform's own engagement unit: ★ stars (GitHub), ♥ likes (Bluesky),
+ * reactions (DEV), views (YouTube), points (HN, Lobsters). Null when there is none.
+ */
+export function engagementLabel(s: ApiRadarSignal, r: Translations["radar"]): string | null {
+  switch (s.source) {
+    case "github":
+      return s.points != null ? r.stars(formatCompact(s.points)) : null;
+    case "bluesky":
+      return s.likeCount != null ? r.likesReplies(formatCompact(s.likeCount), s.numComments ?? 0) : null;
+    case "devto":
+      return s.points != null ? r.reactionsComments(s.points, s.numComments ?? 0) : null;
+    case "youtube":
+      return s.viewCount != null ? r.views(formatCompact(s.viewCount)) : null;
+    case "threads":
+      return null;
+    default:
+      return s.points != null ? r.pointsComments(s.points, s.numComments ?? 0) : null;
+  }
 }
 
 /** "3.9×" — one decimal under 10, whole numbers above. */

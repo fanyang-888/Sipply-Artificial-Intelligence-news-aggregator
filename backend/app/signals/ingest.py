@@ -10,11 +10,16 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.signals.base import SourceResult
+from app.signals.base import SignalCredentials, SourceResult
+from app.signals.bluesky import fetch_bluesky
 from app.signals.config import RadarConfig
+from app.signals.devto import fetch_devto
+from app.signals.github import fetch_github
 from app.signals.gnews import fetch_gnews
 from app.signals.hn import fetch_hn
+from app.signals.lobsters import fetch_lobsters
 from app.signals.store import last_fetched_at, upsert_signals
+from app.signals.threads import fetch_threads
 from app.signals.youtube import fetch_youtube
 
 logger = logging.getLogger(__name__)
@@ -47,17 +52,35 @@ async def run_ingest(
     cfg: RadarConfig,
     *,
     now: datetime,
-    youtube_api_key: str | None,
-    pause_sec: float = 0.25,
+    credentials: SignalCredentials,
+    pause_sec: float | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Fetch HN, Google News and YouTube, upsert into ``signals``; per-source summary."""
+    """Fetch every signal source, upsert into ``signals``; per-source summary.
+
+    ``pause_sec`` overrides each source's polite delay between requests (tests pass 0).
+    """
+    p = {} if pause_sec is None else {"pause_sec": pause_sec}
+    # Sources whose stars/likes keep moving re-read the whole window every run
+    window_start = now - timedelta(days=cfg.window_days)
     results: list[SourceResult] = [
-        await fetch_hn(client, cfg.hn, since=fetch_since(db, "hn", cfg, now), pause_sec=pause_sec),
-        await fetch_gnews(
-            client, cfg.gnews, since=fetch_since(db, "news", cfg, now), now=now, pause_sec=pause_sec
-        ),
+        await fetch_hn(client, cfg.hn, since=fetch_since(db, "hn", cfg, now), **p),
+        await fetch_gnews(client, cfg.gnews, since=fetch_since(db, "news", cfg, now), now=now, **p),
         await fetch_youtube(
-            client, cfg.youtube, since=fetch_since(db, "youtube", cfg, now), api_key=youtube_api_key
+            client, cfg.youtube, since=fetch_since(db, "youtube", cfg, now), api_key=credentials.youtube_api_key
+        ),
+        await fetch_github(client, cfg.github, since=window_start, **p),
+        await fetch_devto(client, cfg.devto, since=window_start, now=now, **p),
+        await fetch_lobsters(client, cfg.lobsters, since=window_start, **p),
+        await fetch_bluesky(
+            client,
+            cfg.bluesky,
+            since=window_start,
+            handle=credentials.bluesky_handle,
+            app_password=credentials.bluesky_app_password,
+            **p,
+        ),
+        await fetch_threads(
+            client, cfg.threads, since=window_start, access_token=credentials.threads_access_token, **p
         ),
     ]
     summary: dict[str, dict[str, Any]] = {}

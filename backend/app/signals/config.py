@@ -35,12 +35,53 @@ class YouTubeConfig(BaseModel):
     queries: list[str] = Field(default_factory=list)
 
 
+class GitHubConfig(BaseModel):
+    enabled: bool = True
+    min_stars: int = Field(default=100, ge=0)
+    per_page: int = Field(default=50, ge=1, le=100)
+    # GitHub search qualifiers; "created:>=<window start>" and the star floor are added
+    queries: list[str] = Field(default_factory=list)
+
+
+class DevtoConfig(BaseModel):
+    enabled: bool = True
+    min_reactions: int = Field(default=10, ge=0)
+    per_page: int = Field(default=50, ge=1, le=1000)
+    tags: list[str] = Field(default_factory=list)
+
+
+class LobstersConfig(BaseModel):
+    enabled: bool = True
+    min_score: int = Field(default=3, ge=0)
+    max_pages: int = Field(default=3, ge=1)
+    tags: list[str] = Field(default_factory=list)
+
+
+class BlueskyConfig(BaseModel):
+    enabled: bool = True  # still skipped while BLUESKY_HANDLE / BLUESKY_APP_PASSWORD are unset
+    min_likes: int = Field(default=10, ge=0)
+    limit: int = Field(default=100, ge=1, le=100)
+    lang: str | None = "en"
+    queries: list[str] = Field(default_factory=list)
+
+
+class ThreadsConfig(BaseModel):
+    enabled: bool = True  # still skipped while THREADS_ACCESS_TOKEN is unset
+    limit: int = Field(default=50, ge=1, le=100)
+    queries: list[str] = Field(default_factory=list)
+
+
 class RadarConfig(BaseModel):
     window_days: int = Field(default=14, ge=4)
     refresh_overlap_days: int = Field(default=2, ge=1)
     hn: HNConfig = Field(default_factory=HNConfig)
     gnews: GNewsConfig = Field(default_factory=GNewsConfig)
     youtube: YouTubeConfig = Field(default_factory=YouTubeConfig)
+    github: GitHubConfig = Field(default_factory=GitHubConfig)
+    devto: DevtoConfig = Field(default_factory=DevtoConfig)
+    lobsters: LobstersConfig = Field(default_factory=LobstersConfig)
+    bluesky: BlueskyConfig = Field(default_factory=BlueskyConfig)
+    threads: ThreadsConfig = Field(default_factory=ThreadsConfig)
 
 
 def load_radar_config(path: Path | None = None) -> RadarConfig:

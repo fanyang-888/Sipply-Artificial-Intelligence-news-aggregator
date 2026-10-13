@@ -3,9 +3,9 @@
 Usage (from backend/):
     python -m scripts.ingest_signals
 
-Sources and keywords live in app/signals/signal_sources.yaml. YouTube is
-skipped unless YOUTUBE_API_KEY is set. Exit code 1 only when every source
-that ran failed.
+Sources and keywords live in app/signals/signal_sources.yaml. YouTube,
+Bluesky and Threads are skipped until their keys are set. Exit code 1 only
+when every source that ran failed.
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ import logging
 import sys
 from datetime import datetime, timezone
 
-from app.config import settings
 from app.db import session_scope
 from app.logging_config import configure_logging
+from app.signals.base import credentials_from_settings
 from app.signals.config import radar_config
 from app.signals.ingest import run_ingest, signals_http_client
 
@@ -26,11 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 async def _run() -> int:
-    key = settings.youtube_api_key.get_secret_value() if settings.youtube_api_key else None
     async with signals_http_client() as client:
         with session_scope() as db:
             summary = await run_ingest(
-                db, client, radar_config(), now=datetime.now(timezone.utc), youtube_api_key=key
+                db, client, radar_config(), now=datetime.now(timezone.utc), credentials=credentials_from_settings()
             )
     for family, s in summary.items():
         print(

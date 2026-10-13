@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     admin_api_key: SecretStr | None = None
     # Trend Radar YouTube source; the source is skipped while this is unset
     youtube_api_key: SecretStr | None = None
+    # Trend Radar Bluesky source (handle + an app password from bsky.app settings)
+    bluesky_handle: str | None = None
+    bluesky_app_password: SecretStr | None = None
+    # Trend Radar Threads source (long-lived token with threads_keyword_search; expires in 60 days)
+    threads_access_token: SecretStr | None = None
 
     # JWT auth
     jwt_secret: SecretStr | None = None

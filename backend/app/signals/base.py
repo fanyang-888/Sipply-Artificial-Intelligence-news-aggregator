@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 # source_kind → source family shown on the radar (and used in source_counts)
@@ -14,12 +14,58 @@ SOURCE_FAMILIES: dict[str, str] = {
     "hn_ask": "hn",
     "gnews_item": "news",
     "yt_video": "youtube",
+    "gh_repo": "github",
+    "devto_post": "devto",
+    "lobsters_story": "lobsters",
+    "bsky_post": "bluesky",
+    "threads_post": "threads",
 }
 FAMILY_LABELS: dict[str, str] = {
     "hn": "Hacker News",
     "news": "Google News",
     "youtube": "YouTube",
+    "github": "GitHub",
+    "devto": "DEV",
+    "lobsters": "Lobsters",
+    "bluesky": "Bluesky",
+    "threads": "Threads",
 }
+
+
+@dataclass(frozen=True)
+class SignalCredentials:
+    """Keys for the sources that need one; each source is skipped while its key is missing."""
+
+    youtube_api_key: str | None = None
+    bluesky_handle: str | None = None
+    bluesky_app_password: str | None = None
+    threads_access_token: str | None = None
+
+    def family_active(self, family: str) -> bool:
+        if family == "youtube":
+            return bool(self.youtube_api_key)
+        if family == "bluesky":
+            return bool(self.bluesky_handle and self.bluesky_app_password)
+        if family == "threads":
+            return bool(self.threads_access_token)
+        return True
+
+    def active_families(self) -> list[str]:
+        return [f for f in FAMILY_LABELS if self.family_active(f)]
+
+
+def credentials_from_settings() -> SignalCredentials:
+    from app.config import settings
+
+    def secret(v):
+        return v.get_secret_value() if v is not None else None
+
+    return SignalCredentials(
+        youtube_api_key=secret(settings.youtube_api_key),
+        bluesky_handle=settings.bluesky_handle,
+        bluesky_app_password=secret(settings.bluesky_app_password),
+        threads_access_token=secret(settings.threads_access_token),
+    )
 
 
 def source_family(source_kind: str) -> str:
@@ -100,6 +146,17 @@ def plain_text(value: str | None, limit: int = 2000) -> str | None:
         return None
     text = _SPACE.sub(" ", html.unescape(_TAG.sub(" ", value))).strip()
     return text[:limit] or None
+
+
+def parse_iso(value: Any) -> datetime | None:
+    """ISO-8601 string ('Z' or offset) → aware datetime; None when missing or malformed."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def to_int(value: Any) -> int | None:

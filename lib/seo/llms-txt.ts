@@ -23,8 +23,9 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
     "## Main pages",
     "",
     `- [Daily Digest](${SITE_URL}/): today's ranked AI stories`,
-    `- [Trend Radar](${SITE_URL}/radar): what the AI community is discussing — Hacker News, news and ` +
-      "video signals grouped into topics, scored by volume, engagement and how fast they are rising, " +
+    `- [Trend Radar](${SITE_URL}/radar): what the AI community is discussing — Hacker News, Bluesky, ` +
+      "Lobsters, news, YouTube, DEV and new GitHub repos grouped into topics, scored by volume, " +
+      "engagement and how fast they are rising, " +
       "plus the questions people are asking",
     `- [Archive](${SITE_URL}/archive): every story, searchable by keyword and category`,
   ];

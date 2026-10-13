@@ -2,7 +2,7 @@
 
 import type { ApiRadarScoreComponents, ApiRadarSignal } from "@/lib/api/types";
 import { useI18n, type Translations } from "@/lib/i18n";
-import { ageParts, formatCompact, radarTitle, sparklineHeights } from "@/lib/utils/radar";
+import { ageParts, engagementLabel, radarTitle, sparklineHeights } from "@/lib/utils/radar";
 
 const UTC_SHORT_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -72,6 +72,7 @@ export function ScoreBreakdown({ components }: { components: ApiRadarScoreCompon
 export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: number | null }) {
   const { t, lang } = useI18n();
   const title = radarTitle(signal.title, signal.titleZh, lang);
+  const engagement = engagementLabel(signal, t.radar);
   const showDiscussion = signal.discussionUrl && signal.discussionUrl !== signal.url;
   return (
     <li className="border-b py-2 last:border-b-0 [border-color:var(--border)]">
@@ -89,8 +90,7 @@ export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: 
           {t.radar.sourceShort[signal.source]}
         </span>
         {signal.outlet ? <span>{signal.outlet}</span> : null}
-        {signal.points != null ? <span>{t.radar.pointsComments(signal.points, signal.numComments ?? 0)}</span> : null}
-        {signal.viewCount != null ? <span>{t.radar.views(formatCompact(signal.viewCount))}</span> : null}
+        {engagement ? <span>{engagement}</span> : null}
         <RelativeAge iso={signal.publishedAt} now={now} />
         {showDiscussion ? (
           <a

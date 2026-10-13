@@ -82,7 +82,27 @@ export type ApiArchiveClusterRow = {
 // Trend Radar
 // ---------------------------------------------------------------------------
 
-export type RadarSourceKey = "hn" | "news" | "youtube";
+export type RadarSourceKey =
+  | "hn"
+  | "news"
+  | "youtube"
+  | "github"
+  | "devto"
+  | "lobsters"
+  | "bluesky"
+  | "threads";
+
+/** Display order for source chips and counts. */
+export const RADAR_SOURCE_ORDER: RadarSourceKey[] = [
+  "hn",
+  "news",
+  "youtube",
+  "bluesky",
+  "threads",
+  "github",
+  "devto",
+  "lobsters",
+];
 
 export type ApiRadarSignal = {
   id: string;
@@ -92,7 +112,16 @@ export type ApiRadarSignal = {
   url: string;
   discussionUrl: string | null;
   source: RadarSourceKey;
-  kind: "hn_story" | "hn_ask" | "gnews_item" | "yt_video";
+  kind:
+    | "hn_story"
+    | "hn_ask"
+    | "gnews_item"
+    | "yt_video"
+    | "gh_repo"
+    | "devto_post"
+    | "lobsters_story"
+    | "bsky_post"
+    | "threads_post";
   outlet: string | null;
   author: string | null;
   points: number | null;
