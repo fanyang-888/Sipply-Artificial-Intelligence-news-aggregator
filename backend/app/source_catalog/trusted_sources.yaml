@@ -17,6 +17,9 @@ sources:
     user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     import_limit: 50
     # since_date: "2025-01-01"  # optional UTC calendar day — drop older RSS rows
+    # openai.com answers article pages with 403 to automated requests (every
+    # page was blocked from 2026-09); the RSS itself is public and carries a summary
+    body_from_feed: true
 
   - name: Anthropic Newsroom
     slug: anthropic-newsroom
@@ -56,7 +59,9 @@ sources:
     index_url: https://venturebeat.com/category/ai/
     adapter_key: generic_rss
     ingestion_method: rss
-    is_active: true
+    # The AI category feed stopped updating (newest item 2026-08-27 as of
+    # 2026-10-13) and feed requests now get 429; off until it publishes again
+    is_active: false
     fetch_frequency_minutes: 30
     source_priority: 20
     default_language: en
@@ -86,7 +91,9 @@ sources:
     index_url: https://tldr.tech/ai
     adapter_key: generic_rss
     ingestion_method: rss
-    is_active: true
+    # The feed carries no text and issue pages render with JavaScript (extraction
+    # comes back empty), so nothing was ever stored; off until there is a readable body
+    is_active: false
     fetch_frequency_minutes: 1440
     source_priority: 15
     default_language: en
@@ -144,7 +151,8 @@ sources:
     slug: deepmind-blog
     type: company_news
     base_url: https://deepmind.google/
-    feed_url: null
+    # The HTML index has no dates and "Learn more" link texts; the feed has both
+    feed_url: https://deepmind.google/blog/rss.xml
     index_url: https://deepmind.google/blog/
     adapter_key: deepmind_blog
     ingestion_method: rss_primary_html_fallback
@@ -159,7 +167,8 @@ sources:
     slug: theverge-ai
     type: tech_press
     base_url: https://www.theverge.com/
-    feed_url: https://www.theverge.com/ai-artificial-intelligence/rss/index.xml
+    # Moved in 2026-10 (the old /ai-artificial-intelligence/rss/index.xml returns 404)
+    feed_url: https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
     index_url: https://www.theverge.com/ai-artificial-intelligence
     adapter_key: generic_rss
     ingestion_method: rss
@@ -193,7 +202,9 @@ sources:
     index_url: https://www.artificialintelligence-news.com/
     adapter_key: generic_rss
     ingestion_method: rss
-    is_active: true
+    # Since 2026-10 the feed answers automated requests with a bot challenge
+    # (403 / HTML instead of XML); off until it is readable again
+    is_active: false
     fetch_frequency_minutes: 60
     source_priority: 15
     default_language: en

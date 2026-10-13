@@ -4,9 +4,12 @@ The ingestion layer already blocks truly broken content (empty body, cookie
 banners, low paragraph density).  This service applies higher-level filters
 to articles already stored in the DB:
 
-  1. short_body       — cleaned_text word count < MIN_WORD_COUNT
+  1. short_body       — cleaned_text word count < MIN_WORD_COUNT (not applied to
+                        bodies taken from a feed summary, which are short by design)
   2. short_title      — title < MIN_TITLE_CHARS chars (likely stub/redirect)
-  3. off_topic        — no AI-related keywords in title + excerpt/text
+  3. off_topic        — no AI-related keywords in title + excerpt/text (not applied
+                        to the AI labs' own newsrooms — source type company_news —
+                        where everything published is AI-industry news)
   4. duplicate_hash   — content_hash already exists on a different article
                         (cross-URL reposts); only the earlier row is kept
 
@@ -28,6 +31,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.adapters.base import FEED_SUMMARY_METHOD
 from app.crud.article import get_unassessed_articles, mark_article_filter_result
 from app.models.article import Article
 
@@ -43,7 +47,7 @@ MIN_TITLE_CHARS = 10         # very short titles are usually navigation artifact
 # An article is off-topic only if NONE of these appear in title + leading text.
 _AI_KEYWORDS = re.compile(
     r"\b("
-    r"ai|a\.i\.|ml|llm|gpt|claude|gemini|mistral|llama|falcon|phi|"
+    r"ai|a\.i\.|ml|llm|gpt|chatgpt|codex|copilot|sora|claude|gemini|mistral|llama|falcon|phi|"
     r"openai|anthropic|deepmind|google|nvidia|meta|hugging\s?face|"
     r"model|neural|transformer|diffusion|generative|foundation|"
     r"machine\s+learning|deep\s+learning|reinforcement|"
@@ -65,10 +69,16 @@ class FilterResult:
     reason: str | None  # None when article passes
 
 
+def _is_feed_summary(article: Article) -> bool:
+    """Body came from the publisher's feed summary (sources with body_from_feed)."""
+    ff = (getattr(article, "raw_meta", None) or {}).get("full_fetch")
+    return isinstance(ff, dict) and ff.get("extraction_method") == FEED_SUMMARY_METHOD
+
+
 def _check(article: Article) -> FilterResult:
     # 1. Short body
     wc = article.word_count or 0
-    if wc < MIN_WORD_COUNT:
+    if wc < MIN_WORD_COUNT and not _is_feed_summary(article):
         # Recompute from text in case word_count was not set at ingest time
         text_len = len((article.cleaned_text or article.raw_text or "").split())
         if text_len < MIN_WORD_COUNT:
@@ -79,7 +89,12 @@ def _check(article: Article) -> FilterResult:
     if len(title) < MIN_TITLE_CHARS:
         return FilterResult(is_filtered_out=True, reason="short_title")
 
-    # 3. Off-topic (no AI keywords anywhere in title + first 800 chars of body)
+    # 3. Off-topic (no AI keywords anywhere in title + first 800 chars of body).
+    # An AI lab's own newsroom is on-topic by definition: its usage-policy or
+    # watermarking posts were being dropped for lacking a keyword up front.
+    source = getattr(article, "source", None)
+    if getattr(source, "type", None) == "company_news":
+        return FilterResult(is_filtered_out=False, reason=None)
     search_text = title + " " + (article.excerpt or article.cleaned_text or "")[:800]
     if not _AI_KEYWORDS.search(search_text):
         return FilterResult(is_filtered_out=True, reason="off_topic")

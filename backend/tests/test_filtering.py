@@ -58,3 +58,26 @@ def test_ai_keyword_in_title_alone_keeps_article():
     bakery = " ".join(["The bakery on Main Street sold out of sourdough again."] * 20)
     result = _check(article(title="Bakery uses an LLM to plan its menu", cleaned_text=bakery))
     assert result.is_filtered_out is False
+
+
+def test_feed_summary_body_is_not_too_short():
+    # body_from_feed sources (OpenAI) store the RSS summary: a sentence or two by design
+    summary = "Asana made its browser agent 76x cheaper and 5x faster in tests with GPT-6.1 Sol."
+    feed = article(word_count=15, cleaned_text=summary, raw_meta={"full_fetch": {"extraction_method": "feed_summary"}})
+    assert _check(feed).is_filtered_out is False
+    fetched = article(word_count=15, cleaned_text=summary, raw_meta={"full_fetch": {"extraction_method": "dom_fallback"}})
+    assert _check(fetched).reason == "short_body"
+
+
+def test_ai_lab_newsroom_posts_are_never_off_topic():
+    no_keywords = dict(title="2026 Usage Policy update", excerpt="We are updating the policy that governs use of our services.")
+    assert _check(article(**no_keywords)).reason == "off_topic"
+    lab = article(**no_keywords, source=SimpleNamespace(type="company_news"))
+    assert _check(lab).is_filtered_out is False
+    press = article(**no_keywords, source=SimpleNamespace(type="tech_press"))
+    assert _check(press).reason == "off_topic"
+
+
+def test_chatgpt_and_codex_count_as_ai_keywords():
+    result = _check(article(title="How Oracle turns days of work into minutes with ChatGPT and Codex", excerpt="Across recruiting and operations."))
+    assert result.is_filtered_out is False

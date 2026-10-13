@@ -1,4 +1,8 @@
-"""Google DeepMind Blog adapter — HTML index scraping (no public RSS)."""
+"""Google DeepMind Blog adapter — the blog's RSS feed if configured; HTML index as fallback.
+
+The HTML index has no dates and many cards whose link text is just "Learn more",
+so the feed (https://deepmind.google/blog/rss.xml) is the primary source.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from app.adapters.html_index import extract_deepmind_candidates
 from app.adapters.http_client import ingestion_http_client
 from app.adapters.http_fetch import get_with_retry
 from app.adapters.ingestion_limits import apply_entry_limits
+from app.adapters.rss import fetch_feed_entries
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +29,28 @@ class DeepMindBlogAdapter(BaseSourceAdapter):
     async def fetch_index(self) -> list[dict[str, Any]]:
         slug = self.source_config.slug
         logger.info("fetch_index start source=%s slug=%s", self.source_name, slug)
+        raw_entries: list[dict[str, Any]] = []
+        rss_ok = False
         try:
             async with ingestion_http_client(self.source_config) as client:
-                resp = await get_with_retry(client, str(self.source_config.index_url))
-                base = str(self.source_config.base_url).rstrip("/")
-                raw_entries = extract_deepmind_candidates(resp.text, base_url=base)
+                if self.source_config.feed_url:
+                    try:
+                        feed_entries, new_etag = await fetch_feed_entries(
+                            str(self.source_config.feed_url), client, etag=self.source_config.etag
+                        )
+                        self._new_etag: str | None = new_etag
+                        raw_entries = [r for r in feed_entries if r.get("link")]
+                        # An empty answer can be 304 Not Modified: nothing new, not a failure
+                        rss_ok = True
+                    except Exception as e:
+                        logger.warning(
+                            "fetch_index rss failed, using html index source=%s slug=%s type=%s msg=%s",
+                            self.source_name, slug, type(e).__name__, e,
+                        )
+                if not rss_ok:
+                    resp = await get_with_retry(client, str(self.source_config.index_url))
+                    base = str(self.source_config.base_url).rstrip("/")
+                    raw_entries = extract_deepmind_candidates(resp.text, base_url=base)
             rows = apply_entry_limits(
                 [r for r in raw_entries if r.get("link")],
                 self.source_config,

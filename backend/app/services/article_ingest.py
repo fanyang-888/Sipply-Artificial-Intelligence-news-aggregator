@@ -16,6 +16,7 @@ from app.crud.article import (
     find_article_by_canonical_or_url,
     get_article_by_url,
 )
+from app.adapters.base import FEED_SUMMARY_METHOD
 from app.models.article import Article
 from app.schemas.article import ArticleCreate
 from app.schemas.normalized_article import NormalizedFetchedArticle
@@ -33,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 # Full article should be substantial; cookie banners often exceed 80 chars.
 _MIN_BODY_CHARS = 400
+# Feed summaries (body_from_feed sources) are a sentence or two by design
+_MIN_FEED_SUMMARY_CHARS = 60
 # When DOM fallback is used, require a minimum share of text in <p>/<li> vs total (nav-heavy pages fail).
 _MIN_PARAGRAPH_RATIO_DOM = 0.12
 _MIN_PARAGRAPH_RATIO_TECHCRUNCH = 0.08
@@ -68,6 +71,22 @@ def normalized_from_candidate_fetch(
         language=config.default_language,
         raw_meta=dict(fetch_ok.get("raw_meta") or {}),
     )
+
+
+def repair_missing_published_at(article: Article, candidate: dict[str, Any]) -> bool:
+    """Give an already-stored article the index's publish date if it never had one.
+
+    Rows ingested while a parser couldn't read dates (Anthropic, DeepMind) have
+    ``published_at`` NULL and are never clustered; seeing them again in a fixed
+    index repairs them. Returns True when the row changed.
+    """
+    if article.published_at is not None:
+        return False
+    pub = iso_to_utc_datetime(candidate.get("published_at"))
+    if pub is None:
+        return False
+    article.published_at = pub
+    return True
 
 
 class PersistArticleOutcome(str, Enum):
@@ -148,7 +167,9 @@ def persist_fetched_article(
     if not raw_t and cleaned:
         raw_t = cleaned
 
-    if len(cleaned) < _MIN_BODY_CHARS and len(raw_t) < _MIN_BODY_CHARS:
+    from_feed = _full_fetch_meta(dict(normalized.raw_meta)).get("extraction_method") == FEED_SUMMARY_METHOD
+    min_chars = _MIN_FEED_SUMMARY_CHARS if from_feed else _MIN_BODY_CHARS
+    if len(cleaned) < min_chars and len(raw_t) < min_chars:
         logger.warning(
             "ingest rejected reason=short_body adapter=%s url=%s raw_len=%s cleaned_len=%s",
             adapter_key,
