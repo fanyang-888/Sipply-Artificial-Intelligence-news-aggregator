@@ -268,17 +268,25 @@ def test_run_ingest_end_to_end_with_mocked_sources(db):
             return httpx.Response(200, json={"hits": [hit], "nbPages": 1})
         return httpx.Response(200, content=b'<?xml version="1.0"?><rss version="2.0"><channel></channel></rss>')
 
+    from app.signals.base import SignalCredentials
+    from app.signals.config import DevtoConfig, GitHubConfig, LobstersConfig
+
     cfg = RadarConfig(
         hn=HNConfig(queries=["agents"]),
         gnews=GNewsConfig(queries=["agents"]),
         youtube=YouTubeConfig(queries=["agents"]),
+        github=GitHubConfig(enabled=False),
+        devto=DevtoConfig(enabled=False),
+        lobsters=LobstersConfig(enabled=False),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    summary = asyncio.run(run_ingest(db, client, cfg, now=NOW, youtube_api_key=None, pause_sec=0))
+    summary = asyncio.run(run_ingest(db, client, cfg, now=NOW, credentials=SignalCredentials(), pause_sec=0))
 
     assert summary["hn"]["status"] == "ok" and summary["hn"]["written"] == 1
     assert summary["news"]["status"] == "ok" and summary["news"]["items"] == 0
-    assert summary["youtube"]["status"] == "skipped"
+    # keyed sources are skipped without credentials, disabled ones by config
+    for family in ("youtube", "bluesky", "threads", "github", "devto", "lobsters"):
+        assert summary[family]["status"] == "skipped", family
     row = db.execute(select(Signal)).scalar_one()
     assert (row.source_kind, row.is_question) == ("hn_ask", True)
     assert db.execute(select(func.count()).select_from(Signal)).scalar_one() == 1

@@ -150,7 +150,7 @@ class RadarSignal(BaseModel):
     titleZh: str | None = None
     url: str
     discussionUrl: str | None = None
-    source: str  # "hn" | "news" | "youtube"
+    source: str  # family: "hn" | "news" | "youtube" | "github" | "devto" | "lobsters" | "bluesky" | "threads"
     kind: str  # "hn_story" | "hn_ask" | "gnews_item" | "yt_video"
     outlet: str | None = None
     author: str | None = None

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { ApiRadarTopic } from "@/lib/api/types";
+import type { ApiRadarSignal, ApiRadarTopic } from "@/lib/api/types";
+import { en } from "@/lib/i18n";
 import {
   DEFAULT_RADAR_FILTERS,
   ageParts,
   filterRadarTopics,
   formatCompact,
+  engagementLabel,
   formatVelocity,
   radarTitle,
   sparklineHeights,
@@ -60,6 +62,27 @@ describe("filterRadarTopics", () => {
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "hn" }))).toEqual(["a", "c"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "news", risingOnly: true }))).toEqual(["a"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "youtube" }))).toEqual([]);
+  });
+});
+
+describe("engagementLabel", () => {
+  const sig = (o: Partial<ApiRadarSignal>): ApiRadarSignal => ({
+    id: "s", title: "t", titleZh: null, url: "u", discussionUrl: null, source: "hn", kind: "hn_story",
+    outlet: null, author: null, points: null, numComments: null, viewCount: null, likeCount: null,
+    publishedAt: null, topicId: null, ...o,
+  });
+
+  it("uses each platform's own unit", () => {
+    expect(engagementLabel(sig({ source: "hn", points: 120, numComments: 45 }), en.radar)).toBe("120 pts · 45 comments");
+    expect(engagementLabel(sig({ source: "github", kind: "gh_repo", points: 3177 }), en.radar)).toBe("★ 3.2k");
+    expect(engagementLabel(sig({ source: "bluesky", kind: "bsky_post", likeCount: 40, numComments: 7 }), en.radar)).toBe("♥ 40 · 7 replies");
+    expect(engagementLabel(sig({ source: "devto", kind: "devto_post", points: 50, numComments: 5 }), en.radar)).toBe("50 reactions · 5 comments");
+    expect(engagementLabel(sig({ source: "youtube", kind: "yt_video", viewCount: 25300 }), en.radar)).toBe("25k views");
+  });
+
+  it("shows nothing when the platform reports no engagement", () => {
+    expect(engagementLabel(sig({ source: "threads", kind: "threads_post" }), en.radar)).toBeNull();
+    expect(engagementLabel(sig({ source: "news", kind: "gnews_item" }), en.radar)).toBeNull();
   });
 });
 

@@ -13,10 +13,9 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import RadarResponse, RadarSignal, RadarSource, RadarTopic, format_dt
 from app.cache import cache_get, cache_set
-from app.config import settings
 from app.db import get_db
 from app.models.signal import Signal, SignalTopic
-from app.signals.base import FAMILY_LABELS, source_family
+from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
 from app.signals.config import radar_config
 from app.signals.topics import engagement_of
 
@@ -118,12 +117,12 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
         counts[fam] += n
         if last is not None and (fam not in fetched or last > fetched[fam]):
             fetched[fam] = last
-    active = {"hn": True, "news": True, "youtube": settings.youtube_api_key is not None}
+    creds = credentials_from_settings()
     sources = [
         RadarSource(
             key=fam,
             label=label,
-            active=active[fam],
+            active=creds.family_active(fam),
             signalCount=counts.get(fam, 0),
             lastFetchedAt=format_dt(fetched.get(fam)),
         )

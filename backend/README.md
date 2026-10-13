@@ -31,6 +31,8 @@ Open [http://localhost:8000/health](http://localhost:8000/health).
 | `SOURCE_FETCH_USER_AGENT` | ✅ | User-Agent sent when fetching articles |
 | `REDIS_URL` | optional | Redis cache (graceful no-op fallback if absent) |
 | `YOUTUBE_API_KEY` | optional | Trend Radar YouTube source (skipped while unset) |
+| `BLUESKY_HANDLE` / `BLUESKY_APP_PASSWORD` | optional | Trend Radar Bluesky source (app password, skipped while unset) |
+| `THREADS_ACCESS_TOKEN` | optional | Trend Radar Threads source (needs Meta's `threads_keyword_search` approval) |
 | `JWT_SECRET` | admin only | Signs admin session tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | admin only | Login credentials |
 
@@ -55,7 +57,7 @@ python -m scripts.update_cluster_status # new/escalating/peaking/ongoing/fading
 python -m scripts.dedup_clusters        # merge cross-day duplicate clusters
 python -m scripts.summarize             # GPT-4o summaries + audience blocks
 python -m scripts.translate_clusters    # EN → ZH for all cluster fields
-python -m scripts.ingest_signals        # Trend Radar: HN / Google News / YouTube signals
+python -m scripts.ingest_signals        # Trend Radar: HN, Google News, YouTube, GitHub, DEV, Lobsters, Bluesky, Threads
 python -m scripts.build_signal_topics   # Trend Radar: group + score signal topics
 ```
 
@@ -132,7 +134,7 @@ app/
 ├── models/         SQLAlchemy ORM models
 ├── schemas/        Pydantic request/response schemas
 ├── services/       Pipeline business logic
-├── signals/        Trend Radar sources (HN, Google News, YouTube) + topic scoring
+├── signals/        Trend Radar sources (HN, Google News, YouTube, GitHub, DEV, Lobsters, Bluesky, Threads) + topic scoring
 └── source_catalog/ trusted_sources.yaml
 
 migrations/         Alembic migration scripts

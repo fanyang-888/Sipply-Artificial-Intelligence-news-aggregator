@@ -1,12 +1,10 @@
 "use client";
 
-import type { ApiRadarTopic, RadarSourceKey } from "@/lib/api/types";
+import { RADAR_SOURCE_ORDER, type ApiRadarTopic } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
 import { formatCompact, formatVelocity, radarTitle, topicGroupForTag } from "@/lib/utils/radar";
 import { RadarSignalItem, RadarSparkline, ScoreBreakdown } from "@/components/radar/radar-bits";
-
-const SOURCE_ORDER: RadarSourceKey[] = ["hn", "news", "youtube"];
 
 type RadarTopicRowProps = {
   topic: ApiRadarTopic;
@@ -25,7 +23,7 @@ export function RadarTopicRow({ topic, rank, windowDays, now }: RadarTopicRowPro
   const groupKey = topicGroupForTag(topic.topicTag);
   const group = groupKey ? topicGroupByKey(groupKey) : undefined;
   const score = Math.min(100, Math.max(0, Math.round(topic.score)));
-  const sources = SOURCE_ORDER.filter((k) => (topic.sourceCounts[k] ?? 0) > 0);
+  const sources = RADAR_SOURCE_ORDER.filter((k) => (topic.sourceCounts[k] ?? 0) > 0);
   const label = radarTitle(topic.label, topic.labelZh, lang);
 
   return (

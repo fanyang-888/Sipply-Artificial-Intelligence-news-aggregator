@@ -1,8 +1,11 @@
 # Trend Radar signal sources — keyword searches over community + news sources.
 #
-# Every source is free: Hacker News (Algolia search API) and Google News RSS
-# need no key; YouTube needs YOUTUBE_API_KEY and is skipped without it.
-# The pipeline runs 4×/day; request counts below are per run.
+# Every source is free. No key needed: Hacker News (Algolia), Google News RSS,
+# GitHub search, DEV (dev.to), Lobsters. Skipped until their key is set:
+# YouTube (YOUTUBE_API_KEY), Bluesky (BLUESKY_HANDLE + BLUESKY_APP_PASSWORD),
+# Threads (THREADS_ACCESS_TOKEN). The pipeline runs 4×/day; request counts
+# below are per run. GitHub, DEV, Lobsters and Bluesky re-read the whole
+# window each run (their stars/likes keep moving and it is only a few requests).
 
 # Topics are built from signals published in the last N days
 window_days: 14
@@ -59,3 +62,51 @@ youtube:
     - ChatGPT
     - Gemini AI
     - AI coding
+
+github:
+  enabled: true
+  min_stars: 100         # new repos below this are mostly noise
+  per_page: 50
+  queries:               # 1 unauthenticated search request each (limit: 10/min)
+    - topic:llm
+    - topic:ai-agents
+    - topic:mcp
+
+devto:
+  enabled: true
+  min_reactions: 10
+  per_page: 50
+  tags:                  # 1 request each: the tag's top posts over the window
+    - ai
+    - llm
+    - machinelearning
+
+lobsters:
+  enabled: true
+  min_score: 3
+  max_pages: 3           # newest stories first; stops at the window start
+  tags:
+    - ai
+    - vibecoding
+
+bluesky:
+  enabled: true          # still skipped while BLUESKY_HANDLE / BLUESKY_APP_PASSWORD are unset
+  min_likes: 10
+  limit: 100
+  lang: en
+  queries:               # 1 request each (sort=top over the window)
+    - LLM
+    - OpenAI
+    - Anthropic Claude
+    - Gemini
+    - AI agent
+    - AI safety
+
+threads:
+  enabled: true          # still skipped while THREADS_ACCESS_TOKEN is unset
+  limit: 50
+  queries:               # 1 request each; quota is 2,200 queries/24h per user
+    - OpenAI
+    - Claude AI
+    - Gemini AI
+    - AI agent

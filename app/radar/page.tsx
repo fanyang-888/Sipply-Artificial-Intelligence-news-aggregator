@@ -10,7 +10,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Trend Radar",
   description:
-    "What the AI community is discussing right now: Hacker News, news and video signals grouped into topics and scored by volume, engagement and velocity.",
+    "What the AI community is discussing right now: Hacker News, Bluesky, Lobsters, news, YouTube, DEV and new GitHub repos grouped into topics and scored by volume, engagement and velocity.",
   alternates: { canonical: "/radar" },
 };
 
