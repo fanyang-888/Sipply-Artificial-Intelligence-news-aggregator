@@ -51,6 +51,13 @@ class TrustedSourceConfig(BaseModel):
         default=None,
         description="Last ETag received from the RSS feed; used for conditional requests.",
     )
+    body_from_feed: bool = Field(
+        default=False,
+        description=(
+            "Use the feed's own summary as the article body instead of fetching the page — "
+            "for publishers whose pages refuse automated requests but whose RSS is public."
+        ),
+    )
 
     def effective_user_agent(self, fallback: str) -> str:
         for candidate in (self.user_agent, fallback, DEFAULT_TRUSTED_BROWSER_USER_AGENT):

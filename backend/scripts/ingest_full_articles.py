@@ -30,6 +30,7 @@ from app.crud.ingest_url_state import (
 from app.db import session_scope
 from app.logging_config import configure_logging
 from app.services.article_ingest import (
+    repair_missing_published_at,
     normalized_from_candidate_fetch,
     persist_fetched_article,
 )
@@ -147,14 +148,19 @@ async def _run(
                 if not dry_run and cand_url:
                     # ── Skip already-ingested articles (no HTTP needed) ────────────────
                     with session_scope() as db:
-                        if get_article_by_url(db, cand_url) is not None:
+                        existing = get_article_by_url(db, cand_url)
+                        if existing is not None:
                             totals["skipped_already_ingested"] += 1
                             st["skipped_already_ingested"] += 1
+                            if repair_missing_published_at(existing, cand):
+                                totals["repaired_published_at"] += 1
+                                st["repaired_published_at"] += 1
                             # Do NOT count as success — we want to keep searching for new articles
                             continue
                     # ── Skip permanently blocked URLs (repeated 403s) ─────────────────
+                    # (feed-body sources never request the page, so a past block doesn't matter)
                     with session_scope() as db:
-                        if is_url_ingest_blocked(db, cand_url):
+                        if not cfg.body_from_feed and is_url_ingest_blocked(db, cand_url):
                             totals["skipped_blocked"] += 1
                             st["skipped_blocked"] += 1
                             logger.info(
@@ -164,7 +170,7 @@ async def _run(
                             )
                             continue
 
-                fr = await adapter.fetch_article(cand)
+                fr = adapter.feed_body_result(cand) if cfg.body_from_feed else await adapter.fetch_article(cand)
                 if fr.get("status") != "ok":
                     totals["fetch_failed"] += 1
                     st["fetch_failed"] += 1

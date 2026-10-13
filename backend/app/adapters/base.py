@@ -10,6 +10,10 @@ from app.utils.datetime_parse import published_raw_to_utc_datetime, utc_datetime
 from app.utils.url_normalize import normalize_article_url
 
 
+# raw_meta.full_fetch.extraction_method for bodies taken from the feed (see feed_body_result)
+FEED_SUMMARY_METHOD = "feed_summary"
+
+
 class BaseSourceAdapter(ABC):
     """Fetch and normalize article candidates from one configured trusted source."""
 
@@ -33,6 +37,35 @@ class BaseSourceAdapter(ABC):
             "error_type": "NotImplementedError",
             "adapter_key": getattr(self, "adapter_key", ""),
             "url": item.get("url"),
+        }
+
+    def feed_body_result(self, item: dict[str, Any]) -> dict[str, Any]:
+        """A ``fetch_article``-shaped result built from the feed entry itself, no HTTP.
+
+        For sources with ``body_from_feed``: their pages refuse automated requests,
+        but the publisher's RSS carries a summary we can use as the body.
+        """
+        url = (item.get("url") or "").strip()
+        meta = dict(item.get("raw_meta") or {})
+        summary = " ".join(str(meta.get("summary") or "").split())
+        if not url or not summary:
+            return {
+                "status": "failed",
+                "error": "feed entry has no summary",
+                "error_type": "ParseError",
+                "url": url,
+                "adapter_key": getattr(self, "adapter_key", ""),
+            }
+        meta["full_fetch"] = {"extraction_method": FEED_SUMMARY_METHOD}
+        return {
+            "status": "ok",
+            "url": url,
+            "raw_text": summary,
+            "canonical_url": None,
+            "title_guess": None,
+            "author_guess": None,
+            "excerpt": summary,
+            "raw_meta": meta,
         }
 
     def normalize(self, raw: dict[str, Any]) -> dict[str, Any]:
