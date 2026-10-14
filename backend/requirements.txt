@@ -11,7 +11,9 @@ feedparser>=6.0.11
 pyyaml>=6.0.0
 beautifulsoup4>=4.12.0
 bleach>=6.2.0
-scikit-learn>=1.4.0
+# models/scorer.pkl was saved with 1.8.0; a different version warns on load and may mis-predict.
+# Retrain (scripts/train_scorer.py) before changing this pin.
+scikit-learn==1.8.0
 openai>=1.30.0
 redis>=5.0.0
 slowapi>=0.1.9
