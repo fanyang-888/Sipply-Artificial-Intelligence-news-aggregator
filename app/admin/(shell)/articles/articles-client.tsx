@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { apiFetchAdmin } from "@/lib/api/client";
@@ -30,8 +30,11 @@ function fmtDate(iso: string | null): string {
 }
 
 function ArticlesInner() {
-  const params = useSearchParams();
-  const sourceId = params.get("source_id");
+  const sourceId = useSearchParams().get("source_id");
+  return <ArticlesList key={sourceId ?? ""} sourceId={sourceId} />;
+}
+
+function ArticlesList({ sourceId }: { sourceId: string | null }) {
   const { lang } = useI18n();
   const zh = lang === "zh";
 
@@ -42,8 +45,8 @@ function ArticlesInner() {
   const [filterMode, setFilterMode] = useState<"all" | "ok" | "filtered">("all");
   const PAGE_SIZE = 50;
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // A different source_id remounts this component (key in ArticlesInner), so loading starts over
+  useEffect(() => {
     const qs = new URLSearchParams({ limit: "200", offset: "0" });
     if (sourceId) qs.set("source_id", sourceId);
     apiFetchAdmin<ArticleRow[]>(`/api/admin/articles?${qs}`)
@@ -51,8 +54,6 @@ function ArticlesInner() {
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, [sourceId]);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered =
     filterMode === "ok" ? articles.filter((a) => !a.is_filtered_out) :

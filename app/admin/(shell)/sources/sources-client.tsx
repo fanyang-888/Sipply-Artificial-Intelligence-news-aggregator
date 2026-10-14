@@ -43,10 +43,14 @@ export function SourcesClient() {
   const [sources, setSources] = useState<SourceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadedAt, setLoadedAt] = useState(0);
 
   useEffect(() => {
     apiFetchAdmin<SourceRow[]>("/api/admin/sources")
-      .then(setSources)
+      .then((rows) => {
+        setSources(rows);
+        setLoadedAt(Date.now());
+      })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, []);
@@ -83,7 +87,7 @@ export function SourcesClient() {
             <tbody>
               {sources.map((src) => {
                 const stale = src.last_polled_at
-                  ? Date.now() - new Date(src.last_polled_at).getTime() > src.fetch_frequency_minutes * 60 * 1000 * 3
+                  ? loadedAt - new Date(src.last_polled_at).getTime() > src.fetch_frequency_minutes * 60 * 1000 * 3
                   : true;
                 const typeLabel = TYPE_LABEL[src.type];
                 const freq = src.fetch_frequency_minutes >= 1440

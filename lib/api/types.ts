@@ -4,8 +4,6 @@
  * (Cluster) after mapping.
  */
 
-import type { LocalizedString } from "@/types/localized";
-
 export type ApiLocalizedStr = { en: string; zh: string | null };
 
 export type ApiAudienceBlocks = {

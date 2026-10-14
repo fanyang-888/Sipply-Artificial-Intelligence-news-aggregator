@@ -48,7 +48,6 @@ export function ClustersClient() {
   const PAGE_SIZE = 20;
 
   useEffect(() => {
-    setLoading(true);
     apiFetch<ClusterRow[]>(`/api/clusters?limit=100&offset=0`)
       .then(setClusters)
       .catch((e) => setError((e as Error).message))

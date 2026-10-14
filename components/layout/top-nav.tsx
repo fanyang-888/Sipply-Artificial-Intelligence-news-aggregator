@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,19 +8,22 @@ import { useI18n } from "@/lib/i18n";
 import { TopNavSearch } from "@/components/layout/top-nav-search";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 
-function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+// The theme lives on <html data-theme> (set before paint by app/layout.tsx); this reads it there
+function subscribeTheme(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+const readTheme = (): "dark" | "light" =>
+  document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
 
-  useEffect(() => {
-    const saved = document.documentElement.getAttribute("data-theme") as "dark" | "light";
-    setTheme(saved || "dark");
-  }, []);
+function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as const);
 
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
-    setTheme(next);
-    try { localStorage.setItem("sipply-theme", next); } catch (e) {}
+    try { localStorage.setItem("sipply-theme", next); } catch {}
   }
 
   return (

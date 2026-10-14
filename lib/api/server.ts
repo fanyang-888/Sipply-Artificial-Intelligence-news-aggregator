@@ -40,6 +40,12 @@ export const getCluster = cache((id: string) =>
 /** The global (non-personalized) digest; readers get their own order client-side. */
 export const getDigest = cache(() => getJson<ApiDigest>("/api/digest/today", 300));
 
+/** When the newest finished pipeline run ended (ISO), or null if none has finished. */
+export async function getLastPipelineRunAt(): Promise<string | null> {
+  const runs = await getJson<{ finished_at: string | null }[]>("/api/pipeline-runs?limit=3", 300);
+  return runs.find((r) => r.finished_at)?.finished_at ?? null;
+}
+
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
   return getJson<ApiClusterIndexEntry[]>("/api/clusters/index", 3600);
 }

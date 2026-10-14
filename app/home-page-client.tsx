@@ -45,9 +45,11 @@ function freshnessLabelFrom(lastSeenAt: string | null, t: HomeT): string | undef
 type HomePageClientProps = {
   /** Server-rendered global digest (so crawlers see the stories); null if the API was unreachable. */
   initialDigest: ApiDigest | null;
+  /** When the last pipeline run finished; null hides the "Pipeline updated" line. */
+  pipelineUpdatedAt: string | null;
 };
 
-export function HomePageClient({ initialDigest }: HomePageClientProps) {
+export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageClientProps) {
   const { t, lang } = useI18n();
   const [role] = usePreferredRole();
   // The reader's local date only after mount: the server's date/time zone may differ
@@ -199,7 +201,7 @@ export function HomePageClient({ initialDigest }: HomePageClientProps) {
 
   return (
     <div>
-      <SippyHero dateLabel={dateLabel} />
+      <SippyHero dateLabel={dateLabel} updatedAt={pipelineUpdatedAt} />
 
       {/* ── Mobile layout (< sm) ── */}
       <div className="sm:hidden">
