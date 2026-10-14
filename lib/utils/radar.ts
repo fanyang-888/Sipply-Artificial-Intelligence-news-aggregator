@@ -8,6 +8,7 @@ import {
   type ApiRadarSignal,
   type ApiRadarTopic,
   type RadarMomentum,
+  type RadarRing,
   type RadarSourceKey,
 } from "@/lib/api/types";
 import type { Lang, Translations } from "@/lib/i18n";
@@ -100,12 +101,32 @@ export function withRadarDefaults(radar: ApiRadar): ApiRadar {
         ring: t.ring ?? (t.signalCount >= 15 ? 1 : t.signalCount >= 5 || (t.signalCount >= 3 && platforms >= 2) ? 2 : 3),
         momentum: t.momentum ?? momentum,
         isNew: t.isNew ?? (t.momentum ?? momentum) === "new",
+        trailSignals: t.trailSignals ?? [],
+        trailRings: t.trailRings ?? [],
         summaryEn: t.summaryEn ?? null,
         summaryZh: t.summaryZh ?? null,
         coverage: t.coverage ?? null,
       };
     }),
   };
+}
+
+/** Days back the radar compares against for "moved inward". */
+export const MOVE_LOOKBACK_DAYS = 3;
+
+/**
+ * Where the topic was MOVE_LOOKBACK_DAYS ago: "moved" (to an inner ring), "stayed",
+ * "appeared" (no signal yet back then), or null when there is no trail.
+ */
+export function ringMove(
+  t: ApiRadarTopic,
+): { kind: "moved"; from: RadarRing; fromSignals: number } | { kind: "stayed" } | { kind: "appeared" } | null {
+  const k = t.trailRings.length - 1 - MOVE_LOOKBACK_DAYS;
+  if (k < 0) return null;
+  const from = t.trailRings[k];
+  if (from === 0) return { kind: "appeared" };
+  if (from === t.ring) return { kind: "stayed" };
+  return { kind: "moved", from, fromSignals: t.trailSignals[k] };
 }
 
 export type RadarBrief = {
@@ -116,6 +137,8 @@ export type RadarBrief = {
   checked: number;
   gaps: number;
   newCount: number;
+  /** Topics that reached an inner ring in the last MOVE_LOOKBACK_DAYS days; biggest jump first. */
+  moved: { topic: ApiRadarTopic; from: RadarRing }[];
 };
 
 export function radarBrief(topics: ApiRadarTopic[]): RadarBrief {
@@ -129,6 +152,12 @@ export function radarBrief(topics: ApiRadarTopic[]): RadarBrief {
     checked: checked.length,
     gaps: checked.filter((t) => t.coverage?.status === "gap").length,
     newCount: topics.filter((t) => t.isNew).length,
+    moved: topics
+      .flatMap((t) => {
+        const m = ringMove(t);
+        return m?.kind === "moved" ? [{ topic: t, from: m.from }] : [];
+      })
+      .sort((a, b) => b.from - b.topic.ring - (a.from - a.topic.ring) || b.topic.score - a.topic.score),
   };
 }
 

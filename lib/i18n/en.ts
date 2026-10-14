@@ -119,6 +119,7 @@ export const en: Translations = {
     legendCooling: "Cooling",
     legendGap: "No Sipply story yet",
     legendCenter: "Within a ring, closer to the center = higher score",
+    legendTrail: "Dashed tail: the ring it was in 3 days ago",
     briefAria: "This run at a glance",
     briefRings: "Rings",
     briefFastest: "Rising fastest",
@@ -126,8 +127,15 @@ export const en: Translations = {
     briefGaps: "Not on Sipply yet",
     briefGapsBody: (gaps, checked) => `Sipply has no story on ${gaps} of the ${checked} mainstream and rising topics`,
     briefGapsPending: "Checked after the next data run",
-    briefNew: "New",
-    briefNewBody: (n) => `${n} ${n === 1 ? "topic" : "topics"} first appeared in the last 3 days`,
+    briefMoved: "Moved inward",
+    briefMovedBody: (n) => `${n} ${n === 1 ? "topic" : "topics"} moved to an inner ring in the last 3 days, biggest move:`,
+    briefMovedNone: "No topic changed rings in the last 3 days",
+    trailLabel: "Evidence over time",
+    trailMoved: (from, fromSignals, to, toSignals) =>
+      `3 days ago: ${from} (${fromSignals} ${fromSignals === 1 ? "signal" : "signals"}). Now: ${to} (${toSignals}).`,
+    trailStayed: (ring) => `${ring} for at least 3 days.`,
+    trailAppeared: "3 days ago this topic didn't exist yet.",
+    trailToday: "today",
     summaryLabel: "Summary · AI-written from the posts below",
     reading: ({ signals, platforms, trend, pace, first, last }) =>
       `${signals} signals from ${platforms}. ` +

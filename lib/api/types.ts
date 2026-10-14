@@ -169,6 +169,9 @@ export type ApiRadarTopic = {
   lastSeenAt: string | null;
   /** Signals per day across the radar window, oldest first. */
   dailyCounts: number[];
+  /** Signals so far and the ring then, at the end of each day of the window (oldest first; ring 0 = none yet). */
+  trailSignals: number[];
+  trailRings: (RadarRing | 0)[];
   /** Evidence ring: how many signals, on how many platforms. */
   ring: RadarRing;
   momentum: RadarMomentum;

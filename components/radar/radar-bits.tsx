@@ -2,7 +2,7 @@
 
 import type { ApiRadarScoreComponents, ApiRadarSignal } from "@/lib/api/types";
 import { useI18n, type Translations } from "@/lib/i18n";
-import { ageParts, engagementLabel, radarTitle, sparklineHeights } from "@/lib/utils/radar";
+import { MOVE_LOOKBACK_DAYS, ageParts, engagementLabel, radarTitle, sparklineHeights } from "@/lib/utils/radar";
 
 const UTC_SHORT_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -153,5 +153,58 @@ export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: 
         ) : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * Signals so far at the end of each day, with the ring thresholds (5 and 15
+ * signals) as dashed lines; the hollow dot marks MOVE_LOOKBACK_DAYS ago.
+ */
+export function RadarEvidenceTrail({ signals, endIso }: { signals: number[]; endIso: string | null }) {
+  const { t } = useI18n();
+  if (signals.length < 2) return null;
+  const W = 420;
+  const H = 120;
+  const P = 4;
+  const B = 16;
+  const R = 124; // room for threshold labels on the right
+  const max = Math.max(18, ...signals);
+  const step = (W - P - R) / (signals.length - 1);
+  const base = H - B - P;
+  const y = (v: number) => P + (base - P) * (1 - v / max);
+  const pts = signals.map((v, i) => [P + i * step, y(v)] as const);
+  const line = pts.map(([px, py], i) => `${i ? "L" : "M"}${px.toFixed(1)} ${py.toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${base} L${P} ${base} Z`;
+  const back = pts[pts.length - 1 - MOVE_LOOKBACK_DAYS];
+  const [endX, endY] = pts[pts.length - 1];
+  const start = endIso ? new Date(new Date(endIso).getTime() - (signals.length - 1) * 86_400_000) : null;
+  // Label baselines; keep the two labels at least 12 units apart when the lines are close
+  const label5 = y(5) + 3.5;
+  const label15 = Math.min(y(15) + 3.5, label5 - 12);
+  const thresholds: [number, string, number][] = [
+    [5, t.radar.rings[2].name, label5],
+    [15, t.radar.rings[1].name, label15],
+  ];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={t.radar.trailLabel}>
+      <title>{`${t.radar.trailLabel}: ${signals.join(" ")}`}</title>
+      <line x1={P} x2={W - R} y1={base} y2={base} stroke="var(--border)" />
+      {thresholds.map(([v, name, labelY]) => (
+        <g key={v}>
+          <line x1={P} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--text-muted)" strokeDasharray="3 3" opacity={0.6} />
+          <text x={W - R + 6} y={labelY} fontFamily="'IBM Plex Mono', monospace" fontSize={10.5} fill="var(--text-muted)">
+            {name} · {v}
+          </text>
+        </g>
+      ))}
+      <path d={area} fill="var(--accent-faint)" />
+      <path d={line} fill="none" stroke="var(--accent)" strokeWidth={1.8} />
+      {back ? <circle cx={back[0]} cy={back[1]} r={3.5} fill="var(--bg)" stroke="var(--text-muted)" strokeWidth={1.5} /> : null}
+      <circle cx={endX} cy={endY} r={3} fill="var(--accent)" />
+      <g fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="var(--text-muted)">
+        {start ? <text x={P} y={H - 3}>{UTC_MONTH_DAY.format(start)}</text> : null}
+        <text x={W - R} y={H - 3} textAnchor="end">{t.radar.trailToday}</text>
+      </g>
+    </svg>
   );
 }

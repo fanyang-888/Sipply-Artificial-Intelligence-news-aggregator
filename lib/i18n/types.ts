@@ -103,6 +103,7 @@ export type Translations = {
     legendCooling: string;
     legendGap: string;
     legendCenter: string;
+    legendTrail: string;
     briefAria: string;
     briefRings: string;
     briefFastest: string;
@@ -110,8 +111,14 @@ export type Translations = {
     briefGaps: string;
     briefGapsBody: (gaps: number, checked: number) => string;
     briefGapsPending: string;
-    briefNew: string;
-    briefNewBody: (n: number) => string;
+    briefMoved: string;
+    briefMovedBody: (n: number) => string;
+    briefMovedNone: string;
+    trailLabel: string;
+    trailMoved: (from: string, fromSignals: number, to: string, toSignals: number) => string;
+    trailStayed: (ring: string) => string;
+    trailAppeared: string;
+    trailToday: string;
     summaryLabel: string;
     reading: (r: {
       signals: number;

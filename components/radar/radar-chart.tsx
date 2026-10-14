@@ -183,6 +183,23 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
         ))}
 
         {ordered.map((topic) => {
+          const tail = positions[topic.id]?.tail;
+          if (!tail) return null;
+          const pos = positions[topic.id];
+          // Stop at the blip's edge
+          const dx = pos.x - tail.x;
+          const dy = pos.y - tail.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const endX = pos.x - (dx / len) * (BLIP_RADIUS + 2);
+          const endY = pos.y - (dy / len) * (BLIP_RADIUS + 2);
+          return (
+            <g key={`tail-${topic.id}`} style={{ opacity: isDimmed(topic) ? 0.14 : 0.85 }} aria-hidden="true">
+              <line x1={tail.x} y1={tail.y} x2={endX.toFixed(1)} y2={endY.toFixed(1)} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="4 3" />
+              <circle cx={tail.x} cy={tail.y} r={4} fill="var(--bg)" stroke="var(--text-muted)" strokeWidth={1.5} />
+            </g>
+          );
+        })}
+        {ordered.map((topic) => {
           const pos = positions[topic.id];
           if (!pos) return null;
           const dim = isDimmed(topic);

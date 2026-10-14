@@ -9,7 +9,7 @@
  */
 
 import type { ApiRadarTopic, RadarRing } from "@/lib/api/types";
-import { RADAR_SECTORS, radarSectorForTag } from "@/lib/utils/radar";
+import { RADAR_SECTORS, radarSectorForTag, ringMove } from "@/lib/utils/radar";
 
 /** Outer radius of each ring, inner first (SVG user units; the chart is centered on 0,0). */
 export const RING_OUTER: Record<RadarRing, number> = { 1: 140, 2: 245, 3: 335 };
@@ -22,7 +22,8 @@ const CENTER_HOLE = 30;
 const GAP = 5;
 const ITERATIONS = 400;
 
-export type BlipPosition = { x: number; y: number };
+/** Blip center; ``tail`` starts in the middle of the ring the topic was in MOVE_LOOKBACK_DAYS ago. */
+export type BlipPosition = { x: number; y: number; tail?: { x: number; y: number } };
 
 type Blip = { id: string; ang: number; rad: number; a0: number; a1: number; r0: number; r1: number; x: number; y: number };
 
@@ -99,7 +100,17 @@ export function layoutRadar(topics: ApiRadarTopic[]): Record<string, BlipPositio
   }
   toXY();
 
+  const round = (v: number) => Math.round(v * 10) / 10;
+  const byId = new Map(topics.map((t) => [t.id, t]));
   const out: Record<string, BlipPosition> = {};
-  for (const b of blips) out[b.id] = { x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10 };
+  for (const b of blips) {
+    const pos: BlipPosition = { x: round(b.x), y: round(b.y) };
+    const move = ringMove(byId.get(b.id)!);
+    if (move?.kind === "moved") {
+      const r = (ringInner(move.from) + RING_OUTER[move.from]) / 2;
+      pos.tail = { x: round(r * Math.cos(b.ang)), y: round(r * Math.sin(b.ang)) };
+    }
+    out[b.id] = pos;
+  }
   return out;
 }

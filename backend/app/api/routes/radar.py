@@ -18,7 +18,7 @@ from app.models.cluster import Cluster
 from app.models.signal import Signal, SignalTopic
 from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
 from app.signals.config import radar_config
-from app.signals.topics import engagement_of, evidence_ring, topic_momentum
+from app.signals.topics import engagement_of, evidence_ring, evidence_trail, topic_momentum
 
 router = APIRouter(prefix="/api/radar", tags=["radar"])
 
@@ -99,6 +99,9 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
     for t in topics:
         ranked = _by_engagement(members.get(t.id, []))
         ring = evidence_ring(t.signal_count, len(t.source_counts or {}))
+        trail_signals, trail_rings = evidence_trail(
+            [(s.published_at, source_family(s.source_kind)) for s in ranked], now=built_at, days=window_days
+        )
         momentum = topic_momentum(
             counts=t.daily_counts or [], velocity=t.velocity, last_seen=t.last_seen_at, now=built_at
         )
@@ -120,6 +123,8 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
                 firstSeenAt=format_dt(t.first_seen_at),
                 lastSeenAt=format_dt(t.last_seen_at),
                 dailyCounts=t.daily_counts or [],
+                trailSignals=trail_signals,
+                trailRings=trail_rings,
                 ring=ring,
                 momentum=momentum,
                 isNew=momentum == "new",

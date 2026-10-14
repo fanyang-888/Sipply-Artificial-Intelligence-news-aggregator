@@ -8,6 +8,7 @@ import {
   hasActiveFilter,
   radarBrief,
   radarSectorForTag,
+  ringMove,
   topicPlatforms,
   withRadarDefaults,
   formatCompact,
@@ -35,6 +36,8 @@ function topic(overrides: Partial<ApiRadarTopic>): ApiRadarTopic {
     firstSeenAt: null,
     lastSeenAt: null,
     dailyCounts: [],
+    trailSignals: [],
+    trailRings: [],
     ring: 3,
     momentum: "steady",
     isNew: false,
@@ -203,5 +206,28 @@ describe("withRadarDefaults", () => {
       ring: 1,
       momentum: "cooling",
     });
+  });
+});
+
+describe("ringMove", () => {
+  // 7-day trails for brevity; MOVE_LOOKBACK_DAYS = 3 compares with index length - 4
+  it("tells moved, stayed and appeared apart", () => {
+    const moved = topic({ ring: 1, signalCount: 53, trailSignals: [0, 1, 2, 3, 20, 40, 53], trailRings: [0, 3, 3, 3, 1, 1, 1] });
+    expect(ringMove(moved)).toEqual({ kind: "moved", from: 3, fromSignals: 3 });
+    const stayed = topic({ ring: 2, trailSignals: [5, 6, 6, 7, 8, 8, 9], trailRings: [2, 2, 2, 2, 2, 2, 2] });
+    expect(ringMove(stayed)).toEqual({ kind: "stayed" });
+    const fresh = topic({ ring: 2, trailSignals: [0, 0, 0, 0, 1, 3, 6], trailRings: [0, 0, 0, 0, 3, 2, 2] });
+    expect(ringMove(fresh)).toEqual({ kind: "appeared" });
+    expect(ringMove(topic({ trailRings: [3, 3] }))).toBeNull(); // trail too short
+  });
+
+  it("feeds the brief, biggest jump first", () => {
+    const a = topic({ id: "a", ring: 2, score: 90, trailSignals: [1, 1, 1, 1, 2, 4, 6], trailRings: [3, 3, 3, 3, 3, 2, 2] });
+    const b = topic({ id: "b", ring: 1, score: 60, trailSignals: [1, 1, 1, 2, 9, 30, 40], trailRings: [3, 3, 3, 3, 2, 1, 1] });
+    const c = topic({ id: "c", ring: 2, trailSignals: [5, 5, 5, 5, 5, 6, 6], trailRings: [2, 2, 2, 2, 2, 2, 2] });
+    expect(radarBrief([a, b, c]).moved.map((m) => [m.topic.id, m.from])).toEqual([
+      ["b", 3],
+      ["a", 3],
+    ]);
   });
 });
