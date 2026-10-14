@@ -282,11 +282,12 @@ python -m scripts.summarize
 
 ### Tests
 
-CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`: backend migrations are applied to an empty Postgres, then `pytest`; the frontend runs `npm run typecheck` and `npm test`.
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`: backend migrations are applied to an empty Postgres, then `pytest`; the frontend runs `npm run typecheck`, `npm run lint -- --max-warnings=0` and `npm test`.
 
 ```bash
 # Frontend — typecheck + unit tests (vitest)
 npm run typecheck
+npm run lint
 npm test
 
 # Backend — pure unit tests run anywhere; DB tests need a local Postgres at alembic head
