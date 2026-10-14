@@ -7,10 +7,12 @@
 **Solution:** A production pipeline that ingests, scores, clusters, and summarises AI news into a role-personalised daily brief — automatically, bilingually, at under $1/day.
 
 - Replaced LLM-based scoring with a trained TF-IDF + Ridge model (422 GPT-labelled examples, Pearson r=0.75), cutting per-run inference cost to $0 while covering 44% of the relevance signal — enabling the system to scale to any volume without API cost growth
-- Shipped a complete 9-stage production pipeline (ingest → filter → ML score → cluster → status → cross-day dedup → summarise → translate → email) running daily on Railway, serving real users a bilingual EN/ZH digest with zero manual intervention
+- Shipped a production pipeline (ingest → filter → ML score → cluster → status → cross-day dedup → summarise → translate → email, plus the Trend Radar stages) running 4× a day on Railway, serving real users a bilingual EN/ZH digest with zero manual intervention
+- Built a **Trend Radar** that groups the last 14 days of community and news signals (~5,000: Hacker News, Google News, YouTube, Bluesky, GitHub, DEV, Lobsters) into scored topics, places them by evidence and momentum, and flags the ones Sipply hasn't covered yet
+- Made the site **readable by AI assistants (GEO)**: server-rendered stories with JSON-LD, a live sitemap, `robots.txt` and `llms.txt`, checked with a crawler script
 - Fine-tuned Qwen2.5-1.5B via LoRA on 780 knowledge-distilled GPT-4o-mini examples (ROUGE-L = 0.37), validating a path to eliminate LLM API dependency entirely at production scale
 
-**Live demo:** [sipply.dev](https://sipply.dev)
+**Live:** [www.sipply.dev](https://www.sipply.dev) · Trend Radar: [www.sipply.dev/radar](https://www.sipply.dev/radar)
 
 ---
 
@@ -31,15 +33,17 @@ So I built it — including the ingestion pipeline, the ML scoring model, the LL
 
 | | |
 |--|--|
-| Auto-ingestion | Fetches full article text from 13 sources daily via Railway cron; incremental via HTTP ETag + poll-frequency gate |
+| Auto-ingestion | Fetches articles from 11 active sources 4× a day via Railway cron; incremental via HTTP ETag + poll-frequency gate |
 | Smart filtering | Rule-based gate (keyword match + length + dedup) removes off-topic articles at zero API cost |
 | ML signal scoring | Composite 0-100 score: rule-based dimensions (recency, source authority) + TF-IDF Ridge model predicting audience fit, practical relevance, and novelty |
 | Story clustering | TF-IDF + cosine similarity groups related articles into story threads |
 | Cross-day dedup | Stories that evolve across days are merged, not duplicated |
 | Role personalisation | PM / Developer / Student lenses with tailored "why it matters" context |
 | Bilingual | Every field (title, summary, takeaways, why it matters) auto-translated to Chinese |
-| Email digest | Daily digest sent to subscribers via Resend; subscribe bar on homepage |
-| Topic filter | Client-side tag filter on homepage; preferences saved to localStorage |
+| Email digest | Daily digest sent to subscribers via Resend, on the 20:00 UTC run only |
+| Category bar | Homepage and archive filter by category (models, research, funding, products, policy & safety, open source & infra) |
+| Trend Radar | Community and news signals grouped into topics; rings by evidence, color by momentum, AI summaries, Sipply coverage — see [Trend Radar](#trend-radar) |
+| Readable by AI assistants | Server-rendered pages, JSON-LD, sitemap, `robots.txt`, `llms.txt` — see [GEO](#readable-by-ai-assistants-geo) |
 | Dark / light mode | Theme toggle with localStorage persistence; all colours via CSS custom properties |
 | Recency ranking | Digest ranks stories by `score × e^(-0.15 × age_days)` — fresh beats stale |
 | Full-text search | Archive search across all clusters and articles |
@@ -55,9 +59,12 @@ The backend is **stateless**. All state lives in PostgreSQL. Redis caches hot en
 
 ## Pipeline
 
+Railway cron runs `scripts/run_pipeline.py` at **02:00, 08:00, 14:00 and 20:00 UTC**; the digest email goes out on the 20:00 run only.
+
 ```mermaid
 flowchart LR
-    SRC["Sources\n13 feeds"]
+    SRC["News sources\n11 feeds"]
+    SIG["Community sources\nHN · Google News · YouTube\nBluesky · GitHub · DEV · Lobsters"]
 
     subgraph COLLECT["Data Collection"]
         direction TB
@@ -82,22 +89,68 @@ flowchart LR
         S7 --> S8
     end
 
+    subgraph RADAR["Trend Radar (best-effort)"]
+        direction TB
+        R1["9 · Ingest signals"]
+        R2["10 · Build topics\nTF-IDF groups + score"]
+        R3["11 · Merge topics\nsame story? (GPT)"]
+        R4["12 · Translate titles"]
+        R5["13 · Describe topics\nsummary + Sipply coverage"]
+        R1 --> R2 --> R3 --> R4 --> R5
+    end
+
     subgraph DELIVER["Delivery"]
         direction TB
-        S9["9 · Email\nResend API\nto subscribers"]
+        S9["14 · Email\n20:00 UTC run only"]
         CACHE["Redis cache bust\nai_tool:*"]
         S9 --> CACHE
     end
 
-    SRC --> COLLECT --> SCORE --> GENERATE --> DELIVER
+    SRC --> COLLECT --> SCORE --> GENERATE --> RADAR --> DELIVER
+    SIG --> R1
 
     style COLLECT  fill:#f0f9ff,stroke:#0ea5e9
     style SCORE    fill:#faf5ff,stroke:#9333ea
     style GENERATE fill:#fefce8,stroke:#ca8a04
+    style RADAR    fill:#fff1f2,stroke:#e11d48
     style DELIVER  fill:#f0fdf4,stroke:#16a34a
 ```
 
-Each stage is a standalone script in `backend/scripts/`; `run_pipeline.py` orchestrates them in sequence with per-stage timing, failure isolation, and a final Redis cache bust.
+Each stage is a standalone script in `backend/scripts/`; `run_pipeline.py` orchestrates them in sequence with per-stage timing, failure isolation, and a final Redis cache bust. The Trend Radar stages depend on third-party APIs, so a failure there is recorded in the run log but doesn't fail the news pipeline.
+
+---
+
+## Trend Radar
+
+[www.sipply.dev/radar](https://www.sipply.dev/radar) shows what the AI community is discussing over the last 14 days. Code: `backend/app/signals/`, `app/radar/`, `components/radar/`.
+
+**Signals.** Each run pulls posts, articles and videos with their engagement numbers: Hacker News (Algolia search), Google News (RSS search), YouTube (Data API), Bluesky (app password), GitHub (new repos by stars), DEV and Lobsters. Keyed sources are skipped until their key is set; Threads is wired up but needs Meta's approval. Keywords and limits: `backend/app/signals/signal_sources.yaml`.
+
+**Topics.** Titles are grouped with the same TF-IDF + union-find as the news clusters (threshold tuned on real HN data; big, loose groups are re-split). Word overlap misses one story told in different words, so likely duplicate pairs are checked by gpt-4o-mini and merged. Each topic gets a 0–100 score:
+
+| Component | Weight | What it measures |
+|---|---|---|
+| Volume | 25% | Signal count, plus a bonus for appearing on several platforms |
+| Engagement | 25% | Points, comments, likes (log-scaled) |
+| Velocity | 25% | Daily rate over the last 3 days vs the 11 before |
+| Recency | 10% | Age of the newest signal |
+| Relevance | 15% | The article relevance model on the topic label |
+
+**On the page.** Rings show evidence: *mainstream* (15+ signals), *picking up* (5–14, or 3+ on two platforms), *weak signal* (the rest). Sectors are the site's categories. Color is momentum: *new* (only in the last 3 days), *rising* (discussed before, now clearly faster), *steady*, *cooling*. Each topic card has an AI summary (EN + 中文), the score split, a 14-day trend, the platform mix, the top posts, and whether Sipply already has a story on it (TF-IDF picks candidate stories, GPT confirms the match).
+
+**Cost.** The GPT steps (title translation, summaries, coverage, duplicate checks) cost well under a cent per run.
+
+---
+
+## Readable by AI assistants (GEO)
+
+AI assistants and search crawlers should be able to read and cite Sipply:
+
+- **Server-rendered content**: the homepage, story pages and the radar ship their full text in the HTML (readers' personalization re-ranks on the client).
+- **Structured data**: `NewsArticle` JSON-LD on story pages (with the original sources), `ItemList` on the homepage.
+- **Machine entry points**: `/sitemap.xml` (every story; rendered per request so it never goes stale), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed), `/llms.txt`.
+- **Metadata for crawlers that don't run JS**: `htmlLimitedBots` includes GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot, so they get `<head>` metadata in the HTML.
+- **Check**: `python -m scripts.geo_crawler_check https://www.sipply.dev` (from `backend/`) fetches pages as GPTBot or ClaudeBot would (raw HTML, no JavaScript) and reports what they can see.
 
 ---
 
@@ -194,32 +247,35 @@ python -m scripts.export_finetune_data --output-dir data/
 
 ## Data sources
 
-| Source | Type | Cadence |
-|--------|------|---------|
-| Anthropic Newsroom | HTML scrape | every 60 min |
-| OpenAI News | RSS | every 60 min |
-| Google DeepMind Blog | HTML scrape | every 120 min |
+News sources (`backend/app/source_catalog/trusted_sources.yaml`):
+
+| Source | How | Cadence |
+|--------|-----|---------|
+| OpenAI News | RSS; the feed summary is the body (article pages block automated requests) | every 60 min |
+| Anthropic Newsroom | HTML (newsroom cards, incl. model launches) | every 60 min |
+| Google DeepMind Blog | RSS (HTML fallback) | every 120 min |
 | Hugging Face Blog | RSS | every 60 min |
 | arXiv cs.AI + cs.LG | RSS | daily |
 | The Verge AI | RSS | every 30 min |
 | Ars Technica AI | RSS | every 60 min |
 | TechCrunch AI | RSS | every 30 min |
-| VentureBeat AI | RSS | every 30 min |
-| AI News | RSS | every 60 min |
 | The Register AI | RSS | every 60 min |
 | Import AI (newsletter) | RSS | daily |
-| TLDR AI (newsletter) | RSS | daily |
+
+Turned off, with the reason in the YAML: VentureBeat AI (feed stopped updating, 429), AI News (bot challenge), TLDR AI (no readable text), Meta AI Blog (JavaScript-rendered). Trend Radar sources are listed [above](#trend-radar).
 
 ---
 
 ## Project layout
 
 ```
-├── app/                    Next.js pages (digest, cluster, archive, admin)
-├── components/             UI components (digest cards, cluster view, archive...)
+├── app/                    Next.js pages (digest, cluster, archive, radar, admin) + sitemap/robots/llms.txt
+├── components/             UI components (digest cards, cluster view, archive, radar...)
 ├── lib/
-│   ├── api/                Type-safe backend API client
+│   ├── api/                Type-safe backend API client (+ server-side fetchers)
 │   ├── i18n/               EN/ZH locale strings with typed keys
+│   ├── seo/                Site URL, JSON-LD, llms.txt builders
+│   ├── utils/              Pure helpers (radar layout and filters, archive URLs...)
 │   └── data/               Static content (AI Basics daily rotation)
 ├── types/                  Shared TypeScript type definitions
 ├── middleware.ts           Next.js middleware — admin route guard
@@ -230,6 +286,7 @@ python -m scripts.export_finetune_data --output-dir data/
     │   ├── crud/           DB query helpers
     │   ├── models/         SQLAlchemy ORM models
     │   ├── services/       Pipeline business logic (ingest, cluster, summarise...)
+    │   ├── signals/        Trend Radar: sources, topics, merge, descriptions
     │   └── source_catalog/ trusted_sources.yaml — add new sources here
     ├── data/               Training data (labels.jsonl, finetune_train/eval.jsonl)
     ├── models/             Trained artifacts (scorer.pkl, qwen-adapter/)
@@ -309,7 +366,7 @@ Deployed as two Railway services sharing one Postgres + Redis instance:
 | Service | Config | Schedule |
 |---------|--------|----------|
 | `personal-ai-intelligence-tool` | `railway.toml` | Always-on API |
-| `daily-pipeline-cron` | `railway.cron.toml` | 02:00 UTC daily |
+| `daily-pipeline-cron` | `railway.cron.toml` | 02:00, 08:00, 14:00, 20:00 UTC (email on the 20:00 run) |
 
 On startup, `alembic upgrade head` runs in a background thread so Railway's healthcheck passes immediately.
 
@@ -323,6 +380,9 @@ Required environment variables:
 | `REDIS_URL` | Auto-set by Railway Redis plugin |
 | `JWT_SECRET` | Signs admin JWT tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SECRET` | Admin login |
+| `YOUTUBE_API_KEY` | Trend Radar YouTube source (optional; skipped while unset) |
+| `BLUESKY_HANDLE` / `BLUESKY_APP_PASSWORD` | Trend Radar Bluesky source (optional; an app password, not the account password) |
+| `THREADS_ACCESS_TOKEN` | Trend Radar Threads source (optional; needs Meta's `threads_keyword_search` approval) |
 
 ### Frontend (Vercel)
 
@@ -349,6 +409,12 @@ GET /api/clusters/{id}
 # Full-text search
 GET /api/search?q=GPT-5&type=cluster
 
+# Trend Radar: topics with rings, momentum, summaries, coverage, top posts and questions
+GET /api/radar?limit=40
+
+# Every story id + last update (feeds the sitemap)
+GET /api/clusters/index
+
 # Subscribe to email digest
 POST /api/subscribe   { "email": "..." }
 
@@ -368,6 +434,12 @@ The pipeline runs daily across 13 sources. Filtering and scoring are handled by 
 
 **Why Redis cache with 5-min TTL?**
 The digest and cluster list endpoints are hit on every page load. Caching avoids repeated Postgres aggregation queries. The pipeline explicitly busts the cache (`ai_tool:*`) after every successful run so stale data never persists beyond one cycle.
+
+**Why ask GPT whether two radar topics are the same story?**
+Measured on 60 real topics: between topic title centroids, true duplicates scored as low as 0.26 while different stories reached 0.53, so no similarity threshold separates them. Similarity only picks candidate pairs (cheap, local); one small GPT request judges them.
+
+**Why rings by evidence instead of by score?**
+A single viral YouTube video can score as high as a story covered by 40 outlets. Rings use how many signals, on how many platforms, back a topic; the score only orders topics inside a ring. In one snapshot, 12 of the top 40 topics were just a few YouTube videos each; they now sit in the outer ring.
 
 **Why incremental RSS ingestion?**
 Each source has a configurable `fetch_frequency_minutes`. The ingest script skips sources polled too recently (`last_polled_at` gate) and sends `If-None-Match` ETag headers so unchanged feeds return HTTP 304 with zero parsing cost — saving bandwidth and avoiding source rate limits.
