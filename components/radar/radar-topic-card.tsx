@@ -13,6 +13,7 @@ import {
 } from "@/lib/utils/radar";
 import { RadarSignalItem, RadarTrendChart, ScoreBreakdown } from "@/components/radar/radar-bits";
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
+import { TopicAnswerCheck } from "@/components/radar/radar-answers";
 
 const UTC_DAY = {
   en: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
@@ -108,6 +109,8 @@ export function RadarTopicCard({ topic, rank, windowDays, builtAt, now, hidden }
           {t.radar.coverageWeak}
         </p>
       ) : null}
+
+      <TopicAnswerCheck topic={topic} now={now} />
 
       <section>
         <div className="mb-2 flex items-baseline justify-between">

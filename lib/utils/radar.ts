@@ -103,6 +103,8 @@ export function withRadarDefaults(radar: ApiRadar): ApiRadar {
         summaryEn: t.summaryEn ?? null,
         summaryZh: t.summaryZh ?? null,
         coverage: t.coverage ?? null,
+        question: t.question ?? null,
+        answerCheck: t.answerCheck ?? null,
       };
     }),
   };

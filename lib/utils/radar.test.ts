@@ -41,6 +41,8 @@ function topic(overrides: Partial<ApiRadarTopic>): ApiRadarTopic {
     summaryEn: null,
     summaryZh: null,
     coverage: null,
+    question: null,
+    answerCheck: null,
     signals: [],
     questions: [],
     ...overrides,

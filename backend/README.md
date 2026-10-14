@@ -61,7 +61,8 @@ python -m scripts.ingest_signals        # Trend Radar: HN, Google News, YouTube,
 python -m scripts.build_signal_topics   # Trend Radar: group + score signal topics
 python -m scripts.merge_signal_topics   # Trend Radar: merge topics about the same story (gpt-4o-mini)
 python -m scripts.translate_signals     # Trend Radar: Chinese titles
-python -m scripts.describe_signal_topics  # Trend Radar: summaries + which Sipply story covers each topic
+python -m scripts.describe_signal_topics  # Trend Radar: summaries, reader questions, which Sipply story covers each topic
+python -m scripts.check_ai_answers      # ask an AI assistant with web search the radar questions; record citations (paid; cron: 14:00 UTC run)
 python -m scripts.send_digest_email     # digest email (the cron sends it on the 20:00 UTC run only)
 ```
 
@@ -83,6 +84,7 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | GET | `/api/clusters/index` | Every story id + last update (for the sitemap) |
 | GET | `/api/search` | Full-text search (clusters + articles) |
 | GET | `/api/radar` | Trend Radar topics: ring, momentum, score breakdown, daily counts, summary, Sipply coverage, top posts, questions |
+| GET | `/api/radar/answers` | What AI assistants cited for the radar questions; Sipply's citation rate |
 | GET | `/api/pipeline-runs` | Pipeline run history |
 | POST | `/api/auth/login` | Get JWT token |
 | POST | `/api/admin/trigger-pipeline` | Trigger pipeline (JWT required) |
@@ -100,7 +102,8 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written |
 | `pipeline_runs` | Run history with per-stage timing and status |
 | `signals` | Trend Radar posts/news/videos with live engagement numbers |
-| `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run; summaries and the covering story carry over to the matching topic |
+| `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run; summaries, reader question and the covering story carry over to the matching topic |
+| `answer_checks` | What an AI assistant with web search answered and cited for each radar question (kept 90 days) |
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
 On Railway, migrations run automatically at startup in a background thread.

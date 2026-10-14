@@ -8,10 +8,13 @@ Railway Cron service (see railway.cron.toml) but also works locally:
     python -m scripts.run_pipeline
     python -m scripts.run_pipeline --triggered-by manual
     python -m scripts.run_pipeline --triggered-by manual --force-email
+    python -m scripts.run_pipeline --triggered-by manual --check-answers
 
 The pipeline runs several times a day, but the digest email goes out only
 once: on the cron run that starts at DIGEST_EMAIL_HOUR_UTC (default 20, the
 last run of the day). Other runs record send_digest_email as "skipped".
+Likewise check_ai_answers (paid web searches) runs only on the
+ANSWER_CHECK_HOUR_UTC cron run.
 
 Exit code 0 = all stages succeeded.
 Exit code 1 = one or more stages failed (details in logs).
@@ -36,6 +39,8 @@ _PIPELINE_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_TIMEOUT_MINUTES", "90")) * 6
 
 # Must match one of the hours in railway.cron.toml's cronSchedule, or no email is ever sent.
 _DIGEST_EMAIL_HOUR_UTC = int(os.getenv("DIGEST_EMAIL_HOUR_UTC", "20"))
+# Once a day, on this cron run, ask an AI assistant the radar questions (paid web search)
+_ANSWER_CHECK_HOUR_UTC = int(os.getenv("ANSWER_CHECK_HOUR_UTC", "14"))
 
 
 # Trend Radar stages depend on third-party APIs; their failure is recorded in
@@ -47,6 +52,7 @@ _BEST_EFFORT_STAGES = frozenset(
         "merge_signal_topics",
         "translate_signals",
         "describe_signal_topics",
+        "check_ai_answers",
     }
 )
 
@@ -145,12 +151,13 @@ def _run_stage(name: str, fn: Callable[[], int]) -> tuple[bool, float]:
     return False, elapsed
 
 
-def main(triggered_by: str = "cron", force_email: bool = False) -> int:
+def main(triggered_by: str = "cron", force_email: bool = False, check_answers: bool = False) -> int:
     # Arm the hard timeout FIRST — this caps the entire run regardless of what hangs
     _install_timeout(_PIPELINE_TIMEOUT_SECONDS)
     # Decide on the email from the start time, not the (much later) email-stage time
     started_at = datetime.now(timezone.utc)
     send_email = force_email or _is_digest_email_run(started_at, triggered_by)
+    check_answers = check_answers or (triggered_by == "cron" and started_at.hour == _ANSWER_CHECK_HOUR_UTC)
     logger.info(
         "========== daily pipeline starting  timeout=%dm  send_email=%s ==========",
         _PIPELINE_TIMEOUT_SECONDS // 60,
@@ -205,6 +212,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         merge_signal_topics,
         translate_signals,
         describe_signal_topics,
+        check_ai_answers,
         send_digest_email,
     )
 
@@ -222,6 +230,8 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         ("translate_signals",     lambda: translate_signals.main([])),
         ("describe_signal_topics", lambda: describe_signal_topics.main([])),
     ]
+    if check_answers:
+        stages.append(("check_ai_answers", lambda: check_ai_answers.main([])))
     if send_email:
         stages.append(("send_digest_email", lambda: send_digest_email.main([])))
 
@@ -236,6 +246,8 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
             failures.append(name)
             # Continue — later stages can still run on already-processed rows.
 
+    if not check_answers:
+        stage_results["check_ai_answers"] = {"status": "skipped", "elapsed_sec": 0}
     if not send_email:
         logger.info(
             "pipeline  stage=%-22s  status=SKIPPED   (email only on the %02d:00 UTC cron run)",
@@ -284,8 +296,13 @@ def _cli_main() -> None:
         action="store_true",
         help="Send the digest email on this run regardless of the hour",
     )
+    parser.add_argument(
+        "--check-answers",
+        action="store_true",
+        help="Ask the AI-answer questions on this run too (paid web search; the cron does it at ANSWER_CHECK_HOUR_UTC)",
+    )
     args = parser.parse_args()
-    sys.exit(main(triggered_by=args.triggered_by, force_email=args.force_email))
+    sys.exit(main(triggered_by=args.triggered_by, force_email=args.force_email, check_answers=args.check_answers))
 
 
 if __name__ == "__main__":

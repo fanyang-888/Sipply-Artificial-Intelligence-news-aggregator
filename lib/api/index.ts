@@ -8,6 +8,7 @@ import type {
   ApiCluster,
   ApiDigest,
   ApiRadar,
+  ApiRadarAnswers,
   ApiSearchResponse,
 } from "./types";
 
@@ -74,6 +75,11 @@ export async function fetchSearch(params: {
 /** Server-side: cached for 5 minutes, the same lifetime as the API's own cache. */
 export async function fetchRadar(limit = 40): Promise<ApiRadar> {
   return apiFetch<ApiRadar>(`/api/radar?limit=${limit}`, { next: { revalidate: 300 } });
+}
+
+/** Server-side: what AI assistants cited for the radar questions (last ``days`` days). */
+export async function fetchRadarAnswers(days = 30): Promise<ApiRadarAnswers> {
+  return apiFetch<ApiRadarAnswers>(`/api/radar/answers?days=${days}`, { next: { revalidate: 300 } });
 }
 
 // ---------------------------------------------------------------------------

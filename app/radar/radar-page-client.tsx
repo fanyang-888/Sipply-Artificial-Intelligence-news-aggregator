@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { ApiRadar, ApiRadarTopic } from "@/lib/api/types";
+import type { ApiRadar, ApiRadarAnswers, ApiRadarTopic } from "@/lib/api/types";
 import { useI18n } from "@/lib/i18n";
 import { useNowMinute } from "@/lib/use-now-minute";
 import { DEFAULT_RADAR_FILTERS, matchesRadarFilters, type RadarFilters, type RadarSectorKey } from "@/lib/utils/radar";
 import type { BlipPosition } from "@/lib/utils/radar-layout";
+import { RadarAnswersSection } from "@/components/radar/radar-answers";
 import { RadarBrief } from "@/components/radar/radar-brief";
 import { RadarChart, MOMENTUM_FILL } from "@/components/radar/radar-chart";
 import { RadarRingLists } from "@/components/radar/radar-ring-lists";
@@ -18,10 +19,12 @@ type RadarPageClientProps = {
   radar: ApiRadar | null;
   /** Blip coordinates, computed once on the server (lib/utils/radar-layout.ts). */
   positions: Record<string, BlipPosition>;
+  /** What AI assistants cited for the radar questions; null hides that section. */
+  answers: ApiRadarAnswers | null;
 };
 
 /** Trend Radar body. Data comes from the server component, so the HTML is complete without JS. */
-export function RadarPageClient({ radar, positions }: RadarPageClientProps) {
+export function RadarPageClient({ radar, positions, answers }: RadarPageClientProps) {
   const { t } = useI18n();
   const now = useNowMinute();
   const [filters, setFilters] = useState<RadarFilters>(DEFAULT_RADAR_FILTERS);
@@ -151,6 +154,10 @@ export function RadarPageClient({ radar, positions }: RadarPageClientProps) {
               windowDays={radar.windowDays}
               onSelect={selectAndShow}
             />
+          </div>
+
+          <div className="mt-10 border-t pt-8 [border-color:var(--border)]">
+            <RadarAnswersSection answers={answers} now={now} />
           </div>
 
           <div className="mt-10 grid gap-8 border-t pt-8 [border-color:var(--border)] lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

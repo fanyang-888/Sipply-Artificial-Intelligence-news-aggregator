@@ -113,3 +113,24 @@ def test_news_stage_failure_still_fails_the_pipeline(run_with_failure):
     code, recorded = run_with_failure("summarize")
     assert code == 1
     assert recorded["_status"] == "failed"
+
+
+def test_ai_answer_check_runs_once_a_day(run):
+    _, executed, recorded = run(14)
+    assert "check_ai_answers" in executed  # the 14:00 UTC cron run only
+    for hour in (2, 8, 20):
+        _, executed, recorded = run(hour)
+        assert "check_ai_answers" not in executed
+        assert recorded["check_ai_answers"]["status"] == "skipped"
+    _, executed, _ = run(14, triggered_by="manual")
+    assert "check_ai_answers" not in executed
+
+
+def test_ai_answer_check_failure_does_not_fail_the_pipeline(monkeypatch):
+    recorded: dict = {}
+    monkeypatch.setattr(rp, "_run_stage", lambda name, fn: (name != "check_ai_answers", 0.01))
+    monkeypatch.setattr(rp, "_create_run", lambda triggered_by: "run-id")
+    monkeypatch.setattr(rp, "_finish_run", lambda run_id, *, status, stage_results, total_elapsed_sec: recorded.update(stage_results, _status=status))
+    monkeypatch.setattr(rp, "_install_timeout", lambda sec: None)
+    assert rp.main(triggered_by="manual", check_answers=True) == 0
+    assert recorded["check_ai_answers"]["status"] == "failed" and recorded["_status"] == "success"
