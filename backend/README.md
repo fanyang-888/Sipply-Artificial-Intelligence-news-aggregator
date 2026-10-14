@@ -26,7 +26,7 @@ Open [http://localhost:8000/health](http://localhost:8000/health).
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `DATABASE_URL` | ✅ | SQLAlchemy URL (`postgresql+psycopg://…`) |
-| `OPENAI_API_KEY` | ✅ | GPT-4o calls (filter / cluster / summarise) |
+| `OPENAI_API_KEY` | ✅ | gpt-4o-mini: summaries, translation, Trend Radar topic merges and descriptions |
 | `APP_ENV` | ✅ | `development` or `production` |
 | `SOURCE_FETCH_USER_AGENT` | ✅ | User-Agent sent when fetching articles |
 | `REDIS_URL` | optional | Redis cache (graceful no-op fallback if absent) |
@@ -50,18 +50,22 @@ python -m scripts.ingest_full_articles --slug techcrunch-ai    # single source
 python -m scripts.ingest_full_articles --dry-run               # no DB writes
 python -m scripts.ingest_full_articles --force-retry-failures  # clear 403 bans
 
-python -m scripts.filter_articles       # GPT-4o relevance filter
+python -m scripts.filter_articles       # rule-based relevance filter (keywords, length, dedup)
 python -m scripts.score_articles        # signal score (0–100)
 python -m scripts.cluster_articles      # TF-IDF story clustering
 python -m scripts.update_cluster_status # new/escalating/peaking/ongoing/fading
 python -m scripts.dedup_clusters        # merge cross-day duplicate clusters
-python -m scripts.summarize             # GPT-4o summaries + audience blocks
+python -m scripts.summarize             # gpt-4o-mini summaries + audience blocks
 python -m scripts.translate_clusters    # EN → ZH for all cluster fields
 python -m scripts.ingest_signals        # Trend Radar: HN, Google News, YouTube, GitHub, DEV, Lobsters, Bluesky, Threads
 python -m scripts.build_signal_topics   # Trend Radar: group + score signal topics
+python -m scripts.merge_signal_topics   # Trend Radar: merge topics about the same story (gpt-4o-mini)
+python -m scripts.translate_signals     # Trend Radar: Chinese titles
+python -m scripts.describe_signal_topics  # Trend Radar: summaries + which Sipply story covers each topic
+python -m scripts.send_digest_email     # digest email (the cron sends it on the 20:00 UTC run only)
 ```
 
-The two Trend Radar stages are best-effort: if HN or Google News is down, the
+The Trend Radar stages are best-effort: if a source or OpenAI is down, the
 run records them as failed but the news pipeline still counts as a success.
 Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 
@@ -76,8 +80,9 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | GET | `/api/digest/today` | Featured cluster + top 9; `?device_id=&role=` re-ranks per reader |
 | GET | `/api/clusters` | Paginated cluster list |
 | GET | `/api/clusters/{id}` | Cluster with articles + related cluster ids |
+| GET | `/api/clusters/index` | Every story id + last update (for the sitemap) |
 | GET | `/api/search` | Full-text search (clusters + articles) |
-| GET | `/api/radar` | Trend Radar topics, score breakdown, daily counts, top questions |
+| GET | `/api/radar` | Trend Radar topics: ring, momentum, score breakdown, daily counts, summary, Sipply coverage, top posts, questions |
 | GET | `/api/pipeline-runs` | Pipeline run history |
 | POST | `/api/auth/login` | Get JWT token |
 | POST | `/api/admin/trigger-pipeline` | Trigger pipeline (JWT required) |
@@ -95,7 +100,7 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written |
 | `pipeline_runs` | Run history with per-stage timing and status |
 | `signals` | Trend Radar posts/news/videos with live engagement numbers |
-| `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run |
+| `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run; summaries and the covering story carry over to the matching topic |
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
 On Railway, migrations run automatically at startup in a background thread.
@@ -134,7 +139,7 @@ app/
 ├── models/         SQLAlchemy ORM models
 ├── schemas/        Pydantic request/response schemas
 ├── services/       Pipeline business logic
-├── signals/        Trend Radar sources (HN, Google News, YouTube, GitHub, DEV, Lobsters, Bluesky, Threads) + topic scoring
+├── signals/        Trend Radar: sources (HN, Google News, YouTube, GitHub, DEV, Lobsters, Bluesky, Threads), topics, merge, descriptions
 └── source_catalog/ trusted_sources.yaml
 
 migrations/         Alembic migration scripts
@@ -150,5 +155,10 @@ scripts/
 ├── translate_clusters.py
 ├── ingest_signals.py           Trend Radar signals
 ├── build_signal_topics.py      Trend Radar topics
+├── merge_signal_topics.py      Trend Radar duplicate merge
+├── translate_signals.py        Trend Radar Chinese titles
+├── describe_signal_topics.py   Trend Radar summaries + coverage
+├── send_digest_email.py
+├── geo_crawler_check.py        What AI crawlers can read on the site
 └── seed_sources.py
 ```
