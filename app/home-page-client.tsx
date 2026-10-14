@@ -18,7 +18,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { MobileClusterRow } from "@/components/digest/mobile-cluster-row";
-import { RoleSelectorBanner } from "@/components/digest/role-selector-banner";
+import { RoleTabs } from "@/components/digest/role-tabs";
+import { SourceLink } from "@/components/digest/source-link";
 import { TopicFilter } from "@/components/shared/topic-filter";
 import { fetchSearch, fetchTodayDigest } from "@/lib/api";
 import { apiClusterToCluster, archiveRowToCluster } from "@/lib/api/mappers";
@@ -205,7 +206,7 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
 
       {/* ── Mobile layout (< sm) ── */}
       <div className="sm:hidden">
-        <RoleSelectorBanner />
+        <RoleTabs />
         {/* Featured story */}
         {featured ? (
           <div
@@ -279,6 +280,7 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
                 {t.digest.viewStory} →
               </Link>
             </div>
+            <SourceLink cluster={featured} className="mt-3" />
           </div>
         ) : null}
 
@@ -332,7 +334,7 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
 
       {/* ── Desktop layout (sm+) ── */}
       <div className="hidden sm:block">
-        <RoleSelectorBanner />
+        <RoleTabs />
         <div className="mb-10">
           {featured ? (
             <FeaturedStoryCard cluster={featured} />

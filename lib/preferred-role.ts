@@ -39,9 +39,11 @@ export function readPreferredRole(): Role | null {
   }
 }
 
-export function writePreferredRole(role: Role): void {
+/** Save the role, or forget it (null = read as a general reader). */
+export function writePreferredRole(role: Role | null): void {
   try {
-    localStorage.setItem(STORAGE_KEY, role);
+    if (role) localStorage.setItem(STORAGE_KEY, role);
+    else localStorage.removeItem(STORAGE_KEY);
   } catch {
     // storage blocked — the choice just won't persist
   }
@@ -61,8 +63,8 @@ function subscribe(onChange: () => void): () => void {
  * The viewer's self-declared role, shared by every component on the page.
  * null until chosen (and always null during server render).
  */
-export function usePreferredRole(): [Role | null, (role: Role) => void] {
+export function usePreferredRole(): [Role | null, (role: Role | null) => void] {
   const role = useSyncExternalStore(subscribe, readPreferredRole, () => null);
-  const setRole = useCallback((next: Role) => writePreferredRole(next), []);
+  const setRole = useCallback((next: Role | null) => writePreferredRole(next), []);
   return [role, setRole];
 }

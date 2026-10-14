@@ -26,6 +26,10 @@ export const en: Translations = {
     viewAllInsights: "View all daily insights",
     categoryBarAria: "Browse by category",
     personalizedNote: "Reordered to match what you read and your role",
+    readAs: "Read as",
+    allReaders: "All readers",
+    readAsPrompt: "Pick a role: today's order and each story's “why it matters” switch to that angle.",
+    readAsHint: (role) => `Ordered and explained for a ${role}.`,
     emptyClustersTitle: "Waiting for more data",
     emptyClustersDesc:
       "We need a bit more signal to synthesize today's clusters. Check back soon or browse the archive.",
@@ -37,6 +41,7 @@ export const en: Translations = {
     sourcesPrefix: "Sources:",
     whyItMattersPrefix: "Why it matters:",
     viewStory: "View Story",
+    originalPrefix: "Original:",
     featuredFallback: "Featured",
     formatMoreChannelTypesHidden: (n) =>
       `${n} more ingest channel types not shown`,

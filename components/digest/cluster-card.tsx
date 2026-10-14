@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { StoryBadge } from "@/components/digest/story-badge";
 import { IngestChannelRow } from "@/components/digest/ingest-channel-row";
+import { SourceLink } from "@/components/digest/source-link";
 import { MetaRow } from "@/components/shared/meta-row";
 import { ResultCardFrame } from "@/components/shared/result-card-frame";
 import { useI18n } from "@/lib/i18n";
@@ -127,10 +128,11 @@ export function ClusterCard({ cluster }: ClusterCardProps) {
         ]}
       />
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <Link href={`/cluster/${cluster.id}`} className={uiTextLinkPrimary}>
           {t.digest.viewStory}
         </Link>
+        <SourceLink cluster={cluster} />
       </div>
 
     </ResultCardFrame>

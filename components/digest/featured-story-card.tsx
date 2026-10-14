@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { StoryBadge } from "@/components/digest/story-badge";
 import { IngestChannelRow } from "@/components/digest/ingest-channel-row";
+import { SourceLink } from "@/components/digest/source-link";
 import { ActionRow } from "@/components/shared/action-row";
 import { ResultCardFrame } from "@/components/shared/result-card-frame";
 import { useI18n } from "@/lib/i18n";
-import { ROLES, roleLabel, usePreferredRole } from "@/lib/preferred-role";
+import { usePreferredRole } from "@/lib/preferred-role";
 import { pickLocalized } from "@/lib/utils/localized-string";
 import { uiMetaText, uiTextLinkPrimary } from "@/lib/ui/classes";
 import {
@@ -27,8 +28,8 @@ export function FeaturedStoryCard({
   className = "",
 }: FeaturedStoryCardProps) {
   const { t, lang } = useI18n();
-  const [preferredRole, setRole] = usePreferredRole();
-  const role = preferredRole ?? "pm";
+  // The role tabs above the digest set this; no role = the general "why it matters"
+  const [role] = usePreferredRole();
   const sourceCount = cluster.articleIds.length;
   const relevance = formatRelevancePercent(cluster.clusterScore);
   const status = cluster.storyStatus ?? t.digest.featuredFallback;
@@ -96,32 +97,14 @@ export function FeaturedStoryCard({
       </p>
 
       <div className="mt-4">
-        <div className="mb-2 flex gap-1">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              aria-pressed={role === r}
-              onClick={() => setRole(r)}
-              className="rounded px-2 py-0.5 text-[11px] font-medium transition-colors"
-              style={
-                role === r
-                  ? { background: "var(--sp-navy)", color: "#fff" }
-                  : { background: "var(--surface2)", color: "var(--text-muted)" }
-              }
-            >
-              {roleLabel(r, lang, true)}
-            </button>
-          ))}
-        </div>
         <p className="text-sm font-medium [color:var(--text-muted)] line-clamp-2 sm:line-clamp-none">
           <span className="[color:var(--text-muted)]">{t.digest.whyItMattersPrefix} </span>
-          {pickLocalized(cluster.audience[role], lang) || pickLocalized(cluster.whyItMatters, lang)}
+          {(role && pickLocalized(cluster.audience[role], lang)) || pickLocalized(cluster.whyItMatters, lang)}
         </p>
       </div>
 
       {/* Mobile: full-width buttons */}
-      <div className="mt-6 flex gap-3 sm:hidden">
+      <div className="mt-6 flex flex-col gap-3 sm:hidden">
         <Link
           href={`/cluster/${cluster.id}`}
           className="flex-1 rounded-xl py-2.5 text-center text-[13px] font-medium"
@@ -129,12 +112,14 @@ export function FeaturedStoryCard({
         >
           {t.digest.viewStory}
         </Link>
+        <SourceLink cluster={cluster} className="justify-center" />
       </div>
       {/* Desktop: inline links */}
-      <ActionRow className="mt-6 hidden sm:flex">
+      <ActionRow className="mt-6 hidden sm:flex sm:items-center sm:gap-4">
         <Link href={`/cluster/${cluster.id}`} className={uiTextLinkPrimary}>
           {t.digest.viewStory}
         </Link>
+        <SourceLink cluster={cluster} />
       </ActionRow>
     </ResultCardFrame>
   );
