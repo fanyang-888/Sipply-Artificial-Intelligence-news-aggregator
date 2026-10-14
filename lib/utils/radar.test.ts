@@ -5,6 +5,11 @@ import {
   DEFAULT_RADAR_FILTERS,
   ageParts,
   filterRadarTopics,
+  hasActiveFilter,
+  radarBrief,
+  radarSectorForTag,
+  topicPlatforms,
+  withRadarDefaults,
   formatCompact,
   engagementLabel,
   formatVelocity,
@@ -30,6 +35,12 @@ function topic(overrides: Partial<ApiRadarTopic>): ApiRadarTopic {
     firstSeenAt: null,
     lastSeenAt: null,
     dailyCounts: [],
+    ring: 3,
+    momentum: "steady",
+    isNew: false,
+    summaryEn: null,
+    summaryZh: null,
+    coverage: null,
     signals: [],
     questions: [],
     ...overrides,
@@ -47,7 +58,7 @@ describe("topicGroupForTag", () => {
 
 describe("filterRadarTopics", () => {
   const topics = [
-    topic({ id: "a", topicTag: "Model Release", sourceCounts: { hn: 2, news: 1 }, rising: true }),
+    topic({ id: "a", topicTag: "Model Release", sourceCounts: { hn: 2, news: 1 }, rising: true, momentum: "rising" }),
     topic({ id: "b", topicTag: "Funding", sourceCounts: { news: 3 } }),
     topic({ id: "c", topicTag: "Other", sourceCounts: { hn: 1 } }),
   ];
@@ -57,11 +68,43 @@ describe("filterRadarTopics", () => {
     expect(ids(filterRadarTopics(topics, DEFAULT_RADAR_FILTERS))).toEqual(["a", "b", "c"]);
   });
 
-  it("combines category, source and rising filters", () => {
+  it("combines category, source and momentum filters", () => {
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, group: "funding" }))).toEqual(["b"]);
+    expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, group: "other" }))).toEqual(["c"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "hn" }))).toEqual(["a", "c"]);
-    expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "news", risingOnly: true }))).toEqual(["a"]);
+    expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "news", momentum: "rising" }))).toEqual(["a"]);
     expect(ids(filterRadarTopics(topics, { ...DEFAULT_RADAR_FILTERS, source: "youtube" }))).toEqual([]);
+  });
+
+  it("knows when any filter is on", () => {
+    expect(hasActiveFilter(DEFAULT_RADAR_FILTERS)).toBe(false);
+    expect(hasActiveFilter({ ...DEFAULT_RADAR_FILTERS, momentum: "cooling" })).toBe(true);
+  });
+});
+
+describe("radarSectorForTag / topicPlatforms", () => {
+  it("puts untagged topics in the 'other' sector and lists platforms in display order", () => {
+    expect(radarSectorForTag("Infrastructure")).toBe("opensource");
+    expect(radarSectorForTag("Other")).toBe("other");
+    expect(radarSectorForTag("Something new")).toBe("other");
+    expect(topicPlatforms(topic({ sourceCounts: { news: 3, youtube: 0, hn: 1 } }))).toEqual(["hn", "news"]);
+  });
+});
+
+describe("radarBrief", () => {
+  it("counts rings, finds the fastest riser and Sipply's gaps", () => {
+    const gap = { status: "gap", clusterId: null, title: null, titleZh: null } as const;
+    const covered = { status: "covered", clusterId: "c1", title: "Story", titleZh: null } as const;
+    const brief = radarBrief([
+      topic({ id: "a", ring: 1, momentum: "rising", velocity: 4.9, coverage: covered, isNew: true }),
+      topic({ id: "b", ring: 1, momentum: "rising", velocity: 49, coverage: gap }),
+      topic({ id: "c", ring: 2, momentum: "steady", velocity: 60, coverage: gap }),
+      topic({ id: "d", ring: 3, momentum: "cooling" }),
+    ]);
+    expect(brief.rings).toEqual([2, 1, 1]);
+    expect(brief.fastest?.id).toBe("b"); // c is faster but not rising
+    expect([brief.checked, brief.gaps, brief.newCount]).toEqual([3, 2, 1]);
+    expect(radarBrief([]).fastest).toBeNull();
   });
 });
 
@@ -118,5 +161,40 @@ describe("formatting", () => {
     expect(ageParts("2026-10-11T12:00:00Z", now)).toEqual({ unit: "h", value: 24 });
     expect(ageParts("2026-10-09T12:00:00Z", now)).toEqual({ unit: "d", value: 3 });
     expect(ageParts(null, now)).toBeNull();
+  });
+});
+
+describe("withRadarDefaults", () => {
+  it("derives ring and momentum when an older API leaves them out", () => {
+    const old = (o: Partial<ApiRadarTopic>) => {
+      const t = topic(o) as Partial<ApiRadarTopic>;
+      for (const k of ["ring", "momentum", "isNew", "summaryEn", "summaryZh", "coverage"] as const) delete t[k];
+      return t as ApiRadarTopic;
+    };
+    const radar = withRadarDefaults({
+      generatedAt: "2026-10-13T14:00:00Z",
+      windowDays: 14,
+      sources: [],
+      questions: [],
+      topics: [
+        old({ id: "a", signalCount: 48, sourceCounts: { hn: 10, news: 37, youtube: 1 }, rising: true, velocity: 4.9, lastSeenAt: "2026-10-13T02:00:00Z" }),
+        old({ id: "b", signalCount: 3, sourceCounts: { hn: 2, news: 1 }, velocity: 1.97, lastSeenAt: "2026-10-12T10:00:00Z" }),
+        old({ id: "c", signalCount: 4, sourceCounts: { youtube: 4 }, velocity: 0.3, lastSeenAt: "2026-10-02T10:00:00Z" }),
+      ],
+    });
+    expect(radar.topics.map((t) => [t.ring, t.momentum])).toEqual([
+      [1, "rising"],
+      [2, "steady"],
+      [3, "cooling"],
+    ]);
+    expect(radar.topics[0]).toMatchObject({ isNew: false, summaryEn: null, coverage: null });
+  });
+
+  it("keeps what the API sends", () => {
+    const t = topic({ ring: 1, momentum: "cooling", signalCount: 2, rising: true });
+    expect(withRadarDefaults({ generatedAt: null, windowDays: 14, sources: [], questions: [], topics: [t] }).topics[0]).toMatchObject({
+      ring: 1,
+      momentum: "cooling",
+    });
   });
 });

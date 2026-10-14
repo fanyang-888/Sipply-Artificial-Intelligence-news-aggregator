@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { fetchRadar } from "@/lib/api";
 import type { ApiRadar } from "@/lib/api/types";
+import { withRadarDefaults } from "@/lib/utils/radar";
+import { layoutRadar } from "@/lib/utils/radar-layout";
 import { RadarPageClient } from "@/app/radar/radar-page-client";
 
 // The pipeline refreshes signals 4× a day; re-render at most every 5 minutes
@@ -27,6 +29,9 @@ async function loadRadar(): Promise<ApiRadar | null> {
 }
 
 export default async function RadarPage() {
-  const radar = await loadRadar();
-  return <RadarPageClient radar={radar} />;
+  const loaded = await loadRadar();
+  const radar = loaded ? withRadarDefaults(loaded) : null;
+  // Laid out here, not in the client: server and browser then draw identical coordinates
+  const positions = radar ? layoutRadar(radar.topics) : {};
+  return <RadarPageClient radar={radar} positions={positions} />;
 }

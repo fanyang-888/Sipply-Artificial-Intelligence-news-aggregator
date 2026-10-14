@@ -21,7 +21,13 @@ Score (0–100) = 0.25·volume + 0.25·engagement + 0.25·velocity
   recency     — age of the newest signal
   relevance   — the article relevance model (models/scorer.pkl) on the label
 
-Topics are rebuilt from scratch on every run, in one transaction.
+The radar page places each topic in a ring by how much evidence there is
+(evidence_ring) and colors it by momentum (topic_momentum).
+
+Topics are rebuilt from scratch on every run, in one transaction. The
+description written by describe_signal_topics moves to the new topic that
+shares most of an old topic's signals (match_previous), so it survives the
+rebuild.
 """
 
 from __future__ import annotations
@@ -61,6 +67,18 @@ RISING_MIN_RATIO = 2.0
 RISING_MIN_RECENT = 3
 
 WEIGHTS = {"volume": 0.25, "engagement": 0.25, "velocity": 0.25, "recency": 0.10, "relevance": 0.15}
+
+# Rings: 1 = mainstream (act now), 2 = picking up (prepare), 3 = weak signal (watch)
+INNER_RING_MIN_SIGNALS = 15
+MIDDLE_RING_MIN_SIGNALS = 5
+# …or a few signals that already show up on more than one platform
+MIDDLE_RING_MIN_CROSS_PLATFORM = 3
+COOLING_MAX_VELOCITY = 0.8
+COOLING_AFTER_DAYS = 3
+NEW_TOPIC_DAYS = 2
+# Share of signals (Jaccard) a new topic needs with an old one to inherit its description
+CARRY_OVER_MIN_OVERLAP = 0.5
+DESCRIPTION_FIELDS = ("summary_en", "summary_zh", "covered_cluster_id", "described_signal_count", "described_at")
 
 _VECTORIZER: dict[str, Any] = {"stop_words": "english", "sublinear_tf": True}
 
@@ -149,6 +167,59 @@ def score_components(
 
 def total_score(components: dict[str, float]) -> float:
     return round(sum(WEIGHTS[k] * components[k] for k in WEIGHTS), 1)
+
+
+def evidence_ring(signal_count: int, platforms: int) -> int:
+    """1 = mainstream, 2 = picking up, 3 = weak signal (one platform, a handful of posts)."""
+    if signal_count >= INNER_RING_MIN_SIGNALS:
+        return 1
+    if signal_count >= MIDDLE_RING_MIN_SIGNALS or (
+        signal_count >= MIDDLE_RING_MIN_CROSS_PLATFORM and platforms >= 2
+    ):
+        return 2
+    return 3
+
+
+def topic_momentum(*, rising: bool, velocity: float, last_seen: datetime | None, now: datetime) -> str:
+    """"rising", "steady" or "cooling" (slowed down, or quiet for a few days)."""
+    if rising:
+        return "rising"
+    quiet = last_seen is None or (now - _aware(last_seen)) > timedelta(days=COOLING_AFTER_DAYS)
+    if quiet or velocity < COOLING_MAX_VELOCITY:
+        return "cooling"
+    return "steady"
+
+
+def is_new_topic(first_seen: datetime | None, now: datetime) -> bool:
+    return first_seen is not None and (now - _aware(first_seen)) <= timedelta(days=NEW_TOPIC_DAYS)
+
+
+def match_previous(
+    new_groups: list[set[Any]],
+    old_groups: dict[Any, set[Any]],
+    *,
+    min_overlap: float = CARRY_OVER_MIN_OVERLAP,
+) -> list[Any | None]:
+    """For each new group, the old group key it continues (most shared members), or None.
+
+    Overlap is Jaccard on member ids; best pairs are taken first and each old
+    group continues into at most one new group.
+    """
+    pairs: list[tuple[float, int, Any]] = []
+    for i, new in enumerate(new_groups):
+        for key, old in old_groups.items():
+            union = len(new | old)
+            overlap = len(new & old) / union if union else 0.0
+            if overlap >= min_overlap:
+                pairs.append((overlap, i, key))
+    pairs.sort(key=lambda p: -p[0])
+    out: list[Any | None] = [None] * len(new_groups)
+    used: set[Any] = set()
+    for _, i, key in pairs:
+        if out[i] is None and key not in used:
+            out[i] = key
+            used.add(key)
+    return out
 
 
 def top_terms(matrix: Any, indices: list[int], feature_names: list[str], k: int = 4) -> list[str]:
@@ -335,11 +406,17 @@ def build_topics(
         active_families=active_families,
         relevance_fn=relevance_fn or default_relevance_fn(),
     )
+    previous = _previous_descriptions(db)
+    continues = match_previous(
+        [set(d.signal_ids) for d in drafts], {key: members for key, (members, _) in previous.items()}
+    )
 
     # FK ON DELETE SET NULL clears signals.topic_id for the old topics
     db.execute(delete(SignalTopic))
-    for d in drafts:
+    for d, prev_key in zip(drafts, continues):
+        carried = previous[prev_key][1] if prev_key is not None else {}
         topic = SignalTopic(
+            **carried,
             label=d.label,
             topic_tag=d.topic_tag,
             keywords=d.keywords,
@@ -369,7 +446,24 @@ def build_topics(
         "groups": n_groups,
         "topics": len(drafts),
         "rising": sum(1 for d in drafts if d.rising),
+        "descriptions_kept": sum(1 for k in continues if k is not None),
         "pruned": pruned,
     }
     logger.info("signal topics built %s", summary)
     return summary
+
+
+def _previous_descriptions(db: Session) -> dict[Any, tuple[set[Any], dict[str, Any]]]:
+    """Described topics from the last build: {topic id: (member signal ids, description fields)}."""
+    described = db.execute(select(SignalTopic).where(SignalTopic.described_at.is_not(None))).scalars().all()
+    if not described:
+        return {}
+    members: dict[Any, set[Any]] = {t.id: set() for t in described}
+    for signal_id, topic_id in db.execute(
+        select(Signal.id, Signal.topic_id).where(Signal.topic_id.in_(list(members)))
+    ).all():
+        members[topic_id].add(signal_id)
+    return {
+        t.id: (members[t.id], {f: getattr(t, f) for f in DESCRIPTION_FIELDS})
+        for t in described
+    }

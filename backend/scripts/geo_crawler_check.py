@@ -114,7 +114,7 @@ def run(site: str, ua: str, api: str, story_id: str | None) -> dict[str, Any]:
         archive.pop("_html")
         radar = page_report(client, f"{site}/radar")
         radar_html = radar.pop("_html")
-        radar["topics_in_html"] = radar_html.count("<details")
+        radar["topics_in_html"] = radar_html.count("data-radar-topic")
         story = story_report(client, site, api, story_id)
 
         robots_status, robots = text_report(client, f"{site}/robots.txt")

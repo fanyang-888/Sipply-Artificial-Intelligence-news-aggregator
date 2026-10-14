@@ -40,7 +40,9 @@ _DIGEST_EMAIL_HOUR_UTC = int(os.getenv("DIGEST_EMAIL_HOUR_UTC", "20"))
 
 # Trend Radar stages depend on third-party APIs; their failure is recorded in
 # stage_results but doesn't mark the news pipeline as failed.
-_BEST_EFFORT_STAGES = frozenset({"ingest_signals", "build_signal_topics", "translate_signals"})
+_BEST_EFFORT_STAGES = frozenset(
+    {"ingest_signals", "build_signal_topics", "translate_signals", "describe_signal_topics"}
+)
 
 
 def _is_digest_email_run(started_at: datetime, triggered_by: str) -> bool:
@@ -182,7 +184,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         return 1
 
     # ------------------------------------------------------------------
-    # Stages 2–11: synchronous
+    # Stages 2–12: synchronous
     # ------------------------------------------------------------------
     from scripts import (
         filter_articles,
@@ -195,6 +197,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         ingest_signals,
         build_signal_topics,
         translate_signals,
+        describe_signal_topics,
         send_digest_email,
     )
 
@@ -209,6 +212,7 @@ def main(triggered_by: str = "cron", force_email: bool = False) -> int:
         ("ingest_signals",        lambda: ingest_signals.main([])),
         ("build_signal_topics",   lambda: build_signal_topics.main([])),
         ("translate_signals",     lambda: translate_signals.main([])),
+        ("describe_signal_topics", lambda: describe_signal_topics.main([])),
     ]
     if send_email:
         stages.append(("send_digest_email", lambda: send_digest_email.main([])))

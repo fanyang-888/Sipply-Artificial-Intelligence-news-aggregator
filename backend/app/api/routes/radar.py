@@ -11,13 +11,14 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import RadarResponse, RadarSignal, RadarSource, RadarTopic, format_dt
+from app.api.schemas import RadarCoverage, RadarResponse, RadarSignal, RadarSource, RadarTopic, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
+from app.models.cluster import Cluster
 from app.models.signal import Signal, SignalTopic
 from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
 from app.signals.config import radar_config
-from app.signals.topics import engagement_of
+from app.signals.topics import engagement_of, evidence_ring, is_new_topic, topic_momentum
 
 router = APIRouter(prefix="/api/radar", tags=["radar"])
 
@@ -51,10 +52,29 @@ def _by_engagement(signals: list[Signal]) -> list[Signal]:
     return sorted(signals, key=lambda s: (engagement_of(s), s.published_at), reverse=True)
 
 
+def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
+    if ring > 2 or topic.described_at is None:
+        return None
+    if topic.covered_cluster_id is None:
+        return RadarCoverage(status="gap")
+    story = stories.get(topic.covered_cluster_id)
+    if story is None:  # deleted since the check; the next run checks again
+        return None
+    return RadarCoverage(
+        status="covered",
+        clusterId=str(story.id),
+        title=story.representative_title,
+        titleZh=story.representative_title_zh,
+    )
+
+
 def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
     window_days = radar_config().window_days
     window_start = now - timedelta(days=window_days)
+    generated = db.execute(select(func.max(SignalTopic.created_at))).scalar_one_or_none()
+    # Momentum and "new" are judged at build time, so a page served hours later says the same
+    built_at = generated or now
 
     topics = list(
         db.execute(
@@ -68,10 +88,17 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
         ).scalars().all()
         for s in rows:
             members[s.topic_id].append(s)
+    covered_ids = [t.covered_cluster_id for t in topics if t.covered_cluster_id]
+    stories = (
+        {c.id: c for c in db.execute(select(Cluster).where(Cluster.id.in_(covered_ids))).scalars()}
+        if covered_ids
+        else {}
+    )
 
     topic_out = []
     for t in topics:
         ranked = _by_engagement(members.get(t.id, []))
+        ring = evidence_ring(t.signal_count, len(t.source_counts or {}))
         topic_out.append(
             RadarTopic(
                 id=str(t.id),
@@ -90,6 +117,12 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
                 firstSeenAt=format_dt(t.first_seen_at),
                 lastSeenAt=format_dt(t.last_seen_at),
                 dailyCounts=t.daily_counts or [],
+                ring=ring,
+                momentum=topic_momentum(rising=t.rising, velocity=t.velocity, last_seen=t.last_seen_at, now=built_at),
+                isNew=is_new_topic(t.first_seen_at, built_at),
+                summaryEn=t.summary_en,
+                summaryZh=t.summary_zh,
+                coverage=_coverage(t, ring, stories),
                 signals=[_signal_out(s) for s in ranked[:SIGNALS_PER_TOPIC]],
                 questions=[_signal_out(s) for s in ranked if s.is_question][:QUESTIONS_PER_TOPIC],
             )
@@ -129,7 +162,6 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
         for fam, label in FAMILY_LABELS.items()
     ]
 
-    generated = db.execute(select(func.max(SignalTopic.created_at))).scalar_one_or_none()
     return RadarResponse(
         generatedAt=format_dt(generated),
         windowDays=window_days,

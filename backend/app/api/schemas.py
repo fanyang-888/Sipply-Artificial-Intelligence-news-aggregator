@@ -162,6 +162,14 @@ class RadarSignal(BaseModel):
     topicId: str | None = None
 
 
+class RadarCoverage(BaseModel):
+    # "covered": Sipply has a story on this topic; "gap": checked, no story yet
+    status: str
+    clusterId: str | None = None
+    title: str | None = None
+    titleZh: str | None = None
+
+
 class RadarTopic(BaseModel):
     id: str
     label: str
@@ -179,6 +187,14 @@ class RadarTopic(BaseModel):
     lastSeenAt: str | None
     # Signals per day across the radar window, oldest first
     dailyCounts: list[int]
+    # 1 = mainstream, 2 = picking up, 3 = weak signal (see topics.evidence_ring)
+    ring: int
+    momentum: str  # "rising" | "steady" | "cooling"
+    isNew: bool
+    summaryEn: str | None = None
+    summaryZh: str | None = None
+    # Only for rings 1–2 once describe_signal_topics has checked the topic
+    coverage: RadarCoverage | None = None
     signals: list[RadarSignal]
     questions: list[RadarSignal]
 
