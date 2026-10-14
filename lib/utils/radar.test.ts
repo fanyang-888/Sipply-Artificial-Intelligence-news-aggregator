@@ -9,6 +9,7 @@ import {
   radarBrief,
   radarSectorForTag,
   topicPlatforms,
+  withRadarDefaults,
   formatCompact,
   engagementLabel,
   formatVelocity,
@@ -160,5 +161,40 @@ describe("formatting", () => {
     expect(ageParts("2026-10-11T12:00:00Z", now)).toEqual({ unit: "h", value: 24 });
     expect(ageParts("2026-10-09T12:00:00Z", now)).toEqual({ unit: "d", value: 3 });
     expect(ageParts(null, now)).toBeNull();
+  });
+});
+
+describe("withRadarDefaults", () => {
+  it("derives ring and momentum when an older API leaves them out", () => {
+    const old = (o: Partial<ApiRadarTopic>) => {
+      const t = topic(o) as Partial<ApiRadarTopic>;
+      for (const k of ["ring", "momentum", "isNew", "summaryEn", "summaryZh", "coverage"] as const) delete t[k];
+      return t as ApiRadarTopic;
+    };
+    const radar = withRadarDefaults({
+      generatedAt: "2026-10-13T14:00:00Z",
+      windowDays: 14,
+      sources: [],
+      questions: [],
+      topics: [
+        old({ id: "a", signalCount: 48, sourceCounts: { hn: 10, news: 37, youtube: 1 }, rising: true, velocity: 4.9, lastSeenAt: "2026-10-13T02:00:00Z" }),
+        old({ id: "b", signalCount: 3, sourceCounts: { hn: 2, news: 1 }, velocity: 1.97, lastSeenAt: "2026-10-12T10:00:00Z" }),
+        old({ id: "c", signalCount: 4, sourceCounts: { youtube: 4 }, velocity: 0.3, lastSeenAt: "2026-10-02T10:00:00Z" }),
+      ],
+    });
+    expect(radar.topics.map((t) => [t.ring, t.momentum])).toEqual([
+      [1, "rising"],
+      [2, "steady"],
+      [3, "cooling"],
+    ]);
+    expect(radar.topics[0]).toMatchObject({ isNew: false, summaryEn: null, coverage: null });
+  });
+
+  it("keeps what the API sends", () => {
+    const t = topic({ ring: 1, momentum: "cooling", signalCount: 2, rising: true });
+    expect(withRadarDefaults({ generatedAt: null, windowDays: 14, sources: [], questions: [], topics: [t] }).topics[0]).toMatchObject({
+      ring: 1,
+      momentum: "cooling",
+    });
   });
 });

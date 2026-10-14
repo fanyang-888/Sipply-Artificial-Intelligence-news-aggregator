@@ -4,6 +4,7 @@
 
 import {
   RADAR_SOURCE_ORDER,
+  type ApiRadar,
   type ApiRadarSignal,
   type ApiRadarTopic,
   type RadarMomentum,
@@ -67,6 +68,32 @@ export const PLATFORM_COLORS: Record<RadarSourceKey, string> = {
   devto: "#8fa3b8",
   lobsters: "#b5651d",
 };
+
+/**
+ * Fill in fields an older API doesn't send yet (ring, momentum, isNew, summary,
+ * coverage). Vercel usually deploys before Railway, so for a few minutes the new
+ * page can meet the old API. Ring and momentum follow the backend rules in
+ * app/signals/topics.py (evidence_ring, topic_momentum).
+ */
+export function withRadarDefaults(radar: ApiRadar): ApiRadar {
+  const builtAt = radar.generatedAt ? new Date(radar.generatedAt).getTime() : Date.now();
+  return {
+    ...radar,
+    topics: radar.topics.map((t) => {
+      const platforms = topicPlatforms(t).length;
+      const quietDays = t.lastSeenAt ? (builtAt - new Date(t.lastSeenAt).getTime()) / 86_400_000 : Infinity;
+      return {
+        ...t,
+        ring: t.ring ?? (t.signalCount >= 15 ? 1 : t.signalCount >= 5 || (t.signalCount >= 3 && platforms >= 2) ? 2 : 3),
+        momentum: t.momentum ?? (t.rising ? "rising" : quietDays > 3 || t.velocity < 0.8 ? "cooling" : "steady"),
+        isNew: t.isNew ?? false,
+        summaryEn: t.summaryEn ?? null,
+        summaryZh: t.summaryZh ?? null,
+        coverage: t.coverage ?? null,
+      };
+    }),
+  };
+}
 
 export type RadarBrief = {
   rings: [number, number, number];
