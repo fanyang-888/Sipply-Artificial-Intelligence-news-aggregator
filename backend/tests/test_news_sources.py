@@ -50,6 +50,28 @@ def test_anthropic_cards_split_date_category_and_title():
     assert cyber["summary"].startswith("We're launching")  # from the featured card
 
 
+def test_anthropic_model_launches_outside_news_path():
+    # Real featured-grid markup from anthropic.com/news (2026-10-14): model launches
+    # link to /claude-haiku-5-5, not /news/…; nav links have no date
+    html = """
+    <a class="FeaturedGrid__sideLink" href="/claude-haiku-5-5">
+      <div class="FeaturedGrid__meta"><span class="caption bold">Announcements</span>
+      <time class="FeaturedGrid__date caption bold">Oct 7, 2026</time></div>
+      <h4 class="headline-6 FeaturedGrid__title">Introducing Claude Haiku 5.5</h4>
+      <p class="body-3 serif FeaturedGrid__body">Our fastest, cheapest, and most capable small model yet.</p>
+    </a>
+    <a href="/claude-corps">Claude Corps</a>
+    <a href="/claude-haiku-5-5/">Haiku 5.5</a>
+    <a href="https://www.anthropic.com/features/ebola-response"><time>Oct 3, 2026</time><h4>The Situation Report</h4></a>
+    """
+    entries = {e["link"]: e for e in extract_anthropic_news_candidates(html)}
+    assert set(entries) == {"https://www.anthropic.com/claude-haiku-5-5"}
+    haiku = entries["https://www.anthropic.com/claude-haiku-5-5"]
+    assert haiku["title"] == "Introducing Claude Haiku 5.5"
+    assert time.strftime("%Y-%m-%d", haiku["published_parsed"]) == "2026-10-07"
+    assert haiku["summary"].startswith("Our fastest")
+
+
 def test_deepmind_html_fallback_ignores_learn_more_link_text():
     html = """
     <a href="/blog/gemini-robotics-2/">Learn more</a>

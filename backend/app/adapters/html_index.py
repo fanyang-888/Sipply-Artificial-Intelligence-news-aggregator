@@ -64,12 +64,19 @@ def extract_anthropic_news_candidates(html: str, base_url: str = "https://www.an
             continue
         path = (parsed.path or "").rstrip("/")
         segments = [p for p in path.split("/") if p]
-        if len(segments) < 2 or segments[0] != "news":
+        if len(segments) >= 2 and segments[0] == "news":
+            slug = segments[1]
+            canon_path = f"news/{slug}"
+        elif len(segments) == 1 and a.find("time"):
+            # Model launches sit at the top level (/claude-haiku-5-5) in the featured
+            # grid. Only dated cards count, so nav links (/claude-corps, /careers) stay out.
+            slug = segments[0]
+            canon_path = slug
+        else:
             continue
-        slug = segments[1]
         if not slug or not _SLUG_RE.match(slug):
             continue
-        canon = f"https://www.anthropic.com/news/{slug}"
+        canon = f"https://www.anthropic.com/{canon_path}"
         card = _anthropic_card(a)
         prev = cards.get(canon)
         # The same article can appear as a featured card and a list row: merge the best fields
