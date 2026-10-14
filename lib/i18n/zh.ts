@@ -25,6 +25,10 @@ export const zh: Translations = {
     viewAllInsights: "查看全部每日洞察",
     categoryBarAria: "按分类浏览",
     personalizedNote: "已根据你的阅读记录和角色调整顺序",
+    readAs: "按谁的角度看",
+    allReaders: "通用",
+    readAsPrompt: "选一个身份：今天的排序和每条的“为什么重要”都会换成这个角度。",
+    readAsHint: (role) => `已按${role}的角度排序和解读。`,
     emptyClustersTitle: "数据尚不足",
     emptyClustersDesc:
       "还需要更多信号才能生成今日集群。请稍后再来，或前往资料库浏览。",
@@ -36,6 +40,7 @@ export const zh: Translations = {
     sourcesPrefix: "来源：",
     whyItMattersPrefix: "为何重要：",
     viewStory: "查看故事",
+    originalPrefix: "原文：",
     featuredFallback: "精选",
     formatMoreChannelTypesHidden: (n) => `另有 ${n} 种采集渠道未显示`,
     srOnlySources: "来源",

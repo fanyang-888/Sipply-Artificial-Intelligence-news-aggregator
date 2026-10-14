@@ -30,6 +30,10 @@ export type Translations = {
     viewAllInsights: string;
     categoryBarAria: string;
     personalizedNote: string;
+    readAs: string;
+    allReaders: string;
+    readAsPrompt: string;
+    readAsHint: (role: string) => string;
     emptyClustersTitle: string;
     emptyClustersDesc: string;
     goToArchive: string;
@@ -39,6 +43,7 @@ export type Translations = {
     sourcesPrefix: string;
     whyItMattersPrefix: string;
     viewStory: string;
+    originalPrefix: string;
     featuredFallback: string;
     formatMoreChannelTypesHidden: (extraTypeCount: number) => string;
     srOnlySources: string;
