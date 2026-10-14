@@ -82,11 +82,24 @@ export function withRadarDefaults(radar: ApiRadar): ApiRadar {
     topics: radar.topics.map((t) => {
       const platforms = topicPlatforms(t).length;
       const quietDays = t.lastSeenAt ? (builtAt - new Date(t.lastSeenAt).getTime()) / 86_400_000 : Infinity;
+      const counts = t.dailyCounts ?? [];
+      const recent = counts.slice(-3).reduce((a, b) => a + b, 0);
+      const earlier = counts.slice(0, -3).reduce((a, b) => a + b, 0);
+      const momentum: RadarMomentum =
+        quietDays > 3
+          ? "cooling"
+          : earlier <= 1
+            ? "new"
+            : t.velocity >= 2 && recent >= 3
+              ? "rising"
+              : t.velocity < 0.8
+                ? "cooling"
+                : "steady";
       return {
         ...t,
         ring: t.ring ?? (t.signalCount >= 15 ? 1 : t.signalCount >= 5 || (t.signalCount >= 3 && platforms >= 2) ? 2 : 3),
-        momentum: t.momentum ?? (t.rising ? "rising" : quietDays > 3 || t.velocity < 0.8 ? "cooling" : "steady"),
-        isNew: t.isNew ?? false,
+        momentum: t.momentum ?? momentum,
+        isNew: t.isNew ?? (t.momentum ?? momentum) === "new",
         summaryEn: t.summaryEn ?? null,
         summaryZh: t.summaryZh ?? null,
         coverage: t.coverage ?? null,

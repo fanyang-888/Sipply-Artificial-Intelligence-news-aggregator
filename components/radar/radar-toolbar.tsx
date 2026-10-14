@@ -18,7 +18,7 @@ type RadarToolbarProps = {
   topics: ApiRadarTopic[];
 };
 
-const MOMENTA: RadarMomentum[] = ["rising", "steady", "cooling"];
+const MOMENTA: RadarMomentum[] = ["new", "rising", "steady", "cooling"];
 
 /** Three filter rows (platform, momentum, category); each pill shows how many topics it keeps. */
 export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {

@@ -79,11 +79,6 @@ export function RadarTopicCard({ topic, rank, windowDays, builtAt, now, hidden }
           >
             {t.radar.momentum[topic.momentum]}
           </span>
-          {topic.isNew ? (
-            <span className="rounded-full px-2.5 py-0.5 font-semibold [background:var(--accent)] [color:var(--bg)]">
-              {t.radar.newBadge}
-            </span>
-          ) : null}
         </div>
       </header>
 

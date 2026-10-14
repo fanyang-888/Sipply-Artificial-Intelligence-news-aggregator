@@ -150,7 +150,8 @@ export type ApiRadarCoverage = {
 
 /** 1 = mainstream, 2 = picking up, 3 = weak signal. */
 export type RadarRing = 1 | 2 | 3;
-export type RadarMomentum = "rising" | "steady" | "cooling";
+/** "new": only in the last 3 days; "rising": discussed before, now clearly faster. */
+export type RadarMomentum = "new" | "rising" | "steady" | "cooling";
 
 export type ApiRadarTopic = {
   id: string;
@@ -173,7 +174,7 @@ export type ApiRadarTopic = {
   /** Evidence ring: how many signals, on how many platforms. */
   ring: RadarRing;
   momentum: RadarMomentum;
-  /** First seen within two days of the radar build. */
+  /** Same as momentum === "new" (kept for older clients). */
   isNew: boolean;
   /** One or two sentences on what happened; null until described (inner rings only). */
   summaryEn: string | null;

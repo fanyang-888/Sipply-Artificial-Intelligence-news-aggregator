@@ -189,7 +189,7 @@ class RadarTopic(BaseModel):
     dailyCounts: list[int]
     # 1 = mainstream, 2 = picking up, 3 = weak signal (see topics.evidence_ring)
     ring: int
-    momentum: str  # "rising" | "steady" | "cooling"
+    momentum: str  # "new" | "rising" | "steady" | "cooling"
     isNew: bool
     summaryEn: str | None = None
     summaryZh: str | None = None

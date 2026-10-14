@@ -100,6 +100,10 @@ export function RadarPageClient({ radar, positions }: RadarPageClientProps) {
               />
               <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] [color:var(--text-muted)]">
                 <li className="inline-flex items-center gap-1.5">
+                  <span className="h-[11px] w-[11px] rounded-full" style={{ background: MOMENTUM_FILL.new }} />
+                  {t.radar.legendNew}
+                </li>
+                <li className="inline-flex items-center gap-1.5">
                   <span className="h-[11px] w-[11px] rounded-full" style={{ background: MOMENTUM_FILL.rising }} />
                   {t.radar.legendRising}
                 </li>

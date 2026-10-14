@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/radar-layout";
 
 export const MOMENTUM_FILL = {
+  new: "var(--radar-new)",
   rising: "var(--green)",
   steady: "var(--accent)",
   cooling: "var(--radar-cool)",

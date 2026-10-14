@@ -109,12 +109,12 @@ export const en: Translations = {
       2: { name: "Picking up", action: "prepare", rule: "5–14 signals, or 3+ on two platforms" },
       3: { name: "Weak signal", action: "watch", rule: "The rest: a few posts, mostly on one platform" },
     },
-    momentum: { rising: "↑ Rising", steady: "→ Steady", cooling: "↓ Cooling" },
-    newBadge: "New",
+    momentum: { new: "✦ New", rising: "↑ Rising", steady: "→ Steady", cooling: "↓ Cooling" },
     chartAria: "Trend Radar chart: topics placed by evidence (rings) and category (sectors)",
     sectorFilterAria: (name) => `Show only ${name}`,
     topicsInSector: (n) => `${n} ${n === 1 ? "topic" : "topics"}`,
-    legendRising: "Rising (more posts in the last 3 days)",
+    legendNew: "New (only in the last 3 days)",
+    legendRising: "Rising (discussed before, now clearly faster)",
     legendSteady: "Steady",
     legendCooling: "Cooling",
     legendGap: "No Sipply story yet",
@@ -127,7 +127,7 @@ export const en: Translations = {
     briefGapsBody: (gaps, checked) => `Sipply has no story on ${gaps} of the ${checked} mainstream and rising topics`,
     briefGapsPending: "Checked after the next data run",
     briefNew: "New",
-    briefNewBody: (n) => `${n} ${n === 1 ? "topic" : "topics"} first appeared in the last 2 days`,
+    briefNewBody: (n) => `${n} ${n === 1 ? "topic" : "topics"} first appeared in the last 3 days`,
     summaryLabel: "Summary · AI-written from the posts below",
     reading: ({ signals, platforms, trend, pace, first, last }) =>
       `${signals} signals from ${platforms}. ` +
@@ -169,7 +169,7 @@ export const en: Translations = {
     unavailableDesc: "Please check back in a few minutes.",
     methodTitle: "How topics are scored",
     methodBody:
-      "Rings show how much evidence a topic has: 15+ signals is mainstream; 5–14, or 3+ on two platforms, is picking up; the rest are weak signals. Score (0–100) = 25% volume (how many posts, across how many sources) + 25% engagement (points, comments, likes) + 25% velocity (posts per day over the last 3 days vs the 11 before) + 10% recency + 15% relevance to AI practitioners. A topic is rising when it posts at twice its earlier pace, with at least 3 posts in the last 3 days; cooling when it slowed below 0.8× or went quiet for 3 days.",
+      "Rings show how much evidence a topic has: 15+ signals is mainstream; 5–14, or 3+ on two platforms, is picking up; the rest are weak signals. Score (0–100) = 25% volume (how many posts, across how many sources) + 25% engagement (points, comments, likes) + 25% velocity (posts per day over the last 3 days vs the 11 before) + 10% recency + 15% relevance to AI practitioners. A topic is new when it has (almost) only appeared in the last 3 days; rising when it was discussed before and now posts at twice its earlier pace, with at least 3 posts in the last 3 days; cooling when it slowed below 0.8× or went quiet for 3 days.",
     justNow: "just now",
     age: (unit, value) => `${value}${unit} ago`,
     pointsComments: (points, comments) => `${points} pts · ${comments} comments`,
