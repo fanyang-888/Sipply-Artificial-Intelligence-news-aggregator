@@ -12,7 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Python backend (its virtualenv ships third-party JS)
+    "backend/**",
   ]),
+  {
+    rules: {
+      // Parameters kept for a stable signature are prefixed with _
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
 ]);
 
 export default eslintConfig;

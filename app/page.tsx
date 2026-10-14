@@ -3,7 +3,7 @@
 
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/shared/json-ld";
-import { getDigest } from "@/lib/api/server";
+import { getDigest, getLastPipelineRunAt } from "@/lib/api/server";
 import type { ApiDigest } from "@/lib/api/types";
 import { digestItemListJsonLd } from "@/lib/seo/json-ld";
 import { HomePageClient } from "@/app/home-page-client";
@@ -25,11 +25,15 @@ async function loadDigest(): Promise<ApiDigest | null> {
 }
 
 export default async function HomePage() {
-  const digest = await loadDigest();
+  const [digest, pipelineUpdatedAt] = await Promise.all([
+    loadDigest(),
+    // Only for the "Pipeline updated" line, which is hidden when this fails
+    getLastPipelineRunAt().catch(() => null),
+  ]);
   return (
     <>
       {digest ? <JsonLd data={digestItemListJsonLd(digest)} /> : null}
-      <HomePageClient initialDigest={digest} />
+      <HomePageClient initialDigest={digest} pipelineUpdatedAt={pipelineUpdatedAt} />
     </>
   );
 }
