@@ -18,7 +18,9 @@ const LIVE: [string, RadarRing, number][] = [
 ];
 
 function topics(rows: [string, RadarRing, number][]): ApiRadarTopic[] {
-  return rows.map(([topicTag, ring, score], i) => ({ id: `t${i}`, topicTag, ring, score }) as ApiRadarTopic);
+  return rows.map(
+    ([topicTag, ring, score], i) => ({ id: `t${i}`, topicTag, ring, score, trailSignals: [], trailRings: [] }) as unknown as ApiRadarTopic,
+  );
 }
 
 describe("layoutRadar", () => {
@@ -61,5 +63,20 @@ describe("layoutRadar", () => {
     // A day with no mainstream topic
     const noInner = layoutRadar(topics(LIVE.filter(([, ring]) => ring !== 1)));
     expect(Object.keys(noInner)).toHaveLength(LIVE.filter(([, ring]) => ring !== 1).length);
+  });
+});
+
+describe("layoutRadar tails", () => {
+  it("starts a tail in the ring the topic was in 3 days ago, on the blip's own angle", () => {
+    const input = topics(LIVE);
+    input[0] = { ...input[0], trailSignals: [1, 2, 3, 3, 30, 60, 80], trailRings: [3, 3, 3, 3, 1, 1, 1] };
+    const pos = layoutRadar(input);
+    const tail = pos.t0.tail!;
+    const r = Math.hypot(tail.x, tail.y);
+    expect(r).toBeGreaterThan(RING_OUTER[2]); // in the weak-signal ring
+    expect(r).toBeLessThan(RING_OUTER[3]);
+    const angle = (p: { x: number; y: number }) => Math.atan2(p.y, p.x);
+    expect(Math.abs(angle(tail) - angle(pos.t0))).toBeLessThan(0.01);
+    expect(pos.t1.tail).toBeUndefined(); // no trail, no tail
   });
 });

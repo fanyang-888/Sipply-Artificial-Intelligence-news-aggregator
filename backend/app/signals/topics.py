@@ -185,6 +185,24 @@ def evidence_ring(signal_count: int, platforms: int) -> int:
     return 3
 
 
+def evidence_trail(
+    members: list[tuple[datetime, str]], *, now: datetime, days: int
+) -> tuple[list[int], list[int]]:
+    """How a topic's evidence built up: (signals so far, ring then) at the end of each
+    of the last ``days`` days, oldest first; the last entry is ``now``. Ring 0 = no
+    signal yet. Rebuilt from the members' publish dates, so it needs no history table;
+    rings can only move inward over time because signals only accumulate.
+    """
+    signals: list[int] = []
+    rings: list[int] = []
+    for back in range(days - 1, -1, -1):
+        cutoff = now - timedelta(days=back)
+        seen = [family for published, family in members if _aware(published) <= cutoff]
+        signals.append(len(seen))
+        rings.append(evidence_ring(len(seen), len(set(seen))) if seen else 0)
+    return signals, rings
+
+
 def topic_momentum(*, counts: list[int], velocity: float, last_seen: datetime | None, now: datetime) -> str:
     """"new", "rising", "steady" or "cooling" from daily counts (oldest first, ending at ``now``)."""
     if last_seen is None or (now - _aware(last_seen)) > timedelta(days=COOLING_AFTER_DAYS):

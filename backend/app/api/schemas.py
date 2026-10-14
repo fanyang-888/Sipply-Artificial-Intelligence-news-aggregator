@@ -187,6 +187,9 @@ class RadarTopic(BaseModel):
     lastSeenAt: str | None
     # Signals per day across the radar window, oldest first
     dailyCounts: list[int]
+    # Signals so far and ring then, at the end of each day of the window (oldest first, 0 = none yet)
+    trailSignals: list[int] = []
+    trailRings: list[int] = []
     # 1 = mainstream, 2 = picking up, 3 = weak signal (see topics.evidence_ring)
     ring: int
     momentum: str  # "new" | "rising" | "steady" | "cooling"

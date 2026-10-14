@@ -4,7 +4,7 @@ import type { ApiRadarTopic } from "@/lib/api/types";
 import { useI18n } from "@/lib/i18n";
 import { formatVelocity, radarBrief, radarTitle } from "@/lib/utils/radar";
 
-/** Four facts about this run: ring sizes, the fastest riser, Sipply's gaps, new topics. */
+/** Four facts about this run: ring sizes, the fastest riser, Sipply's gaps, topics that moved inward. */
 export function RadarBrief({ topics, onSelect }: { topics: ApiRadarTopic[]; onSelect: (id: string) => void }) {
   const { t, lang } = useI18n();
   const brief = radarBrief(topics);
@@ -51,8 +51,24 @@ export function RadarBrief({ topics, onSelect }: { topics: ApiRadarTopic[]; onSe
         </p>
       </div>
       <div className={cell}>
-        <p className={label}>{t.radar.briefNew}</p>
-        <p className="text-sm text-foreground">{t.radar.briefNewBody(brief.newCount)}</p>
+        <p className={label}>{t.radar.briefMoved}</p>
+        {brief.moved.length > 0 ? (
+          <p className="text-sm text-foreground">
+            {t.radar.briefMovedBody(brief.moved.length)}{" "}
+            <button
+              type="button"
+              onClick={() => onSelect(brief.moved[0].topic.id)}
+              className="text-left font-semibold hover:[color:var(--accent)] hover:underline"
+            >
+              {radarTitle(brief.moved[0].topic.label, brief.moved[0].topic.labelZh, lang)}
+            </button>{" "}
+            <span className="[color:var(--text-muted)]">
+              ({t.radar.rings[brief.moved[0].from].name} → {t.radar.rings[brief.moved[0].topic.ring].name})
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm [color:var(--text-muted)]">{t.radar.briefMovedNone}</p>
+        )}
       </div>
     </section>
   );

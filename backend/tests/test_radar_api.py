@@ -113,6 +113,10 @@ def test_radar_rings_momentum_and_descriptions(client, radar_data, db, make_clus
     assert (gemini["ring"], gemini["momentum"], gemini["isNew"]) == (3, "cooling", False)
     # Not described yet
     assert openai["summaryEn"] is None and openai["coverage"] is None
+    # Evidence trail: one entry per day of the window, ending at today's numbers
+    assert len(openai["trailSignals"]) == len(openai["trailRings"]) == 14
+    assert (openai["trailSignals"][-1], openai["trailRings"][-1]) == (4, 2)
+    assert openai["trailSignals"][-3] == 0  # none of its posts is older than 30 hours
 
     story = make_cluster(title="Fired OpenAI safety researchers dispute misconduct claims", title_zh="被解雇的 OpenAI 安全研究员否认不当行为")
     topics = {t.label: t for t in db.execute(select(SignalTopic)).scalars()}

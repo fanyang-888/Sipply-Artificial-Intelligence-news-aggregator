@@ -9,9 +9,10 @@ import {
   formatVelocity,
   radarSectorForTag,
   radarTitle,
+  ringMove,
   topicPlatforms,
 } from "@/lib/utils/radar";
-import { RadarSignalItem, RadarTrendChart, ScoreBreakdown } from "@/components/radar/radar-bits";
+import { RadarEvidenceTrail, RadarSignalItem, RadarTrendChart, ScoreBreakdown } from "@/components/radar/radar-bits";
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
 
 const UTC_DAY = {
@@ -34,6 +35,15 @@ export function topicReading(topic: ApiRadarTopic, t: Translations, lang: "en" |
     first: day(topic.firstSeenAt),
     last: day(topic.lastSeenAt),
   });
+}
+
+/** Where the topic was a few days ago, in words. */
+export function trailSentence(topic: ApiRadarTopic, t: Translations): string {
+  const move = ringMove(topic);
+  if (!move) return "";
+  if (move.kind === "appeared") return t.radar.trailAppeared;
+  if (move.kind === "stayed") return t.radar.trailStayed(t.radar.rings[topic.ring].name);
+  return t.radar.trailMoved(t.radar.rings[move.from].name, move.fromSignals, t.radar.rings[topic.ring].name, topic.signalCount);
 }
 
 type RadarTopicCardProps = {
@@ -122,6 +132,14 @@ export function RadarTopicCard({ topic, rank, windowDays, builtAt, now, hidden }
           <ScoreBreakdown components={topic.components} />
         </div>
       </section>
+
+      {topic.trailSignals.length > 1 ? (
+        <section>
+          <h3 className={`${label} mb-1.5`}>{t.radar.trailLabel}</h3>
+          <p className="mb-1.5 text-[13.5px] text-foreground">{trailSentence(topic, t)}</p>
+          <RadarEvidenceTrail signals={topic.trailSignals} endIso={builtAt} />
+        </section>
+      ) : null}
 
       <section>
         <h3 className={`${label} mb-1.5`}>{t.radar.trendLabel(windowDays)}</h3>

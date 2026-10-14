@@ -119,6 +119,10 @@ export function RadarPageClient({ radar, positions }: RadarPageClientProps) {
                   <span className="h-[14px] w-[14px] rounded-full border-[1.6px] border-dashed [border-color:var(--amber)]" />
                   {t.radar.legendGap}
                 </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <span className="w-[18px] border-t-[1.5px] border-dashed [border-color:var(--text-muted)]" />
+                  {t.radar.legendTrail}
+                </li>
                 <li>{t.radar.legendCenter}</li>
               </ul>
             </section>

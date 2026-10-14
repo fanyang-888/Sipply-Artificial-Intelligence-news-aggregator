@@ -288,6 +288,20 @@ def test_topic_momentum():
     assert T.topic_momentum(counts=[], velocity=1.0, last_seen=None, now=NOW) == "cooling"
 
 
+def test_evidence_trail_rebuilds_ring_history_from_publish_dates():
+    members = [(ago(10.5), "hn"), (ago(9.5), "hn")]  # a quiet start on HN
+    members += [(ago(2.5), "news")] * 3  # news picks it up
+    members += [(ago(0.5), "news")] * 12  # then the burst
+    signals, rings = T.evidence_trail(members, now=NOW, days=14)
+    assert len(signals) == len(rings) == 14
+    assert signals[0] == 0 and rings[0] == 0  # 13 days ago: nothing yet
+    assert (signals[-11], rings[-11]) == (1, 3)  # 10 days ago: one HN post, weak signal
+    assert (signals[-3], rings[-3]) == (5, 2)  # 2 days ago: 5 posts on two platforms
+    assert (signals[-1], rings[-1]) == (17, 1)  # now: mainstream
+    assert signals == sorted(signals)  # only accumulates
+    assert T.evidence_trail([], now=NOW, days=3) == ([0, 0, 0], [0, 0, 0])
+
+
 def test_match_previous_best_overlap_first_and_one_to_one():
     old = {"A": {1, 2, 3, 4}, "B": {10, 11}}
     new = [
