@@ -165,7 +165,8 @@ def test_draft_topics_keeps_groups_and_hot_singletons():
     group = next(d for d in drafts if d.signal_count == 3)
     assert group.label == "Anthropic bans cruel behavior towards Claude"  # most engagement
     assert group.source_counts == {"hn": 2, "news": 1}
-    assert group.rising  # 3 signals in the last 3 days, none before
+    # 3 signals in the last 3 days and none before: new, not rising
+    assert not group.rising
     assert group.topic_tag == "Regulation"
     assert drafts == sorted(drafts, key=lambda d: -d.score)
 
@@ -266,14 +267,25 @@ def test_evidence_ring(count, platforms, ring):
     assert T.evidence_ring(count, platforms) == ring
 
 
-def test_topic_momentum_and_new():
-    assert T.topic_momentum(rising=True, velocity=4.9, last_seen=ago(0.2), now=NOW) == "rising"
-    assert T.topic_momentum(rising=False, velocity=1.3, last_seen=ago(0.5), now=NOW) == "steady"
-    # slowed down, or nothing new for more than three days
-    assert T.topic_momentum(rising=False, velocity=0.3, last_seen=ago(0.5), now=NOW) == "cooling"
-    assert T.topic_momentum(rising=False, velocity=1.97, last_seen=ago(3.5), now=NOW) == "cooling"
-    assert T.is_new_topic(ago(1.5), NOW) and not T.is_new_topic(ago(2.5), NOW)
-    assert not T.is_new_topic(None, NOW)
+def momentum(counts, last_seen_days=0.2):
+    return T.topic_momentum(
+        counts=counts, velocity=T.velocity_ratio(counts), last_seen=ago(last_seen_days), now=NOW
+    )
+
+
+def test_topic_momentum():
+    quiet11 = [0] * 11
+    # Only in the last 3 days (at most 1 earlier post): new, however fast
+    assert momentum(quiet11 + [10, 20, 30]) == "new"
+    assert momentum([1] + [0] * 10 + [5, 5, 5]) == "new"
+    # Discussed before, now at least 2x faster with 3+ recent posts: rising
+    assert momentum([1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 3, 4, 5]) == "rising"
+    # A slow trickle that picked up only a little: steady
+    assert momentum([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1]) == "steady"
+    # Slowed down, or nothing new for more than three days: cooling
+    assert momentum([5] * 11 + [0, 0, 1]) == "cooling"
+    assert momentum([0] * 6 + [3] * 5 + [0, 0, 0], last_seen_days=3.5) == "cooling"
+    assert T.topic_momentum(counts=[], velocity=1.0, last_seen=None, now=NOW) == "cooling"
 
 
 def test_match_previous_best_overlap_first_and_one_to_one():

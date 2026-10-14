@@ -93,11 +93,11 @@ export type Translations = {
     filterCategory: string;
     clearFilters: string;
     rings: Record<1 | 2 | 3, { name: string; action: string; rule: string }>;
-    momentum: Record<"rising" | "steady" | "cooling", string>;
-    newBadge: string;
+    momentum: Record<"new" | "rising" | "steady" | "cooling", string>;
     chartAria: string;
     sectorFilterAria: (name: string) => string;
     topicsInSector: (n: number) => string;
+    legendNew: string;
     legendRising: string;
     legendSteady: string;
     legendCooling: string;

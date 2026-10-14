@@ -177,17 +177,24 @@ describe("withRadarDefaults", () => {
       sources: [],
       questions: [],
       topics: [
-        old({ id: "a", signalCount: 48, sourceCounts: { hn: 10, news: 37, youtube: 1 }, rising: true, velocity: 4.9, lastSeenAt: "2026-10-13T02:00:00Z" }),
-        old({ id: "b", signalCount: 3, sourceCounts: { hn: 2, news: 1 }, velocity: 1.97, lastSeenAt: "2026-10-12T10:00:00Z" }),
-        old({ id: "c", signalCount: 4, sourceCounts: { youtube: 4 }, velocity: 0.3, lastSeenAt: "2026-10-02T10:00:00Z" }),
+        old({ id: "a", signalCount: 48, sourceCounts: { hn: 10, news: 37, youtube: 1 }, velocity: 4.9, lastSeenAt: "2026-10-13T02:00:00Z",
+          dailyCounts: [0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 2, 10, 12, 15] }),
+        old({ id: "b", signalCount: 3, sourceCounts: { hn: 2, news: 1 }, velocity: 1.97, lastSeenAt: "2026-10-12T10:00:00Z",
+          dailyCounts: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] }),
+        old({ id: "c", signalCount: 4, sourceCounts: { youtube: 4 }, velocity: 0.3, lastSeenAt: "2026-10-02T10:00:00Z",
+          dailyCounts: [0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }),
+        old({ id: "d", signalCount: 14, sourceCounts: { hn: 8, news: 6 }, velocity: 1.2, lastSeenAt: "2026-10-13T08:00:00Z",
+          dailyCounts: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] }),
       ],
     });
     expect(radar.topics.map((t) => [t.ring, t.momentum])).toEqual([
       [1, "rising"],
-      [2, "steady"],
+      [2, "new"],
       [3, "cooling"],
+      [2, "steady"],
     ]);
     expect(radar.topics[0]).toMatchObject({ isNew: false, summaryEn: null, coverage: null });
+    expect(radar.topics[1].isNew).toBe(true);
   });
 
   it("keeps what the API sends", () => {

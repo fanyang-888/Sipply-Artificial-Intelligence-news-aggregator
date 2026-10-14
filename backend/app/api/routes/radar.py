@@ -18,7 +18,7 @@ from app.models.cluster import Cluster
 from app.models.signal import Signal, SignalTopic
 from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
 from app.signals.config import radar_config
-from app.signals.topics import engagement_of, evidence_ring, is_new_topic, topic_momentum
+from app.signals.topics import engagement_of, evidence_ring, topic_momentum
 
 router = APIRouter(prefix="/api/radar", tags=["radar"])
 
@@ -99,6 +99,9 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
     for t in topics:
         ranked = _by_engagement(members.get(t.id, []))
         ring = evidence_ring(t.signal_count, len(t.source_counts or {}))
+        momentum = topic_momentum(
+            counts=t.daily_counts or [], velocity=t.velocity, last_seen=t.last_seen_at, now=built_at
+        )
         topic_out.append(
             RadarTopic(
                 id=str(t.id),
@@ -118,8 +121,8 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
                 lastSeenAt=format_dt(t.last_seen_at),
                 dailyCounts=t.daily_counts or [],
                 ring=ring,
-                momentum=topic_momentum(rising=t.rising, velocity=t.velocity, last_seen=t.last_seen_at, now=built_at),
-                isNew=is_new_topic(t.first_seen_at, built_at),
+                momentum=momentum,
+                isNew=momentum == "new",
                 summaryEn=t.summary_en,
                 summaryZh=t.summary_zh,
                 coverage=_coverage(t, ring, stories),

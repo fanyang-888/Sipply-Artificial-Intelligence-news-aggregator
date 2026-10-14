@@ -108,8 +108,8 @@ def test_radar_rings_momentum_and_descriptions(client, radar_data, db, make_clus
     by_label = {t["label"]: t for t in body["topics"]}
     openai, gemini = by_label["OpenAI fires three safety researchers"], by_label["Gemini 4 Argon launches"]
     # 4 posts on HN + news → picking up; 2 posts a week ago → weak and cooling
-    assert (openai["ring"], openai["isNew"]) == (2, True)
-    assert openai["momentum"] in {"rising", "steady"}
+    # all four posts within the last 30 hours: new, not rising
+    assert (openai["ring"], openai["momentum"], openai["isNew"]) == (2, "new", True)
     assert (gemini["ring"], gemini["momentum"], gemini["isNew"]) == (3, "cooling", False)
     # Not described yet
     assert openai["summaryEn"] is None and openai["coverage"] is None

@@ -73,9 +73,14 @@ INNER_RING_MIN_SIGNALS = 15
 MIDDLE_RING_MIN_SIGNALS = 5
 # …or a few signals that already show up on more than one platform
 MIDDLE_RING_MIN_CROSS_PLATFORM = 3
+# Momentum (topic_momentum): "new" = at most NEW_MAX_EARLIER signals before the
+# last RECENT_DAYS days; "rising" = discussed before and now RISING_MIN_RATIO×
+# faster with ≥ RISING_MIN_RECENT recent signals; "cooling" = quiet for
+# COOLING_AFTER_DAYS or slowed below COOLING_MAX_VELOCITY; else "steady".
+# Before "new" existed, every fresh topic with 3 posts read as rising (29 of 40).
+NEW_MAX_EARLIER = 1
 COOLING_MAX_VELOCITY = 0.8
 COOLING_AFTER_DAYS = 3
-NEW_TOPIC_DAYS = 2
 # Share of signals (Jaccard) a new topic needs with an old one to inherit its description
 CARRY_OVER_MIN_OVERLAP = 0.5
 DESCRIPTION_FIELDS = ("summary_en", "summary_zh", "covered_cluster_id", "described_signal_count", "described_at")
@@ -180,18 +185,19 @@ def evidence_ring(signal_count: int, platforms: int) -> int:
     return 3
 
 
-def topic_momentum(*, rising: bool, velocity: float, last_seen: datetime | None, now: datetime) -> str:
-    """"rising", "steady" or "cooling" (slowed down, or quiet for a few days)."""
-    if rising:
+def topic_momentum(*, counts: list[int], velocity: float, last_seen: datetime | None, now: datetime) -> str:
+    """"new", "rising", "steady" or "cooling" from daily counts (oldest first, ending at ``now``)."""
+    if last_seen is None or (now - _aware(last_seen)) > timedelta(days=COOLING_AFTER_DAYS):
+        return "cooling"
+    recent = sum(counts[-RECENT_DAYS:])
+    earlier = sum(counts[:-RECENT_DAYS])
+    if earlier <= NEW_MAX_EARLIER:
+        return "new"
+    if velocity >= RISING_MIN_RATIO and recent >= RISING_MIN_RECENT:
         return "rising"
-    quiet = last_seen is None or (now - _aware(last_seen)) > timedelta(days=COOLING_AFTER_DAYS)
-    if quiet or velocity < COOLING_MAX_VELOCITY:
+    if velocity < COOLING_MAX_VELOCITY:
         return "cooling"
     return "steady"
-
-
-def is_new_topic(first_seen: datetime | None, now: datetime) -> bool:
-    return first_seen is not None and (now - _aware(first_seen)) <= timedelta(days=NEW_TOPIC_DAYS)
 
 
 def match_previous(
@@ -343,45 +349,65 @@ def draft_topics(
     drafts: list[TopicDraft] = []
     for indices in groups:
         members = [signals[i] for i in indices]
-        engagement = sum(engagement_of(s) for s in members)
-        if len(members) < MIN_GROUP_SIZE and engagement < SINGLETON_MIN_ENGAGEMENT:
+        if len(members) < MIN_GROUP_SIZE and sum(engagement_of(s) for s in members) < SINGLETON_MIN_ENGAGEMENT:
             continue
-        dates = [_aware(s.published_at) for s in members]
-        counts = daily_counts(dates, now, window_days)
-        ratio = velocity_ratio(counts)
-        recent = sum(counts[-RECENT_DAYS:])
-        families = Counter(source_family(s.source_kind) for s in members)
-        lead = max(members, key=lambda s: (engagement_of(s), _aware(s.published_at)))
-        components = score_components(
-            signal_count=len(members),
-            families=len(families),
-            active_families=active_families,
-            engagement=engagement,
-            velocity=ratio,
-            last_seen=max(dates),
-            now=now,
-            relevance=relevance_fn(lead.title),
-        )
         drafts.append(
-            TopicDraft(
-                label=lead.title,
-                topic_tag=tag_titles([s.title for s in members]),
+            draft_group(
+                members,
                 keywords=top_terms(matrix, indices, feature_names),
-                signal_ids=[s.id for s in members],
-                signal_count=len(members),
-                source_counts=dict(families),
-                engagement=engagement,
-                components=components,
-                score=total_score(components),
-                velocity=ratio,
-                rising=ratio >= RISING_MIN_RATIO and recent >= RISING_MIN_RECENT,
-                daily_counts=counts,
-                first_seen_at=min(dates),
-                last_seen_at=max(dates),
+                now=now,
+                window_days=window_days,
+                active_families=active_families,
+                relevance_fn=relevance_fn,
             )
         )
     drafts.sort(key=lambda d: (-d.score, -d.engagement))
     return drafts[:MAX_TOPICS], len(groups)
+
+
+def draft_group(
+    members: list[Any],
+    *,
+    keywords: list[str],
+    now: datetime,
+    window_days: int,
+    active_families: int,
+    relevance_fn: RelevanceFn,
+) -> TopicDraft:
+    """Score one group of signals (also used to re-score topics merged by app/signals/merge.py)."""
+    engagement = sum(engagement_of(s) for s in members)
+    dates = [_aware(s.published_at) for s in members]
+    counts = daily_counts(dates, now, window_days)
+    ratio = velocity_ratio(counts)
+    families = Counter(source_family(s.source_kind) for s in members)
+    lead = max(members, key=lambda s: (engagement_of(s), _aware(s.published_at)))
+    components = score_components(
+        signal_count=len(members),
+        families=len(families),
+        active_families=active_families,
+        engagement=engagement,
+        velocity=ratio,
+        last_seen=max(dates),
+        now=now,
+        relevance=relevance_fn(lead.title),
+    )
+    momentum = topic_momentum(counts=counts, velocity=ratio, last_seen=max(dates), now=now)
+    return TopicDraft(
+        label=lead.title,
+        topic_tag=tag_titles([s.title for s in members]),
+        keywords=keywords,
+        signal_ids=[s.id for s in members],
+        signal_count=len(members),
+        source_counts=dict(families),
+        engagement=engagement,
+        components=components,
+        score=total_score(components),
+        velocity=ratio,
+        rising=momentum == "rising",
+        daily_counts=counts,
+        first_seen_at=min(dates),
+        last_seen_at=max(dates),
+    )
 
 
 def build_topics(
