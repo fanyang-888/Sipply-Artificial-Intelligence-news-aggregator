@@ -249,6 +249,85 @@ def test_build_topics_replaces_topics_and_prunes(db):
     assert db.execute(select(func.count()).select_from(Signal).where(Signal.external_id == "b4")).scalar_one() == 0
 
 
+@pytest.mark.parametrize(
+    ("count", "platforms", "ring"),
+    [
+        (15, 1, 1),  # plenty of posts, even on one platform
+        (72, 2, 1),
+        (14, 1, 2),
+        (5, 1, 2),
+        (3, 2, 2),  # a handful, but already on two platforms
+        (4, 1, 3),  # four YouTube videos
+        (2, 2, 3),
+        (1, 1, 3),
+    ],
+)
+def test_evidence_ring(count, platforms, ring):
+    assert T.evidence_ring(count, platforms) == ring
+
+
+def test_topic_momentum_and_new():
+    assert T.topic_momentum(rising=True, velocity=4.9, last_seen=ago(0.2), now=NOW) == "rising"
+    assert T.topic_momentum(rising=False, velocity=1.3, last_seen=ago(0.5), now=NOW) == "steady"
+    # slowed down, or nothing new for more than three days
+    assert T.topic_momentum(rising=False, velocity=0.3, last_seen=ago(0.5), now=NOW) == "cooling"
+    assert T.topic_momentum(rising=False, velocity=1.97, last_seen=ago(3.5), now=NOW) == "cooling"
+    assert T.is_new_topic(ago(1.5), NOW) and not T.is_new_topic(ago(2.5), NOW)
+    assert not T.is_new_topic(None, NOW)
+
+
+def test_match_previous_best_overlap_first_and_one_to_one():
+    old = {"A": {1, 2, 3, 4}, "B": {10, 11}}
+    new = [
+        {1, 2, 3, 4, 5},  # grew by one post: continues A (0.8)
+        {1, 2, 3},  # also overlaps A (0.75), but A is taken
+        {10, 11, 12, 13, 14},  # 2/5 = 0.4: too different from B
+        {99},
+    ]
+    assert T.match_previous(new, old) == ["A", None, None, None]
+    assert T.match_previous([], old) == []
+    assert T.match_previous([{1}], {}) == [None]
+
+
+def test_build_topics_carries_descriptions_to_the_matching_topic(db):
+    from sqlalchemy import delete, select
+
+    from app.models.signal import Signal, SignalTopic
+    from app.signals.store import upsert_signals
+
+    db.execute(delete(Signal))
+    upsert_signals(
+        db,
+        [
+            item("c1", "OpenAI fires three safety researchers", days=0.5),
+            item("c2", "OpenAI fires safety researchers over leak", days=1.0),
+            item("g1", "Gemini 4 Argon launches", days=1.0),
+            item("g2", "Gemini 4 Argon is here", days=1.2),
+        ],
+        now=NOW,
+    )
+    T.build_topics(db, now=NOW, relevance_fn=lambda title: 50.0)
+    openai = db.execute(select(SignalTopic).where(SignalTopic.label.like("OpenAI%"))).scalar_one()
+    story_id = uuid.uuid4()
+    openai.summary_en, openai.summary_zh = "OpenAI fired three safety researchers.", "OpenAI 解雇了三名安全研究员。"
+    openai.covered_cluster_id, openai.described_signal_count, openai.described_at = story_id, 2, NOW
+    db.flush()
+    old_id = openai.id
+
+    # One more post joins the OpenAI topic; Gemini was never described
+    upsert_signals(db, [item("c3", "OpenAI fires three safety researchers, report says", days=0.2)], now=NOW)
+    summary = T.build_topics(db, now=NOW, relevance_fn=lambda title: 50.0)
+    assert summary["descriptions_kept"] == 1
+
+    rows = {t.label[:6]: t for t in db.execute(select(SignalTopic)).scalars()}
+    kept = rows["OpenAI"]
+    assert kept.id != old_id and kept.signal_count == 3
+    assert (kept.summary_zh, kept.covered_cluster_id, kept.described_signal_count) == (
+        "OpenAI 解雇了三名安全研究员。", story_id, 2,
+    )
+    assert rows["Gemini"].described_at is None and rows["Gemini"].summary_en is None
+
+
 def test_run_ingest_end_to_end_with_mocked_sources(db):
     from sqlalchemy import delete, func, select
 

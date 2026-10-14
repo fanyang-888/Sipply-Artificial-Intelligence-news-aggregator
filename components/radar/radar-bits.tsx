@@ -45,27 +45,76 @@ export function RadarSparkline({ counts, label }: { counts: number[]; label: str
   );
 }
 
+/** The five score components with their weights (see backend app/signals/topics.py WEIGHTS). */
 export function ScoreBreakdown({ components }: { components: ApiRadarScoreComponents }) {
   const { t } = useI18n();
-  const rows: [string, number][] = [
-    [t.radar.componentVolume, components.volume],
-    [t.radar.componentEngagement, components.engagement],
-    [t.radar.componentVelocity, components.velocity],
-    [t.radar.componentRecency, components.recency],
-    [t.radar.componentRelevance, components.relevance],
+  const rows: [string, number, number][] = [
+    [t.radar.componentVolume, components.volume, 25],
+    [t.radar.componentEngagement, components.engagement, 25],
+    [t.radar.componentVelocity, components.velocity, 25],
+    [t.radar.componentRecency, components.recency, 10],
+    [t.radar.componentRelevance, components.relevance, 15],
   ];
   return (
     <dl className="space-y-1.5">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[88px_1fr_28px] items-center gap-2 text-[11px]">
+      {rows.map(([label, value, weight]) => (
+        <div key={label} className="grid grid-cols-[72px_1fr_26px_34px] items-center gap-2 text-[11px]">
           <dt className="[color:var(--text-muted)]">{label}</dt>
-          <dd className="h-[4px] overflow-hidden rounded-full [background:var(--border)]">
+          <dd className="h-[5px] overflow-hidden rounded-full [background:var(--border)]">
             <span className="block h-full rounded-full [background:var(--accent)]" style={{ width: `${Math.round(value)}%` }} />
           </dd>
-          <dd className="text-right font-mono [color:var(--text-muted)]">{Math.round(value)}</dd>
+          <dd className="text-right font-mono text-foreground">{Math.round(value)}</dd>
+          <dd className="text-right font-mono text-[10px] [color:var(--text-muted)]">×{weight}%</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+const UTC_MONTH_DAY = new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", timeZone: "UTC" });
+
+/**
+ * Daily counts as an area chart, the last 3 days (the velocity window) shaded.
+ * ``endIso`` is the radar build time: the last point is the 24h before it.
+ */
+export function RadarTrendChart({ counts, endIso, windowDays }: { counts: number[]; endIso: string | null; windowDays: number }) {
+  const { t } = useI18n();
+  if (counts.length < 2) return null;
+  const W = 420;
+  const H = 96;
+  const P = 4;
+  const B = 16;
+  const max = Math.max(1, ...counts);
+  const step = (W - 2 * P) / (counts.length - 1);
+  const base = H - B - P;
+  const pts = counts.map((v, i) => [P + i * step, P + (base - P) * (1 - v / max)] as const);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${base} L${P} ${base} Z`;
+  const recentX = P + (counts.length - 3.5) * step;
+  const [endX, endY] = pts[pts.length - 1];
+  const start = endIso ? new Date(new Date(endIso).getTime() - (counts.length - 1) * 86_400_000) : null;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={t.radar.dailyChartAria(windowDays)}>
+      <title>{`${t.radar.dailyChartAria(windowDays)}: ${counts.join(" ")}`}</title>
+      <rect x={recentX} y={P} width={W - P - recentX} height={base - P} fill="var(--accent-faint)" />
+      <line x1={P} x2={W - P} y1={base} y2={base} stroke="var(--border)" />
+      <path d={area} fill="var(--accent-faint)" />
+      <path d={line} fill="none" stroke="var(--accent)" strokeWidth={1.8} />
+      <circle cx={endX} cy={endY} r={3} fill="var(--accent)" />
+      <g fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="var(--text-muted)">
+        <text x={P} y={11}>
+          {t.radar.trendPeak(max)}
+        </text>
+        {start ? (
+          <text x={P} y={H - 3}>
+            {UTC_MONTH_DAY.format(start)}
+          </text>
+        ) : null}
+        <text x={recentX + (W - P - recentX) / 2} y={H - 3} textAnchor="middle">
+          {t.radar.trendRecent}
+        </text>
+      </g>
+    </svg>
   );
 }
 

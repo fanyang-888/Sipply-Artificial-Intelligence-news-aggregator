@@ -101,6 +101,46 @@ def test_radar_empty_before_first_run(client, db):
     assert body["generatedAt"] is None
 
 
+def test_radar_rings_momentum_and_descriptions(client, radar_data, db, make_cluster):
+    from sqlalchemy import select
+
+    body = client.get("/api/radar").json()
+    by_label = {t["label"]: t for t in body["topics"]}
+    openai, gemini = by_label["OpenAI fires three safety researchers"], by_label["Gemini 4 Argon launches"]
+    # 4 posts on HN + news → picking up; 2 posts a week ago → weak and cooling
+    assert (openai["ring"], openai["isNew"]) == (2, True)
+    assert openai["momentum"] in {"rising", "steady"}
+    assert (gemini["ring"], gemini["momentum"], gemini["isNew"]) == (3, "cooling", False)
+    # Not described yet
+    assert openai["summaryEn"] is None and openai["coverage"] is None
+
+    story = make_cluster(title="Fired OpenAI safety researchers dispute misconduct claims", title_zh="被解雇的 OpenAI 安全研究员否认不当行为")
+    topics = {t.label: t for t in db.execute(select(SignalTopic)).scalars()}
+    t = topics["OpenAI fires three safety researchers"]
+    t.summary_en, t.summary_zh = "OpenAI fired three safety researchers.", "OpenAI 解雇了三名安全研究员。"
+    t.covered_cluster_id, t.described_at = story.id, datetime.now(timezone.utc)
+    g = topics["Gemini 4 Argon launches"]
+    g.described_at = datetime.now(timezone.utc)  # described, but a weak signal: no coverage shown
+    db.flush()
+
+    body = client.get("/api/radar").json()
+    by_label = {t["label"]: t for t in body["topics"]}
+    openai = by_label["OpenAI fires three safety researchers"]
+    assert openai["summaryZh"] == "OpenAI 解雇了三名安全研究员。"
+    assert openai["coverage"] == {
+        "status": "covered",
+        "clusterId": str(story.id),
+        "title": "Fired OpenAI safety researchers dispute misconduct claims",
+        "titleZh": "被解雇的 OpenAI 安全研究员否认不当行为",
+    }
+    assert by_label["Gemini 4 Argon launches"]["coverage"] is None
+
+    t.covered_cluster_id = None  # checked, no Sipply story
+    db.flush()
+    openai = next(x for x in client.get("/api/radar").json()["topics"] if x["label"] == t.label)
+    assert openai["coverage"] == {"status": "gap", "clusterId": None, "title": None, "titleZh": None}
+
+
 def test_radar_returns_chinese_titles(client, radar_data, db):
     from sqlalchemy import select
 

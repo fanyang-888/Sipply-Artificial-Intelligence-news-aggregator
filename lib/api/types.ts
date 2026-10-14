@@ -140,6 +140,18 @@ export type ApiRadarScoreComponents = {
   relevance: number;
 };
 
+export type ApiRadarCoverage = {
+  /** "covered": Sipply has a story on this topic; "gap": checked, no story yet. */
+  status: "covered" | "gap";
+  clusterId: string | null;
+  title: string | null;
+  titleZh: string | null;
+};
+
+/** 1 = mainstream, 2 = picking up, 3 = weak signal. */
+export type RadarRing = 1 | 2 | 3;
+export type RadarMomentum = "rising" | "steady" | "cooling";
+
 export type ApiRadarTopic = {
   id: string;
   label: string;
@@ -158,6 +170,16 @@ export type ApiRadarTopic = {
   lastSeenAt: string | null;
   /** Signals per day across the radar window, oldest first. */
   dailyCounts: number[];
+  /** Evidence ring: how many signals, on how many platforms. */
+  ring: RadarRing;
+  momentum: RadarMomentum;
+  /** First seen within two days of the radar build. */
+  isNew: boolean;
+  /** One or two sentences on what happened; null until described (inner rings only). */
+  summaryEn: string | null;
+  summaryZh: string | null;
+  /** Whether Sipply has a story on it; null for weak signals and topics not checked yet. */
+  coverage: ApiRadarCoverage | null;
   signals: ApiRadarSignal[];
   questions: ApiRadarSignal[];
 };
