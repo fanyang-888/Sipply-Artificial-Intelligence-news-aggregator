@@ -70,9 +70,18 @@ def test_candidate_pairs_most_similar_first_and_capped():
 
 
 def test_merge_sets_joins_chains():
-    assert M.merge_sets(5, [(0, 3), (3, 4)]) == [[0, 3, 4]]
-    assert M.merge_sets(4, [(2, 1), (0, 3)]) == [[0, 3], [1, 2]]
-    assert M.merge_sets(3, []) == []
+    assert M.merge_sets([(0, 3, True), (3, 4, True)]) == [[0, 3, 4]]
+    assert M.merge_sets([(2, 1, True), (0, 3, True), (1, 3, None)]) == [[0, 3], [1, 2]]
+    assert M.merge_sets([(0, 1, False), (1, 2, None)]) == []
+
+
+def test_merge_sets_never_joins_topics_judged_different():
+    # 2026-10-14: Argon launch (0) = vague "Google just dropped…" video (1) = Argon for Robotics (2),
+    # but launch ≠ Robotics: the video joins the more similar pair, Robotics stays out
+    pairs = [(0, 1, True), (0, 2, False), (1, 2, True), (0, 3, True)]
+    assert M.merge_sets(pairs) == [[0, 1, 3]]
+    # a later "same" can still bring Robotics together with a topic it doesn't conflict with
+    assert M.merge_sets(pairs + [(2, 4, True)]) == [[0, 1, 3], [2, 4]]
 
 
 def test_judge_pairs_maps_answers_and_ignores_junk():

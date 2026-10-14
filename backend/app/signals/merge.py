@@ -122,24 +122,31 @@ def judge_pairs(client: Any, items: list[tuple[list[str], list[str]]]) -> tuple[
     return out, prompt_tokens, completion_tokens
 
 
-def merge_sets(n: int, same: list[tuple[int, int]]) -> list[list[int]]:
-    """Join confirmed pairs (union-find). Returns groups of 2+ indices, each sorted ascending."""
-    parent = list(range(n))
+def merge_sets(verdicts: list[tuple[int, int, bool | None]]) -> list[list[int]]:
+    """Groups of topics to merge, from (i, j, verdict) pairs in order of similarity.
 
-    def find(x: int) -> int:
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    for i, j in same:
-        ri, rj = find(i), find(j)
-        if ri != rj:
-            parent[max(ri, rj)] = min(ri, rj)
-    groups: dict[int, list[int]] = defaultdict(list)
-    for k in range(n):
-        groups[find(k)].append(k)
-    return sorted((g for g in groups.values() if len(g) > 1), key=lambda g: g[0])
+    Pairs judged the same are joined, but never two groups where any pair across
+    them was judged different: "A = B" and "B = C" must not merge A with C when
+    "A ≠ C" (2026-10-14: "Gemini 4 Argon for Robotics" reached the Gemini 4 Argon
+    launch through a vague "Google just dropped its most powerful AI" video).
+    Returns groups of 2+ indices, each sorted ascending.
+    """
+    different = {frozenset((i, j)) for i, j, v in verdicts if v is False}
+    group_of: dict[int, set[int]] = {}
+    for i, j, verdict in verdicts:
+        if verdict is not True:
+            continue
+        gi = group_of.get(i, {i})
+        gj = group_of.get(j, {j})
+        if gi is gj:
+            continue
+        if any(frozenset((a, b)) in different for a in gi for b in gj):
+            continue
+        joined = gi | gj
+        for k in joined:
+            group_of[k] = joined
+    groups = {id(g): g for g in group_of.values()}.values()
+    return sorted((sorted(g) for g in groups if len(g) > 1), key=lambda g: g[0])
 
 
 def _top_titles(members: list[Signal], k: int) -> list[str]:
@@ -191,9 +198,16 @@ def run_merge(
         summary["failed"] = True
         return summary
 
-    same = [(i, j) for (i, j, _), verdict in zip(pairs, verdicts) if verdict]
+    judged = [(i, j, verdict) for (i, j, _), verdict in zip(pairs, verdicts)]
+    for (i, j, sim), verdict in zip(pairs, verdicts):
+        # One line per pair, so every merge (and every refusal) can be audited in the run log
+        logger.info(
+            "merge pair %s sim=%.2f: %r | %r",
+            {True: "same", False: "different"}.get(verdict, "no answer"), sim, topics[i].label[:70], topics[j].label[:70],
+        )
+    same = [p for p in judged if p[2] is True]
     relevance = relevance_fn or default_relevance_fn()
-    for group in merge_sets(len(topics), same):
+    for group in merge_sets(judged):
         keep, dropped = topics[group[0]], [topics[k] for k in group[1:]]
         all_members = [s for t in (keep, *dropped) for s in members[t.id]]
         keywords: list[str] = []

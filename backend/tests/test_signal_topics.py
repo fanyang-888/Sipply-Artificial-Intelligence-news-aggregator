@@ -288,6 +288,18 @@ def test_topic_momentum():
     assert T.topic_momentum(counts=[], velocity=1.0, last_seen=None, now=NOW) == "cooling"
 
 
+def test_label_comes_from_headlines_before_videos_and_posts():
+    members = [
+        sig("Is this the Start of AGI? | Gemini 4 Argon review!", 0.5, "yt_video", points=0, comments=900),
+        sig("anotha one, Gemini is out", 0.4, "bsky_post", points=0, comments=500),
+        sig("Google releases Gemini 4 Argon", 1.0, "gnews_item"),
+        sig("Gemini 4 Argon", 1.0, "hn_story", points=300, comments=120),
+    ]
+    assert T.label_signal(members).title == "Gemini 4 Argon"  # HN first, though the video has more engagement
+    assert T.label_signal(members[:3]).title == "Google releases Gemini 4 Argon"  # then news
+    assert T.label_signal(members[:2]).title == "anotha one, Gemini is out"  # Bluesky before YouTube
+
+
 def test_evidence_trail_rebuilds_ring_history_from_publish_dates():
     members = [(ago(10.5), "hn"), (ago(9.5), "hn")]  # a quiet start on HN
     members += [(ago(2.5), "news")] * 3  # news picks it up

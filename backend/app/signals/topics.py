@@ -81,6 +81,11 @@ MIDDLE_RING_MIN_CROSS_PLATFORM = 3
 NEW_MAX_EARLIER = 1
 COOLING_MAX_VELOCITY = 0.8
 COOLING_AFTER_DAYS = 3
+# Where a topic's label comes from, best first: headline-style titles before posts.
+# The most-engaged post used to win outright, so YouTube and Bluesky (with far
+# bigger like counts) named topics "Is this the Start of AGI? | Gemini 4 Argon
+# review!" and "anotha one *OPENAI HEAD OF COMPUTING…".
+LABEL_FAMILY_ORDER = ("hn", "news", "lobsters", "devto", "github", "bluesky", "threads", "youtube")
 # Share of signals (Jaccard) a new topic needs with an old one to inherit its description
 CARRY_OVER_MIN_OVERLAP = 0.5
 DESCRIPTION_FIELDS = (
@@ -390,6 +395,21 @@ def draft_topics(
     return drafts[:MAX_TOPICS], len(groups)
 
 
+def label_signal(members: list[Any]) -> Any:
+    """The signal whose title names the topic: from the best family present
+    (LABEL_FAMILY_ORDER), then the most engaged, then the newest."""
+
+    def rank(s: Any) -> int:
+        family = source_family(s.source_kind)
+        return LABEL_FAMILY_ORDER.index(family) if family in LABEL_FAMILY_ORDER else len(LABEL_FAMILY_ORDER)
+
+    best = min(rank(s) for s in members)
+    return max(
+        (s for s in members if rank(s) == best),
+        key=lambda s: (engagement_of(s), _aware(s.published_at)),
+    )
+
+
 def draft_group(
     members: list[Any],
     *,
@@ -405,7 +425,7 @@ def draft_group(
     counts = daily_counts(dates, now, window_days)
     ratio = velocity_ratio(counts)
     families = Counter(source_family(s.source_kind) for s in members)
-    lead = max(members, key=lambda s: (engagement_of(s), _aware(s.published_at)))
+    lead = label_signal(members)
     components = score_components(
         signal_count=len(members),
         families=len(families),
