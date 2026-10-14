@@ -83,7 +83,14 @@ COOLING_MAX_VELOCITY = 0.8
 COOLING_AFTER_DAYS = 3
 # Share of signals (Jaccard) a new topic needs with an old one to inherit its description
 CARRY_OVER_MIN_OVERLAP = 0.5
-DESCRIPTION_FIELDS = ("summary_en", "summary_zh", "covered_cluster_id", "described_signal_count", "described_at")
+DESCRIPTION_FIELDS = (
+    "summary_en",
+    "summary_zh",
+    "question_en",
+    "covered_cluster_id",
+    "described_signal_count",
+    "described_at",
+)
 
 _VECTORIZER: dict[str, Any] = {"stop_words": "english", "sublinear_tf": True}
 

@@ -170,6 +170,22 @@ class RadarCoverage(BaseModel):
     titleZh: str | None = None
 
 
+class RadarCitation(BaseModel):
+    url: str
+    title: str
+    domain: str
+
+
+class RadarAnswerCheck(BaseModel):
+    checkedAt: str | None
+    model: str
+    sipplyCited: bool
+    sipplyInSources: bool
+    # Cited inline in the answer, in order (first few)
+    citations: list[RadarCitation]
+    sourceCount: int
+
+
 class RadarTopic(BaseModel):
     id: str
     label: str
@@ -198,6 +214,9 @@ class RadarTopic(BaseModel):
     summaryZh: str | None = None
     # Only for rings 1–2 once describe_signal_topics has checked the topic
     coverage: RadarCoverage | None = None
+    # What a reader would ask an AI assistant about it, and the latest check of that question
+    question: str | None = None
+    answerCheck: RadarAnswerCheck | None = None
     signals: list[RadarSignal]
     questions: list[RadarSignal]
 
@@ -208,6 +227,36 @@ class RadarSource(BaseModel):
     active: bool
     signalCount: int
     lastFetchedAt: str | None
+
+
+class RadarDomainShare(BaseModel):
+    domain: str
+    citations: int
+    # Share of checks whose answer cited this domain at least once
+    share: float
+
+
+class RadarRecentCheck(BaseModel):
+    checkedAt: str | None
+    question: str
+    topicLabel: str | None
+    sipplyCited: bool
+    sipplyHasStory: bool
+    citations: list[RadarCitation]
+
+
+class RadarAnswersResponse(BaseModel):
+    days: int
+    model: str | None
+    checks: int
+    questions: int
+    sipplyCited: int
+    sipplyInSources: int
+    # Checks on topics Sipply had a story on (only those can cite it)
+    sipplyCovered: int
+    sipplyCitedWhenCovered: int
+    topDomains: list[RadarDomainShare]
+    recent: list[RadarRecentCheck]
 
 
 class RadarResponse(BaseModel):

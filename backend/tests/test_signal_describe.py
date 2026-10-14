@@ -31,6 +31,7 @@ class FakeOpenAI:
                 "summary_en": f"EN {t['posts'][0]}",
                 "summary_zh": f"中文 {t['posts'][0]}",
                 "story": self.pick(t["posts"], t["stories"]),
+                "question": f"What happened with {t['posts'][0]}?",
             }
             for t in sent
             if t["id"] not in self.drop_ids
@@ -99,7 +100,12 @@ def test_describe_batch_maps_answers_and_only_accepts_own_candidates():
         return stories[0]["id"] if stories else None
 
     results, p, c = D.describe_batch(FakeOpenAI(pick=pick, drop_ids={2}), items)
-    assert results[0] == {"summary_en": "EN Gemini 4 Argon", "summary_zh": "中文 Gemini 4 Argon", "story": a}
+    assert results[0] == {
+        "summary_en": "EN Gemini 4 Argon",
+        "summary_zh": "中文 Gemini 4 Argon",
+        "story": a,
+        "question": "What happened with Gemini 4 Argon?",
+    }
     assert results[1]["story"] is None
     assert results[2] is None  # no answer for it
     assert results[3]["story"] is None
@@ -179,6 +185,7 @@ def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
     meta, haiku, videos = rows["Meta launc"], rows["Claude Hai"], rows["These Clau"]
     assert meta.covered_cluster_id == muse.id and meta.summary_zh.startswith("中文 ")
     assert meta.described_signal_count == 16 and meta.described_at == NOW
+    assert meta.question_en.startswith("What happened with Meta launches Muse Wonder")
     assert haiku.described_at == NOW and haiku.covered_cluster_id is None  # checked: Sipply has no story
     assert videos.described_at is None  # weak signal: not described
 
@@ -189,9 +196,14 @@ def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
 
 
 def test_needs_description_after_growth():
-    topic = SimpleNamespace(described_at=NOW, covered_cluster_id=uuid.uuid4(), described_signal_count=10, signal_count=14)
+    topic = SimpleNamespace(
+        described_at=NOW, covered_cluster_id=uuid.uuid4(), question_en="Q?", described_signal_count=10, signal_count=14
+    )
     assert not D.needs_description(topic)
     topic.signal_count = 15
+    assert D.needs_description(topic)
+    # Described before questions existed: describe again once to get one
+    topic.signal_count, topic.question_en = 14, None
     assert D.needs_description(topic)
 
 

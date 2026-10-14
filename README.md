@@ -101,9 +101,10 @@ flowchart LR
 
     subgraph DELIVER["Delivery"]
         direction TB
-        S9["14 · Email\n20:00 UTC run only"]
+        S10["14 · AI answer check\n14:00 UTC run only"]
+        S9["15 · Email\n20:00 UTC run only"]
         CACHE["Redis cache bust\nai_tool:*"]
-        S9 --> CACHE
+        S10 --> S9 --> CACHE
     end
 
     SRC --> COLLECT --> SCORE --> GENERATE --> RADAR --> DELIVER
@@ -151,6 +152,7 @@ AI assistants and search crawlers should be able to read and cite Sipply:
 - **Machine entry points**: `/sitemap.xml` (every story; rendered per request so it never goes stale), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed), `/llms.txt`.
 - **Metadata for crawlers that don't run JS**: `htmlLimitedBots` includes GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot, so they get `<head>` metadata in the HTML.
 - **Check**: `python -m scripts.geo_crawler_check https://www.sipply.dev` (from `backend/`) fetches pages as GPTBot or ClaudeBot would (raw HTML, no JavaScript) and reports what they can see.
+- **Citation tracking** (`backend/app/signals/answers.py`): each mainstream or picking-up radar topic gets the question a reader would ask an AI assistant. Once a day (14:00 UTC run) the top 10 go to OpenAI's Responses API with the `web_search` tool (gpt-4.1-mini, ~$0.014 a question). Each check records the answer, the sources it cited and read, and whether a sipply.dev page was among them. The radar shows it per topic and as "Who AI assistants cite" (`GET /api/radar/answers`). This is the API's search, not the ChatGPT app: a fixed-settings proxy, comparable over time.
 
 ---
 
@@ -412,6 +414,9 @@ GET /api/search?q=GPT-5&type=cluster
 
 # Trend Radar: topics with rings, momentum, summaries, coverage, top posts and questions
 GET /api/radar?limit=40
+
+# What an AI assistant with web search cited for the radar questions (last 30 days)
+GET /api/radar/answers?days=30
 
 # Every story id + last update (feeds the sitemap)
 GET /api/clusters/index

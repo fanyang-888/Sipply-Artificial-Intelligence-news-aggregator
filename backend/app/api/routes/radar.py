@@ -11,9 +11,22 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import RadarCoverage, RadarResponse, RadarSignal, RadarSource, RadarTopic, format_dt
+from app.api.schemas import (
+    RadarAnswerCheck,
+    RadarAnswersResponse,
+    RadarCitation,
+    RadarCoverage,
+    RadarDomainShare,
+    RadarRecentCheck,
+    RadarResponse,
+    RadarSignal,
+    RadarSource,
+    RadarTopic,
+    format_dt,
+)
 from app.cache import cache_get, cache_set
 from app.db import get_db
+from app.models.answer_check import AnswerCheck
 from app.models.cluster import Cluster
 from app.models.signal import Signal, SignalTopic
 from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
@@ -23,6 +36,12 @@ from app.signals.topics import engagement_of, evidence_ring, evidence_trail, top
 router = APIRouter(prefix="/api/radar", tags=["radar"])
 
 _CACHE_KEY = "ai_tool:radar:{limit}"
+_ANSWERS_CACHE_KEY = "ai_tool:radar:answers:{days}"
+# A topic shows the latest check of its question from this many days back
+ANSWER_CHECK_MAX_AGE_DAYS = 7
+CITATIONS_SHOWN = 6
+TOP_DOMAINS = 10
+RECENT_CHECKS = 20
 SIGNALS_PER_TOPIC = 5
 QUESTIONS_PER_TOPIC = 3
 TOP_QUESTIONS = 12
@@ -50,6 +69,27 @@ def _signal_out(s: Signal) -> RadarSignal:
 
 def _by_engagement(signals: list[Signal]) -> list[Signal]:
     return sorted(signals, key=lambda s: (engagement_of(s), s.published_at), reverse=True)
+
+
+def _citations(check: AnswerCheck, limit: int) -> list[RadarCitation]:
+    return [
+        RadarCitation(url=c.get("url", ""), title=c.get("title", ""), domain=c.get("domain", ""))
+        for c in (check.citations or [])[:limit]
+        if isinstance(c, dict) and c.get("url")
+    ]
+
+
+def _answer_check_out(check: AnswerCheck | None) -> RadarAnswerCheck | None:
+    if check is None:
+        return None
+    return RadarAnswerCheck(
+        checkedAt=format_dt(check.checked_at),
+        model=check.model,
+        sipplyCited=check.sipply_cited,
+        sipplyInSources=check.sipply_in_sources,
+        citations=_citations(check, CITATIONS_SHOWN),
+        sourceCount=len(check.sources or []),
+    )
 
 
 def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
@@ -95,6 +135,19 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
         else {}
     )
 
+    questions = [t.question_en for t in topics if t.question_en]
+    latest_check: dict[str, AnswerCheck] = {}
+    if questions:
+        for check in db.execute(
+            select(AnswerCheck)
+            .where(
+                AnswerCheck.question.in_(questions),
+                AnswerCheck.checked_at >= now - timedelta(days=ANSWER_CHECK_MAX_AGE_DAYS),
+            )
+            .order_by(AnswerCheck.checked_at.desc())
+        ).scalars():
+            latest_check.setdefault(check.question, check)
+
     topic_out = []
     for t in topics:
         ranked = _by_engagement(members.get(t.id, []))
@@ -131,6 +184,8 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
                 summaryEn=t.summary_en,
                 summaryZh=t.summary_zh,
                 coverage=_coverage(t, ring, stories),
+                question=t.question_en,
+                answerCheck=_answer_check_out(latest_check.get(t.question_en)) if t.question_en else None,
                 signals=[_signal_out(s) for s in ranked[:SIGNALS_PER_TOPIC]],
                 questions=[_signal_out(s) for s in ranked if s.is_question][:QUESTIONS_PER_TOPIC],
             )
@@ -192,5 +247,69 @@ def get_radar(
     data = cache_get(key)
     if data is None:
         data = build_radar(db, limit=limit)
+        cache_set(key, data)
+    return JSONResponse(content=data)
+
+
+def build_answers(db: Session, *, days: int, now: datetime | None = None) -> dict[str, Any]:
+    """What AI assistants cited for the radar questions over the last ``days`` days."""
+    now = now or datetime.now(timezone.utc)
+    checks = list(
+        db.execute(
+            select(AnswerCheck)
+            .where(AnswerCheck.checked_at >= now - timedelta(days=days))
+            .order_by(AnswerCheck.checked_at.desc())
+        ).scalars().all()
+    )
+    citations_per_domain: dict[str, int] = defaultdict(int)
+    checks_per_domain: dict[str, int] = defaultdict(int)
+    for check in checks:
+        domains = [c.get("domain") for c in (check.citations or []) if isinstance(c, dict) and c.get("domain")]
+        for d in domains:
+            citations_per_domain[d] += 1
+        for d in set(domains):
+            checks_per_domain[d] += 1
+    top = sorted(checks_per_domain, key=lambda d: (-checks_per_domain[d], -citations_per_domain[d], d))[:TOP_DOMAINS]
+    covered = [c for c in checks if c.covered_cluster_id]
+    return RadarAnswersResponse(
+        days=days,
+        model=checks[0].model if checks else None,
+        checks=len(checks),
+        questions=len({c.question for c in checks}),
+        sipplyCited=sum(c.sipply_cited for c in checks),
+        sipplyInSources=sum(c.sipply_in_sources for c in checks),
+        sipplyCovered=len(covered),
+        sipplyCitedWhenCovered=sum(c.sipply_cited for c in covered),
+        topDomains=[
+            RadarDomainShare(domain=d, citations=citations_per_domain[d], share=round(checks_per_domain[d] / len(checks), 3))
+            for d in top
+        ],
+        recent=[
+            RadarRecentCheck(
+                checkedAt=format_dt(c.checked_at),
+                question=c.question,
+                topicLabel=c.topic_label,
+                sipplyCited=c.sipply_cited,
+                sipplyHasStory=c.covered_cluster_id is not None,
+                citations=_citations(c, 3),
+            )
+            for c in checks[:RECENT_CHECKS]
+        ],
+    ).model_dump(mode="json")
+
+
+@router.get("/answers", response_model=RadarAnswersResponse)
+def get_radar_answers(
+    days: int = Query(default=30, ge=1, le=90, description="Look-back window in days"),
+    db: Session = Depends(get_db),
+):
+    """Which sites an AI assistant with web search cited for the radar questions, and how often Sipply was one.
+
+    Cached until the next pipeline run clears the ``ai_tool:*`` keys.
+    """
+    key = _ANSWERS_CACHE_KEY.format(days=days)
+    data = cache_get(key)
+    if data is None:
+        data = build_answers(db, days=days)
         cache_set(key, data)
     return JSONResponse(content=data)

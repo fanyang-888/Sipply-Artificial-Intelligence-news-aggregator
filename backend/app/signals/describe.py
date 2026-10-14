@@ -42,6 +42,7 @@ MIN_CANDIDATE_SIMILARITY = 0.02
 STORY_SUMMARY_CHARS = 300
 REDESCRIBE_GROWTH = 1.5
 SUMMARY_MAX_CHARS = 400
+QUESTION_MAX_CHARS = 200
 # USD per 1M tokens (same table as app/services/summarization.py)
 _PRICE_INPUT = 0.15
 _PRICE_OUTPUT = 0.60
@@ -52,13 +53,14 @@ For every topic return:
 - "summary_en": one or two plain sentences (at most 45 words) saying what happened. Use only what the titles say; do not speculate or add hype; do not start with "This topic".
 - "summary_zh": the same in Simplified Chinese (简体中文). Keep names of products, models, companies and people in English.
 - "story": the id of the candidate story that reports the same event or announcement, or null if none does. A story about the same company but a different event is not a match.
+- "question": the question a curious reader would type into an AI assistant to learn about this story, in English, at most 15 words, naming the company or product (e.g. "What did Microsoft's president say about AI regulation and milk?").
 
 Input is a JSON list of {"id": ..., "posts": [...], "stories": [{"id": ..., "title": ...}]}.
-Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ...}, ...]} with one entry for every input id."""
+Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ..., "question": ...}, ...]} with one entry for every input id."""
 
 
 def needs_description(topic: SignalTopic) -> bool:
-    if topic.described_at is None or topic.covered_cluster_id is None:
+    if topic.described_at is None or topic.covered_cluster_id is None or topic.question_en is None:
         return True
     described = topic.described_signal_count or 0
     return topic.signal_count >= described * REDESCRIBE_GROWTH
@@ -121,7 +123,7 @@ def describe_batch(
     """Describe topics in one request.
 
     ``items``: [{"posts": [title, …], "stories": [(story key, title), …]}].
-    Returns ({"summary_en", "summary_zh", "story": story key or None} or None per item,
+    Returns ({"summary_en", "summary_zh", "story": story key or None, "question": str or None} or None per item,
     prompt tokens, completion tokens).
     """
     payload = [
@@ -161,11 +163,13 @@ def describe_batch(
         if not (isinstance(en, str) and en.strip() and isinstance(zh, str) and zh.strip()):
             continue
         keys = {f"s{j}": key for j, (key, _) in enumerate(items[idx]["stories"])}
+        question = row.get("question")
         out[idx] = {
             "summary_en": en.strip()[:SUMMARY_MAX_CHARS],
             "summary_zh": zh.strip()[:SUMMARY_MAX_CHARS],
             # Anything but one of this topic's own candidate ids counts as "no story"
             "story": keys.get(row.get("story")) if isinstance(row.get("story"), str) else None,
+            "question": question.strip()[:QUESTION_MAX_CHARS] if isinstance(question, str) and question.strip() else None,
         }
     return out, prompt_tokens, completion_tokens
 
@@ -233,6 +237,7 @@ def run_describe(
             topic.summary_en = result["summary_en"]
             topic.summary_zh = result["summary_zh"]
             topic.covered_cluster_id = result["story"]
+            topic.question_en = result["question"]
             topic.described_signal_count = topic.signal_count
             topic.described_at = now
             described += 1

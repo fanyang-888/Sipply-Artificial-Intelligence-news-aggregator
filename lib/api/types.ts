@@ -138,6 +138,40 @@ export type ApiRadarScoreComponents = {
   relevance: number;
 };
 
+export type ApiRadarCitation = { url: string; title: string; domain: string };
+
+/** What an AI assistant with web search answered to the topic's question. */
+export type ApiRadarAnswerCheck = {
+  checkedAt: string | null;
+  model: string;
+  sipplyCited: boolean;
+  /** Sipply was among the pages the search read, cited or not. */
+  sipplyInSources: boolean;
+  citations: ApiRadarCitation[];
+  sourceCount: number;
+};
+
+/** GET /api/radar/answers: which sites assistants cited for the radar questions. */
+export type ApiRadarAnswers = {
+  days: number;
+  model: string | null;
+  checks: number;
+  questions: number;
+  sipplyCited: number;
+  sipplyInSources: number;
+  sipplyCovered: number;
+  sipplyCitedWhenCovered: number;
+  topDomains: { domain: string; citations: number; share: number }[];
+  recent: {
+    checkedAt: string | null;
+    question: string;
+    topicLabel: string | null;
+    sipplyCited: boolean;
+    sipplyHasStory: boolean;
+    citations: ApiRadarCitation[];
+  }[];
+};
+
 export type ApiRadarCoverage = {
   /** "covered": Sipply has a story on this topic; "gap": checked, no story yet. */
   status: "covered" | "gap";
@@ -182,6 +216,10 @@ export type ApiRadarTopic = {
   summaryZh: string | null;
   /** Whether Sipply has a story on it; null for weak signals and topics not checked yet. */
   coverage: ApiRadarCoverage | null;
+  /** What a reader would ask an AI assistant about the topic (English). */
+  question: string | null;
+  /** The latest check of that question (last 7 days), or null. */
+  answerCheck: ApiRadarAnswerCheck | null;
   signals: ApiRadarSignal[];
   questions: ApiRadarSignal[];
 };

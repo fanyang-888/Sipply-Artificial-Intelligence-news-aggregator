@@ -120,6 +120,8 @@ class SignalTopic(Base):
     # The Sipply story (clusters.id) about the same event; None after a check
     # means Sipply has no story on it. No FK: see migration w4d3.
     covered_cluster_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # What a reader would ask an AI assistant about this topic (checked by check_ai_answers)
+    question_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     described_signal_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     described_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
