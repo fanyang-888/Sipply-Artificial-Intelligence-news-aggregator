@@ -57,6 +57,8 @@ export function TopNav() {
   const pathname = usePathname();
   const onArchive = pathname === "/archive";
   const onRadar = pathname === "/radar";
+  const onTopics = pathname.startsWith("/topics");
+  const onWeekly = pathname.startsWith("/weekly");
   const onDigest = pathname === "/";
 
   return (
@@ -94,6 +96,8 @@ export function TopNav() {
             { href: "/", label: t.nav.dailyDigest, active: onDigest },
             { href: "/archive", label: t.nav.archive, active: onArchive },
             { href: "/radar", label: t.nav.radar, active: onRadar },
+            { href: "/topics", label: t.nav.topics, active: onTopics },
+            { href: "/weekly", label: t.nav.weekly, active: onWeekly },
           ].map(({ href, label, active }) => (
             <Link
               key={href}

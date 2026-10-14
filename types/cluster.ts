@@ -31,4 +31,6 @@ export type Cluster = {
   articleIds: string[];
   articles?: Article[];
   relatedClusterIds: string[];
+  /** Company / model-family pages this story belongs to. */
+  topics?: { slug: string; name: string }[];
 };

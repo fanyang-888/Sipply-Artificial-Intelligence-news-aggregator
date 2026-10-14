@@ -7,9 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchSearch } from "@/lib/api";
-import type { ArchiveResultRow, ArchiveClusterRow } from "@/lib/mappers/archive";
+import { apiRowToArchiveRow, type ArchiveResultRow } from "@/lib/mappers/archive";
 import { archiveHref, parseArchiveQuery } from "@/lib/utils/archive-url";
 import { topicTagsForGroup } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
@@ -93,52 +94,6 @@ const PAGE_SIZE = 20;
 
 type SortBy = "score" | "date";
 
-function toDateKey(dateStr: string | null): string {
-  if (!dateStr) return "unknown";
-  return dateStr.slice(0, 10); // YYYY-MM-DD
-}
-
-type ArchiveT = ReturnType<typeof useI18n>["t"];
-
-/** "arXiv · TechCrunch · The Verge +2" — names capped at 3, falls back to a count. */
-function formatSourceLabels(
-  sourceNames: string[],
-  sourceCount: number,
-  t: ArchiveT,
-): string {
-  if (sourceNames.length === 0) return t.archive.sourceCountLabel(sourceCount);
-  const shown = sourceNames.slice(0, 3).join(" · ");
-  const extra = sourceNames.length - 3;
-  return extra > 0 ? `${shown} +${extra}` : shown;
-}
-
-function toClusterRow(
-  c: { id: string; title: string; title_zh: string | null; summary: string | null; summary_zh: string | null; tags: string[]; theme: string; topicTag: string | null; storyStatus: string; clusterScore: number | null; lastSeenAt: string | null; sourceCount: number; sourceNames: string[] },
-  t: ArchiveT,
-  lang: string,
-): ArchiveClusterRow {
-  let freshnessLabel: string | undefined;
-  if (c.lastSeenAt) {
-    const diff = (Date.now() - new Date(c.lastSeenAt).getTime()) / 60000;
-    if (diff < 60) freshnessLabel = t.archive.freshnessMinutes(Math.round(diff));
-    else if (diff < 1440) freshnessLabel = t.archive.freshnessHours(Math.round(diff / 60));
-    else freshnessLabel = t.archive.freshnessDays(Math.round(diff / 1440));
-  }
-  const isZh = lang === "zh";
-  return {
-    kind: "cluster",
-    id: c.id,
-    title: isZh ? (c.title_zh || c.title) : c.title,
-    theme: c.theme,
-    themeLabel: c.topicTag ?? c.theme,
-    summarySnippet: (isZh ? (c.summary_zh ?? c.summary ?? "") : (c.summary ?? "")).slice(0, 160),
-    sourceLabels: formatSourceLabels(c.sourceNames ?? [], c.sourceCount, t),
-    clusterScore: c.clusterScore ?? undefined,
-    freshnessLabel,
-    dateKey: toDateKey(c.lastSeenAt),
-  };
-}
-
 type DayMarker = { primary: string; secondary: string };
 
 function formatDayMarker(dateKey: string, lang: string): DayMarker {
@@ -215,7 +170,7 @@ export function ArchivePageClient() {
         sortBy: sort,
       });
 
-      const newRows = result.clusters.map(c => toClusterRow(c, t, lang));
+      const newRows = result.clusters.map(c => apiRowToArchiveRow(c, t, lang, Date.now()));
       setRows(prev => append ? [...prev, ...newRows] : newRows);
       setTotal(result.total);
     } catch {
@@ -266,6 +221,17 @@ export function ArchivePageClient() {
           {t.archive.title}
         </h1>
         <p className="mt-1.5 text-sm [color:var(--text-muted)]">{t.archive.description}</p>
+        {/* The top nav shows only icons on phones; these pages are reachable from here too */}
+        <p className="mt-2 text-sm [color:var(--text-muted)]">
+          {t.hubs.browse}:{" "}
+          <Link href="/topics" className="[color:var(--accent)] hover:underline">
+            {t.hubs.topicsTitle}
+          </Link>{" "}
+          ·{" "}
+          <Link href="/weekly" className="[color:var(--accent)] hover:underline">
+            {t.hubs.weeklyTitle}
+          </Link>
+        </p>
       </div>
 
       <ArchiveToolbar

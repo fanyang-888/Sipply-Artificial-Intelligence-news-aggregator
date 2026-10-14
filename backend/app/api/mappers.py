@@ -7,12 +7,14 @@ from app.api.schemas import (
     AudienceBlocks,
     ArchiveClusterRow,
     ClusterResponse,
+    TopicRef,
     format_dt,
     freshness_label,
     localized,
     localized_bilingual,
 )
 from app.models.cluster import Cluster
+from app.services.entities import entities_in
 
 
 def cluster_to_response(
@@ -63,6 +65,7 @@ def cluster_to_response(
 
     return ClusterResponse(
         id=str(cluster.id),
+        topics=[TopicRef(slug=e.slug, name=e.name) for e in entities_in(cluster.representative_title or "")],
         clusterType=cluster.type or "event",
         title=localized_bilingual(cluster.representative_title, getattr(cluster, "representative_title_zh", None), "Untitled Story"),
         theme=cluster.type or "event",

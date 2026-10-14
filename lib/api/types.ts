@@ -43,6 +43,41 @@ export type ApiCluster = {
   relatedClusterIds: string[];
   articleCount: number;
   sourceCount: number;
+  /** Company / model-family pages this story belongs to. */
+  topics?: ApiTopicRef[];
+};
+
+export type ApiTopicRef = { slug: string; name: string };
+
+/** GET /api/topics */
+export type ApiTopicSummary = ApiTopicRef & {
+  /** Stories in the last 30 days. */
+  storyCount: number;
+  totalStories: number;
+  latestAt: string | null;
+};
+
+/** GET /api/topics/{slug} */
+export type ApiTopicDetail = ApiTopicSummary & {
+  stories: ApiArchiveClusterRow[];
+  radar: { id: string; label: string; ring: 1 | 2 | 3; signalCount: number; rising: boolean }[];
+};
+
+/** GET /api/weeks */
+export type ApiWeekSummary = {
+  /** ISO week, e.g. "2026-W42" */
+  week: string;
+  /** Monday and Sunday, YYYY-MM-DD (UTC) */
+  start: string;
+  end: string;
+  storyCount: number;
+};
+
+/** GET /api/weeks/{week} */
+export type ApiWeekDetail = ApiWeekSummary & {
+  stories: ApiArchiveClusterRow[];
+  categories: { key: string; name: string; count: number }[];
+  topics: { key: string; name: string; count: number }[];
 };
 
 export type ApiDigest = {

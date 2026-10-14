@@ -52,6 +52,7 @@ export function apiClusterToCluster(c: ApiCluster): Cluster {
       organizationName: a.sourceName ?? undefined,
     })),
     relatedClusterIds: c.relatedClusterIds,
+    topics: c.topics ?? [],
   };
 }
 

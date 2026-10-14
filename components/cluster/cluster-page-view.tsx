@@ -7,6 +7,7 @@ import { TakeawayList } from "@/components/cluster/takeaway-list";
 import { WhyItMattersSection } from "@/components/cluster/why-it-matters-section";
 import { CoveredSourcesList } from "@/components/cluster/covered-sources-list";
 import { RelatedStories } from "@/components/cluster/related-stories";
+import { RelatedTopics } from "@/components/cluster/related-topics";
 import { ClusterStoryFooter } from "@/components/cluster/cluster-story-footer";
 import {
   BilingualAssistBody,
@@ -54,6 +55,7 @@ export function ClusterPageView({
             audience={cluster.audience}
           />
           <CoveredSourcesList articles={articles} />
+          <RelatedTopics topics={cluster.topics} />
           <RelatedStories clusters={related} />
           <ClusterStoryFooter nextCluster={nextCluster} />
         </div>

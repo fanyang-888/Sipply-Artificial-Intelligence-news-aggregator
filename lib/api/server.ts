@@ -9,7 +9,7 @@
 import { cache } from "react";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { ApiError } from "./client";
-import type { ApiCluster, ApiDigest } from "./types";
+import type { ApiCluster, ApiDigest, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
@@ -45,6 +45,23 @@ export async function getLastPipelineRunAt(): Promise<string | null> {
   const runs = await getJson<{ finished_at: string | null }[]>("/api/pipeline-runs?limit=3", 300);
   return runs.find((r) => r.finished_at)?.finished_at ?? null;
 }
+
+export function getTopics(): Promise<ApiTopicSummary[]> {
+  return getJson<ApiTopicSummary[]>("/api/topics", 300);
+}
+
+/** Cached per render, so generateMetadata and the page share one request. */
+export const getTopic = cache((slug: string) =>
+  getJson<ApiTopicDetail>(`/api/topics/${encodeURIComponent(slug)}`, 300),
+);
+
+export function getWeeks(): Promise<ApiWeekSummary[]> {
+  return getJson<ApiWeekSummary[]>("/api/weeks", 300);
+}
+
+export const getWeek = cache((week: string) =>
+  getJson<ApiWeekDetail>(`/api/weeks/${encodeURIComponent(week)}`, 300),
+);
 
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
   return getJson<ApiClusterIndexEntry[]>("/api/clusters/index", 3600);
