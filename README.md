@@ -269,6 +269,17 @@ Turned off, with the reason in the YAML: VentureBeat AI (feed stopped updating, 
 
 ---
 
+## Design
+
+One visual language on every page, public and admin, set in `app/globals.css` (tokens) and `lib/ui/classes.ts` (type and control styles):
+
+- **Stage**: a near-black page (`#080c12`) with one light, a soft radial beam behind each page's title; the light theme is its own token set (white cards on `#f5f8ff`), not an inversion.
+- **Type**: Fraunces (light, large) for headlines and section titles; DM Sans for reading; IBM Plex Mono in small capitals for metadata only — categories, dates, counts, tabs.
+- **Surfaces**: glass panels (`.sp-glass`: translucent fill, 20px radius, a 1px gradient edge drawn with a mask) holding rows separated by hairlines (`.sp-rows`); pills for inputs, buttons and chips; one accent colour (`#4a9eff` / `#1d6fe8`) for links, the active tab and small status dots.
+- **Home**: four full-viewport panels — the lead story, today's stories as a native-scroll carousel with snap points (no wheel hijacking), what the AI community is discussing, this week + the email — each with one focal point and one action. Panels fade up once as they enter; the server HTML is complete without JavaScript and reduced-motion disables the effect.
+- **Share images**: generated per page with `next/og` in the same language (`lib/seo/og-card.tsx`).
+- **Rules of thumb** (after Meng To's design notes and Tufte): one focal point per viewport; metadata in mono labels, never body text; a surface or an effect has to do a job or it goes; nothing fake — no placeholder counts, quotes or logos.
+
 ## Project layout
 
 ```
