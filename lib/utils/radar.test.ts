@@ -6,7 +6,9 @@ import {
   ageParts,
   filterRadarTopics,
   hasActiveFilter,
+  platformBreakdown,
   radarBrief,
+  radarOrder,
   radarSectorForTag,
   ringMove,
   topicPlatforms,
@@ -160,6 +162,14 @@ describe("formatting", () => {
     expect(sparklineHeights([0, 0], 20)).toEqual([1, 1]);
   });
 
+  it("draws sparklines on a shared scale when given one", () => {
+    // A quiet topic stays low next to a busy one instead of filling the box
+    expect(sparklineHeights([0, 1, 2], 20, 20)).toEqual([1, 2, 2]);
+    expect(sparklineHeights([10, 20], 20, 20)).toEqual([10, 20]);
+    // Never taller than the box, even if a count exceeds the shared max
+    expect(sparklineHeights([30], 20, 20)).toEqual([20]);
+  });
+
   it("splits ages into minutes, hours, then days", () => {
     const now = new Date("2026-10-12T12:00:00Z");
     expect(ageParts("2026-10-12T11:30:00Z", now)).toEqual({ unit: "m", value: 30 });
@@ -231,5 +241,24 @@ describe("ringMove", () => {
       ["b", 3],
       ["a", 3],
     ]);
+  });
+});
+
+describe("radarOrder", () => {
+  it("lists the inner ring first, then by score, so numbers read in order", () => {
+    const order = radarOrder([
+      topic({ id: "weak-high", ring: 3, score: 90 }),
+      topic({ id: "main-low", ring: 1, score: 40 }),
+      topic({ id: "mid", ring: 2, score: 70 }),
+      topic({ id: "main-high", ring: 1, score: 80 }),
+    ]).map((t) => t.id);
+    expect(order).toEqual(["main-high", "main-low", "mid", "weak-high"]);
+  });
+});
+
+describe("platformBreakdown", () => {
+  it("lists platforms busiest first with their counts", () => {
+    const t = topic({ sourceCounts: { hn: 3, news: 24, youtube: 6 } });
+    expect(platformBreakdown(t, en.radar.sourceShort, ", ")).toBe("News 24, YouTube 6, HN 3");
   });
 });
