@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.mappers import cluster_to_response
 from app.api.schemas import DigestResponse, format_dt
 from app.cache import cache_get, cache_set
-from app.crud.cluster import get_top_clusters
+from app.services.home_ranking import home_ranking
 from app.db import get_db
 from app.services.personalization import personalize_digest
 
@@ -20,8 +20,8 @@ _CACHE_KEY = "ai_tool:digest:today"
 
 
 def _build_digest(db: Session) -> dict[str, Any]:
-    clusters = get_top_clusters(db, limit=10)
-    cluster_responses = [cluster_to_response(c) for c in clusters]
+    ranked = home_ranking(db, limit=10)
+    cluster_responses = [cluster_to_response(c) for c, _ in ranked]
 
     featured = cluster_responses[0] if cluster_responses else None
     top = cluster_responses[1:] if len(cluster_responses) > 1 else cluster_responses
@@ -30,6 +30,7 @@ def _build_digest(db: Session) -> dict[str, Any]:
         date=format_dt(datetime.now(timezone.utc)) or "",
         featured=featured,
         topClusters=top,
+        rankScores={str(c.id): value for c, value in ranked},
     ).model_dump(mode="json")
 
 
