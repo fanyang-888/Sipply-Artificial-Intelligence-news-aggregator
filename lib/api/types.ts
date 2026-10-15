@@ -45,6 +45,8 @@ export type ApiCluster = {
   sourceCount: number;
   /** Company / model-family pages this story belongs to. */
   topics?: ApiTopicRef[];
+  /** Community posts about this story (detail endpoint only; missing from an older API). */
+  discussions?: ApiRadarSignal[];
 };
 
 export type ApiTopicRef = { slug: string; name: string };

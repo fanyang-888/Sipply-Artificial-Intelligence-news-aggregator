@@ -77,3 +77,46 @@ def test_cluster_related_stories_share_a_subject(client, make_cluster):
     make_cluster(title="Import AI 476: Creativity and RSI; AI goes to space", score=99)
     body = client.get(f"/api/clusters/{story.id}").json()
     assert body["relatedClusterIds"] == [str(near.id)]
+
+
+def test_story_lists_community_discussion_from_the_radar(client, db, make_cluster):
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import delete
+
+    from app.models.signal import Signal, SignalTopic
+    from app.signals.base import SignalItem
+    from app.signals.store import upsert_signals
+
+    db.execute(delete(Signal))
+    db.execute(delete(SignalTopic))
+    story = make_cluster(title="Google releases Gemini 4 Argon")
+    topic = SignalTopic(label="Gemini 4 Argon", signal_count=4, source_counts={"hn": 2, "news": 1, "youtube": 1}, score=80, covered_cluster_id=story.id)
+    db.add(topic)
+    db.flush()
+    now = datetime.now(timezone.utc)
+
+    def item(eid, title, kind, points=None):
+        return SignalItem(source_kind=kind, external_id=eid, url=f"https://example.test/{eid}", title=title,
+                          published_at=now - timedelta(hours=3), points=points, num_comments=10 if points else None)
+
+    upsert_signals(db, [
+        item("hn1", "Gemini 4 Argon", "hn_story", points=1400),
+        item("hn2", "Gemini 4 Argon for Robotics", "hn_story", points=230),
+        item("bs1", "Gemini 4 Argon is out and it is good", "bsky_post", points=None),
+        item("n1", "Google launches Gemini 4 Argon", "gnews_item"),
+        item("yt1", "Google Just DROPPED Its Most Powerful AI Ever", "yt_video"),
+    ], now=now)
+    db.execute(Signal.__table__.update().values(topic_id=topic.id))
+    db.flush()
+
+    body = client.get(f"/api/clusters/{story.id}").json()
+    # Discussion platforms only, most engaged first; news re-reports and videos left out
+    assert [d["title"] for d in body["discussions"]] == [
+        "Gemini 4 Argon",
+        "Gemini 4 Argon for Robotics",
+        "Gemini 4 Argon is out and it is good",
+    ]
+    assert body["discussions"][0]["source"] == "hn"
+    other = make_cluster(title="Unrelated story")
+    assert client.get(f"/api/clusters/{other.id}").json()["discussions"] == []

@@ -244,6 +244,8 @@ export const zh: Translations = {
     coveredSources: "覆盖来源",
     relatedStories: "相关故事",
     relatedTopics: "相关话题",
+    communityTitle: "大家怎么说",
+    communityDesc: "Hacker News、Bluesky 等社区里关于这件事讨论最多的帖子。",
     bilingualAssistTrustNote: "以下内容为 AI 自动翻译，英文原文附后供参考。",
     sourceOriginalPreservedNote:
       "来源标题与摘录保留原文，以便核对与追溯。",

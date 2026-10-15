@@ -1,3 +1,4 @@
+import type { ApiRadarSignal } from "@/lib/api/types";
 import type { LocalizedString } from "@/types/localized";
 import type { Article } from "@/types/article";
 
@@ -33,4 +34,6 @@ export type Cluster = {
   relatedClusterIds: string[];
   /** Company / model-family pages this story belongs to. */
   topics?: { slug: string; name: string }[];
+  /** Community posts about this story (Hacker News, Bluesky…), from the Trend Radar. */
+  discussions?: ApiRadarSignal[];
 };

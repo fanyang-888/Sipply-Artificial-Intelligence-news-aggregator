@@ -8,6 +8,7 @@ import { WhyItMattersSection } from "@/components/cluster/why-it-matters-section
 import { CoveredSourcesList } from "@/components/cluster/covered-sources-list";
 import { RelatedStories } from "@/components/cluster/related-stories";
 import { RelatedTopics } from "@/components/cluster/related-topics";
+import { CommunityDiscussion } from "@/components/cluster/community-discussion";
 import { ClusterStoryFooter } from "@/components/cluster/cluster-story-footer";
 import {
   BilingualAssistBody,
@@ -55,6 +56,7 @@ export function ClusterPageView({
             audience={cluster.audience}
           />
           <CoveredSourcesList articles={articles} />
+          <CommunityDiscussion posts={cluster.discussions} />
           <RelatedTopics topics={cluster.topics} />
           <RelatedStories clusters={related} />
           <ClusterStoryFooter nextCluster={nextCluster} />
