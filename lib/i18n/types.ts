@@ -218,6 +218,8 @@ export type Translations = {
     relatedStories: string;
     relatedTopics: string;
     communityTitle: string;
+    share: string;
+    linkCopied: string;
     communityDesc: string;
     /** Shown in Chinese mode above product-structured story body (bilingual assist disclaimer). */
     bilingualAssistTrustNote: string;
