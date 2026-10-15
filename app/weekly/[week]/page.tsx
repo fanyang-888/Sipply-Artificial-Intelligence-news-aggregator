@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: title(data),
       description: describe(data),
       alternates: { canonical: `/weekly/${week}` },
-      openGraph: { title: title(data), description: describe(data), url: `/weekly/${week}` },
+      openGraph: { siteName: "Sipply", title: title(data), description: describe(data), url: `/weekly/${week}` },
     };
   } catch {
     return {};
