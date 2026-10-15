@@ -29,6 +29,8 @@ export function newsArticleJsonLd(c: ApiCluster): JsonLd {
     description: c.summary.en || undefined,
     url,
     mainEntityOfPage: url,
+    // The generated share card (app/cluster/[id]/opengraph-image.tsx)
+    image: [`${url}/opengraph-image`],
     datePublished: c.firstSeenAt ?? c.lastSeenAt ?? undefined,
     dateModified: c.lastSeenAt ?? c.firstSeenAt ?? undefined,
     inLanguage: "en",

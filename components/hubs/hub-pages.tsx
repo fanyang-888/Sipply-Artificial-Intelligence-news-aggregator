@@ -164,7 +164,8 @@ export function WeeksIndex({ weeks, currentWeek }: { weeks: ApiWeekSummary[] | n
         <ul className="sp-glass sp-rows max-w-4xl overflow-hidden">
           {weeks.map((w) => (
             <li key={w.week} className="px-6 py-5">
-              <div className="flex items-center justify-between gap-3">
+              {/* Phones: the bars and count go under the title instead of squeezing it */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <Link href={`/weekly/${w.week}`} className="font-display text-[1.25rem] leading-tight text-foreground no-underline hover:[color:var(--accent)]">
                   {t.hubs.weekTitle(formatWeekRange(w.start, w.end, lang))}
                   {w.week === currentWeek ? (
@@ -173,9 +174,9 @@ export function WeeksIndex({ weeks, currentWeek }: { weeks: ApiWeekSummary[] | n
                     </span>
                   ) : null}
                 </Link>
-                <span className="flex shrink-0 items-center gap-3">
+                <span className="flex shrink-0 items-center gap-3 sm:justify-end">
                   <WeekBars counts={w.dailyCounts ?? []} max={maxDaily} label={t.hubs.weekDailyAria((w.dailyCounts ?? []).join(", "))} />
-                  <span className={`${label} w-[5.5rem] text-right normal-case tracking-[0.04em]`}>{t.hubs.weekStories(w.storyCount)}</span>
+                  <span className={`${label} normal-case tracking-[0.04em] sm:w-[5.5rem] sm:text-right`}>{t.hubs.weekStories(w.storyCount)}</span>
                 </span>
               </div>
               {w.headlines && w.headlines.length > 0 ? (
