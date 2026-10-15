@@ -9,7 +9,10 @@ between topic centroids, true duplicates scored as low as 0.26 and different
 stories as high as 0.53. So:
 
 1. candidate pairs: topic centroids (TF-IDF over member titles) with cosine
-   >= MIN_PAIR_SIMILARITY, best first, at most MAX_PAIRS;
+   >= MIN_PAIR_SIMILARITY, best first, at most MAX_PAIRS; plus every pair of
+   topics the describe stage already matched to the same Sipply story,
+   whatever their similarity (a launch's news coverage and its YouTube
+   reviews share few words);
 2. gpt-4o-mini says for each pair whether both are the same story (one event
    or announcement, with its follow-ups, reactions and demos);
 3. confirmed pairs are joined (union-find), and each group becomes its
@@ -24,7 +27,7 @@ import json
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Any
+from typing import Any, Iterable
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
@@ -63,8 +66,13 @@ def candidate_pairs(
     *,
     min_similarity: float = MIN_PAIR_SIMILARITY,
     limit: int = MAX_PAIRS,
+    must_include: Iterable[tuple[int, int]] = (),
 ) -> list[tuple[int, int, float]]:
-    """(i, j, cosine) for topic pairs whose title centroids are similar, most similar first."""
+    """(i, j, cosine) for topic pairs whose title centroids are similar, most similar first.
+
+    Pairs in ``must_include`` are kept whatever their similarity and beyond ``limit``.
+    """
+    forced = sorted({(min(i, j), max(i, j)) for i, j in must_include if i != j})
     if len(titles_per_topic) < 2:
         return []
     import numpy as np
@@ -74,7 +82,7 @@ def candidate_pairs(
     try:
         vectorizer.fit([t for titles in titles_per_topic for t in titles])
     except ValueError:  # nothing but stop words
-        return []
+        return [(i, j, 0.0) for i, j in forced]
     rows = []
     for titles in titles_per_topic:
         centroid = np.asarray(vectorizer.transform(titles or [""]).mean(axis=0)).ravel()
@@ -88,7 +96,11 @@ def candidate_pairs(
         if sims[i, j] >= min_similarity
     ]
     pairs.sort(key=lambda p: -p[2])
-    return pairs[:limit]
+    pairs = pairs[:limit]
+    seen = {(i, j) for i, j, _ in pairs}
+    pairs += [(i, j, float(sims[i, j])) for i, j in forced if (i, j) not in seen]
+    pairs.sort(key=lambda p: -p[2])
+    return pairs
 
 
 def judge_pairs(client: Any, items: list[tuple[list[str], list[str]]]) -> tuple[list[bool | None], int, int]:
@@ -180,8 +192,20 @@ def run_merge(
         for s in db.execute(select(Signal).where(Signal.topic_id.in_([t.id for t in topics]))).scalars():
             members[s.topic_id].append(s)
 
-    pairs = candidate_pairs([[strip_hn_prefix(s.title) for s in members[t.id]] for t in topics])
-    summary: dict[str, Any] = {"topics": len(topics), "pairs": len(pairs), "same": 0, "merged_away": 0, "failed": False}
+    # Topics the describe stage matched to the same Sipply story (on the previous
+    # run) are judged however little their titles overlap
+    by_story: dict[Any, list[int]] = defaultdict(list)
+    for k, t in enumerate(topics):
+        if t.covered_cluster_id is not None:
+            by_story[t.covered_cluster_id].append(k)
+    covered_pairs = {(g[a], g[b]) for g in by_story.values() for a in range(len(g)) for b in range(a + 1, len(g))}
+    pairs = candidate_pairs(
+        [[strip_hn_prefix(s.title) for s in members[t.id]] for t in topics], must_include=covered_pairs
+    )
+    summary: dict[str, Any] = {
+        "topics": len(topics), "pairs": len(pairs), "covered_pairs": len(covered_pairs),
+        "same": 0, "merged_away": 0, "failed": False,
+    }
     if not pairs:
         logger.info("merge_signal_topics %s", summary)
         return summary
@@ -202,8 +226,10 @@ def run_merge(
     for (i, j, sim), verdict in zip(pairs, verdicts):
         # One line per pair, so every merge (and every refusal) can be audited in the run log
         logger.info(
-            "merge pair %s sim=%.2f: %r | %r",
-            {True: "same", False: "different"}.get(verdict, "no answer"), sim, topics[i].label[:70], topics[j].label[:70],
+            "merge pair %s sim=%.2f%s: %r | %r",
+            {True: "same", False: "different"}.get(verdict, "no answer"), sim,
+            " (same Sipply story)" if (i, j) in covered_pairs else "",
+            topics[i].label[:70], topics[j].label[:70],
         )
     same = [p for p in judged if p[2] is True]
     relevance = relevance_fn or default_relevance_fn()
