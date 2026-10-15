@@ -51,3 +51,8 @@ next-env.d.ts
 
 # local project context (not for version control)
 CLAUDE.md
+
+# iCloud Drive copies made while files change on disk ("page 2.tsx", "briefs 2.py").
+# They are byte-identical duplicates; a committed migration copy would break alembic.
+* 2.*
+* 2

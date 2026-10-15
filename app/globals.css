@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 /* ── Dark theme (default) ── */
@@ -138,3 +138,90 @@ body {
   .radar-chart .radar-ring-label { font-size: 19px; }
   .radar-chart .radar-blip-num { display: none; }
 }
+
+/* ── Home: full-screen panels (dark glass, one light, reveal on enter) ──────
+   Tokens per theme; the light theme has its own white-card values instead of
+   an inverted dark look. */
+:root,
+[data-theme="dark"] {
+  --panel-fill:   rgba(255,255,255,.035);
+  --panel-fill-2: rgba(255,255,255,.06);
+  --panel-edge-a: rgba(255,255,255,.18);
+  --panel-edge-b: rgba(255,255,255,.035);
+  --panel-shadow: 0 24px 60px rgba(0,0,0,.45);
+  --panel-inset:  inset 0 1px 0 rgba(255,255,255,.06);
+  --beam:         rgba(74,158,255,.22);
+  --cta-bg:       #e8f1fc;
+  --cta-text:     #080c12;
+  /* Reading text on dark glass: brighter than --text-muted (#5a7a9a is too dim for paragraphs) */
+  --text-soft:    #a9bdd3;
+}
+[data-theme="light"] {
+  --panel-fill:   rgba(255,255,255,.92);
+  --panel-fill-2: #ffffff;
+  --panel-edge-a: rgba(11,24,41,.16);
+  --panel-edge-b: rgba(11,24,41,.05);
+  --panel-shadow: 0 18px 44px rgba(29,111,232,.10);
+  --panel-inset:  inset 0 1px 0 rgba(255,255,255,.9);
+  --beam:         rgba(29,111,232,.14);
+  --cta-bg:       #0b1829;
+  --cta-text:     #f5f8ff;
+  --text-soft:    #344a63;
+}
+
+/* A frosted card with a 1px gradient edge (mask keeps the fill transparent) */
+.sp-glass {
+  position: relative;
+  background: var(--panel-fill);
+  border-radius: 20px;
+  box-shadow: var(--panel-shadow), var(--panel-inset);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+.sp-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, var(--panel-edge-a), var(--panel-edge-b) 45%, var(--panel-edge-b) 70%, var(--panel-edge-a));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* The one light on the page: behind the lead story's headline */
+.sp-beam {
+  position: absolute;
+  inset: -12% -10% auto -10%;
+  height: 120%;
+  background:
+    radial-gradient(42% 55% at 50% 0%, var(--beam), transparent 72%),
+    radial-gradient(18% 60% at 50% 0%, var(--beam), transparent 80%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Reveal on enter: hidden only after mount and only below the fold (see Reveal) */
+.sp-reveal {
+  transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1), filter .7s ease;
+}
+.sp-reveal[data-hidden="true"] {
+  opacity: 0;
+  transform: translateY(24px);
+  filter: blur(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-reveal { transition: none; }
+  .sp-reveal[data-hidden="true"] { opacity: 1; transform: none; filter: none; }
+}
+
+/* Horizontal story carousel: native scroll, one card per snap */
+.sp-carousel {
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.sp-carousel::-webkit-scrollbar { display: none; }
+.sp-carousel > * { scroll-snap-align: center; scroll-snap-stop: always; }
