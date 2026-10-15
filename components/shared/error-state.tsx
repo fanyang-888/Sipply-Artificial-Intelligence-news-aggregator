@@ -21,21 +21,18 @@ export function ErrorState({
   const { t } = useI18n();
 
   return (
-    <div
-      className="rounded-lg border border-amber-200/90 border-l-4 border-l-amber-500 bg-amber-50/50 px-4 py-6"
-      role="alert"
-    >
-      <h1 className="text-lg font-semibold text-foreground">
+    <div className="sp-glass mx-auto my-[6vh] max-w-2xl px-6 py-12 text-center" role="alert">
+      <h1 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] font-light leading-tight text-foreground">
         {title ?? t.error.title}
       </h1>
-      <p className="mt-2 text-sm leading-relaxed [color:var(--text-muted)]">
+      <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed [color:var(--text-soft)]">
         {message ?? t.error.description}
       </p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
-          className={`mt-4 ${uiButtonSecondary}`}
+          className={`mt-6 ${uiButtonSecondary}`}
         >
           {t.error.tryAgain}
         </button>

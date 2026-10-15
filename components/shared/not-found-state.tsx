@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
-import { BackLink } from "@/components/shared/back-link";
+import Link from "next/link";
+import { uiButtonPrimary } from "@/lib/ui/classes";
 
 type NotFoundStateProps = {
   title?: string;
@@ -18,16 +19,18 @@ export function NotFoundState({
   const { t } = useI18n();
 
   return (
-    <div className="rounded-lg border [border-color:var(--border)] [background:var(--surface2)] px-4 py-10 text-center shadow-sm">
-      <h1 className="text-lg font-semibold text-foreground">
+    <div className="sp-glass mx-auto my-[8vh] max-w-2xl px-6 py-14 text-center">
+      <h1 className="font-display text-[clamp(1.8rem,3.4vw,2.6rem)] font-light leading-tight text-foreground">
         {title ?? "Not found"}
       </h1>
-      <p className="mt-2 text-sm leading-relaxed [color:var(--text-muted)]">
+      <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed [color:var(--text-soft)]">
         {message ?? "We could not find that page or item."}
       </p>
       {children ? <div className="mt-5">{children}</div> : null}
-      <div className="mt-6 flex justify-center">
-        <BackLink href="/">{t.notFound.backToDigest}</BackLink>
+      <div className="mt-8 flex justify-center">
+        <Link href="/" className={uiButtonPrimary}>
+          {t.notFound.backToDigest} <span aria-hidden>→</span>
+        </Link>
       </div>
     </div>
   );

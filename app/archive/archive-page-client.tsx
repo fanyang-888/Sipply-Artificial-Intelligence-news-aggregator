@@ -17,7 +17,9 @@ import { useI18n } from "@/lib/i18n";
 import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
 import { ArchiveThemeSuggestions } from "@/components/archive/archive-theme-suggestions";
 import { ArchiveToolbar } from "@/components/archive/archive-toolbar";
+import { PageHeader } from "@/components/shared/page-header";
 import { SectionBlock } from "@/components/shared/section-block";
+import { uiButtonSecondary, uiMicroLabel, uiTab } from "@/lib/ui/classes";
 import { EmptyState } from "@/components/shared/empty-state";
 import { NoResultsState } from "@/components/shared/no-results-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -45,44 +47,27 @@ function TimelineList({
     }
   }
 
+  // Each day: its date on the left (sticky while its rows scroll by), the rows in one glass panel
   return (
-    <div className="relative sm:ml-[118px] sm:border-l-2 sm:pl-8 sm:[border-color:var(--border)]">
+    <div className="space-y-8">
       {groups.map((group, gi) => (
-        <div key={`${group.dateKey}-${gi}`}>
-          <div className={`relative mb-2.5 ${gi === 0 ? "" : "mt-8"}`}>
-            {/* rail dot + left date label (sm+) */}
-            <span
-              className="absolute top-[5px] hidden h-3 w-3 rounded-full [background:var(--accent)] sm:-left-[39px] sm:block"
-              style={{ boxShadow: "0 0 0 3px var(--bg)" }}
-            />
-            <span
-              className="absolute top-0 hidden w-24 text-right sm:-left-[150px] sm:block"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              <span className="block text-[15px] font-medium leading-tight [color:var(--accent)]">
-                {group.marker.primary}
-              </span>
-              <span className="text-[10px] uppercase tracking-[0.08em] [color:var(--text-muted)]">
-                {group.marker.secondary}
-              </span>
+        <section key={`${group.dateKey}-${gi}`} className="sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-8">
+          <div className="mb-3 flex items-baseline gap-2 font-mono sm:sticky sm:top-36 sm:mb-0 sm:block sm:self-start sm:pt-4 sm:text-right">
+            <span className="text-[14px] font-medium leading-tight [color:var(--accent)] sm:block sm:text-[15px]">
+              {group.marker.primary}
             </span>
-            {/* inline date (mobile) + story count */}
-            <span className="flex items-baseline gap-2">
-              <span
-                className="text-[13px] font-medium [color:var(--accent)] sm:hidden"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-              >
-                {group.marker.primary} · {group.marker.secondary}
-              </span>
-              <span className="text-[11px] [color:var(--text-dim)]">
-                {storyCountLabel(group.items.length)}
-              </span>
+            <span className="text-[10.5px] uppercase tracking-[0.12em] [color:var(--text-muted)] sm:mt-1 sm:block">
+              {group.marker.secondary}
+              {group.marker.secondary ? " · " : ""}
+              {storyCountLabel(group.items.length)}
             </span>
           </div>
-          {group.items.map((row) => (
-            <ArchiveTimelineRow key={row.id} row={row} highlightQuery={keyword} />
-          ))}
-        </div>
+          <div className="sp-glass sp-rows overflow-hidden">
+            {group.items.map((row) => (
+              <ArchiveTimelineRow key={row.id} row={row} highlightQuery={keyword} />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );
@@ -213,26 +198,19 @@ export function ArchivePageClient() {
 
   return (
     <div>
-      <div className="mb-4">
-        <h1
-          className="text-4xl"
-          style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, color: "var(--sp-navy)" }}
-        >
-          {t.archive.title}
-        </h1>
-        <p className="mt-1.5 text-sm [color:var(--text-muted)]">{t.archive.description}</p>
+      <PageHeader title={t.archive.title} description={t.archive.description}>
         {/* The top nav shows only icons on phones; these pages are reachable from here too */}
-        <p className="mt-2 text-sm [color:var(--text-muted)]">
-          {t.hubs.browse}:{" "}
-          <Link href="/topics" className="[color:var(--accent)] hover:underline">
+        <p className={`${uiMicroLabel} flex flex-wrap items-center gap-x-3 gap-y-1`}>
+          <span>{t.hubs.browse}</span>
+          <Link href="/topics" className="no-underline [color:var(--accent)] hover:underline">
             {t.hubs.topicsTitle}
-          </Link>{" "}
-          ·{" "}
-          <Link href="/weekly" className="[color:var(--accent)] hover:underline">
+          </Link>
+          <span aria-hidden>·</span>
+          <Link href="/weekly" className="no-underline [color:var(--accent)] hover:underline">
             {t.hubs.weeklyTitle}
           </Link>
         </p>
-      </div>
+      </PageHeader>
 
       <ArchiveToolbar
         topic={topic}
@@ -242,34 +220,18 @@ export function ArchivePageClient() {
       />
 
       <SectionBlock>
-        <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             {initialLoaded && !loading && total > 0 && (
-              <span className="text-sm [color:var(--text-muted)]">
-                {t.archive.resultCountStories(total)}
-              </span>
+              <span className={uiMicroLabel}>{t.archive.resultCountStories(total)}</span>
             )}
           </div>
           {initialLoaded && rows.length > 0 && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setSortBy("score")}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  sortBy === "score"
-                    ? "bg-foreground text-background"
-                    : "[color:var(--text-muted)] hover:text-foreground"
-                }`}
-              >
+            <div className="flex shrink-0 items-center gap-4" role="group" aria-label={t.archive.sortLabel}>
+              <button type="button" aria-pressed={sortBy === "score"} onClick={() => setSortBy("score")} className={uiTab(sortBy === "score")}>
                 {t.archive.sortBestMatch}
               </button>
-              <button
-                onClick={() => setSortBy("date")}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  sortBy === "date"
-                    ? "bg-foreground text-background"
-                    : "[color:var(--text-muted)] hover:text-foreground"
-                }`}
-              >
+              <button type="button" aria-pressed={sortBy === "date"} onClick={() => setSortBy("date")} className={uiTab(sortBy === "date")}>
                 {t.archive.sortNewest}
               </button>
             </div>
@@ -297,12 +259,8 @@ export function ArchivePageClient() {
               />
 
               {hasMore && (
-                <div className="mt-6 flex justify-center">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="rounded-md border [border-color:var(--border)] px-5 py-2 text-sm font-medium [color:var(--text-muted)] transition-colors hover:[border-color:var(--border)] hover:text-foreground disabled:opacity-50"
-                  >
+                <div className="mt-10 flex justify-center">
+                  <button type="button" onClick={handleLoadMore} disabled={loadingMore} className={uiButtonSecondary}>
                     {loadingMore ? t.archive.loadingMore : t.archive.loadMore(total - rows.length)}
                   </button>
                 </div>

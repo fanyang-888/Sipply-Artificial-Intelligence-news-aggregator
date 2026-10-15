@@ -8,6 +8,7 @@ import { formatVelocity, platformBreakdown, radarSectorForTag, radarTitle, ringM
 import { RadarSignalItem, RadarTrendChart, ScoreLine } from "@/components/radar/radar-bits";
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
 import { TopicAnswerCheck } from "@/components/radar/radar-answers";
+import { uiMicroLabel } from "@/lib/ui/classes";
 
 const UTC_DAY = {
   en: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
@@ -61,27 +62,27 @@ export function RadarTopicCard({ topic, rank, total, windowDays, builtAt, now, h
   const ring = t.radar.rings[topic.ring];
   const coverage = topic.coverage;
   const loud = topic.momentum === "new" || topic.momentum === "rising";
-  const h3 = "mb-1 text-[13px] font-semibold text-foreground";
+  const h3 = `${uiMicroLabel} mb-1`;
 
   return (
-    <article id={`topic-${topic.id}`} data-radar-topic hidden={hidden} className="space-y-4">
+    <article id={`topic-${topic.id}`} data-radar-topic hidden={hidden} className="space-y-5">
       <header>
-        <p className="text-[12.5px] [color:var(--text-muted)]">
+        <p className={uiMicroLabel}>
           #{rank} · {group ? topicGroupLabel(group, lang) : t.radar.otherCategory} · {ring.name} ·{" "}
           <span style={loud ? { color: MOMENTUM_FILL[topic.momentum] } : undefined}>{t.radar.momentum[topic.momentum]}</span>
         </p>
-        <h2 className="mt-1 text-[20px] font-semibold leading-snug text-foreground [text-wrap:balance]">{title}</h2>
-        {title !== topic.label ? <p className="mt-1 text-[13px] [color:var(--text-muted)]">{topic.label}</p> : null}
+        <h2 className="mt-2 font-display text-[clamp(1.5rem,2.4vw,1.9rem)] font-normal leading-tight text-foreground [text-wrap:balance]">{title}</h2>
+        {title !== topic.label ? <p className="mt-1.5 text-[13.5px] [color:var(--text-muted)]">{topic.label}</p> : null}
       </header>
 
       {summary ? (
-        <p className="text-[14.5px] leading-relaxed text-foreground">
+        <p className="text-[15px] leading-relaxed text-foreground">
           {summary} <span className="text-[12px] [color:var(--text-muted)]">— {t.radar.aiSummaryNote}</span>
         </p>
       ) : null}
 
       <div>
-        <p className="mb-2 text-[14px] leading-relaxed text-foreground">
+        <p className="mb-3 text-[14px] leading-relaxed [color:var(--text-soft)]">
           {topicReading(topic, t, lang)} {trailSentence(topic, t)}
         </p>
         <RadarTrendChart counts={topic.dailyCounts} endIso={builtAt} windowDays={windowDays} />
@@ -103,7 +104,7 @@ export function RadarTopicCard({ topic, rank, total, windowDays, builtAt, now, h
 
       <section>
         <h3 className={h3}>{t.radar.evidenceLabel(topic.signals.length)}</h3>
-        <ul>
+        <ul className="sp-rows">
           {topic.signals.map((s) => (
             <RadarSignalItem key={s.id} signal={s} now={now} />
           ))}
@@ -113,7 +114,7 @@ export function RadarTopicCard({ topic, rank, total, windowDays, builtAt, now, h
       {topic.questions.length > 0 ? (
         <section>
           <h3 className={h3}>{t.radar.askedInTopic}</h3>
-          <ul>
+          <ul className="sp-rows">
             {topic.questions.map((s) => (
               <RadarSignalItem key={s.id} signal={s} now={now} />
             ))}

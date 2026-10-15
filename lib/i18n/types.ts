@@ -93,6 +93,7 @@ export type Translations = {
     allCategories: string;
     loading: string;
     suggestThemesLead: string;
+    sortLabel: string;
     sortBestMatch: string;
     sortNewest: string;
     loadingMore: string;

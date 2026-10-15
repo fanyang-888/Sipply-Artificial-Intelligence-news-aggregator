@@ -9,7 +9,7 @@ import { isBilingual, pickLocalized } from "@/lib/utils/localized-string";
 const enMuted = "[color:var(--text-muted)]";
 const zhPrimary = "text-foreground";
 /** Subtle left rule on the ZH block for long bilingual passages. */
-const zhBlockContinuity = "border-l pl-3 sm:pl-3.5 [border-color:var(--border)]";
+const zhBlockContinuity = "border-l pl-3 sm:pl-3.5 [border-color:var(--panel-edge-a)]";
 
 function splitParas(text: string): string[] {
   return text
@@ -64,7 +64,7 @@ export function BilingualAssistBody({
         ))}
       </div>
       <div
-        className={`mt-3 space-y-3 border-t [border-color:var(--border)] pt-3 ${enMuted} ${zhBlockContinuity}`}
+        className={`mt-4 space-y-3 text-[0.92em] ${enMuted} ${zhBlockContinuity}`}
       >
         {enParas.map((p, i) => (
           <p key={`en-${i}`}>{p}</p>
@@ -86,9 +86,7 @@ export function BilingualAssistTakeawayItem({ value, lang }: TakeawayProps) {
   return (
     <div className="space-y-2">
       <p className={zhPrimary}>{value.zh}</p>
-      <p
-        className={`border-t [border-color:var(--border)] pt-2 ${enMuted} ${zhBlockContinuity}`}
-      >
+      <p className={`text-[0.92em] ${enMuted} ${zhBlockContinuity}`}>
         {value.en}
       </p>
     </div>
@@ -108,14 +106,8 @@ export function BilingualAssistHeading({
   }
   return (
     <>
-      <span
-        className={`block text-xl font-semibold tracking-tight sm:text-2xl ${zhPrimary}`}
-      >
-        {value.zh}
-      </span>
-      <span className={`mt-2 block border-t [border-color:var(--border)] pt-2 ${enMuted} ${zhBlockContinuity}`}>
-        {value.en}
-      </span>
+      <span className={`block ${zhPrimary}`}>{value.zh}</span>
+      <span className={`mt-4 block text-[0.5em] font-normal leading-snug tracking-normal ${enMuted}`}>{value.en}</span>
     </>
   );
 }
@@ -133,36 +125,9 @@ export function BilingualAssistSubline({
   }
   return (
     <>
-      <span className={`block text-sm ${zhPrimary}`}>{value.zh}</span>
-      <span
-        className={`mt-1 block border-t border-dashed [border-color:var(--border)] pt-1 text-sm ${enMuted} ${zhBlockContinuity}`}
-      >
-        {value.en}
-      </span>
+      <span className="block">{value.zh}</span>
+      <span className={`mt-1 block text-[0.9em] ${enMuted}`}>{value.en}</span>
     </>
-  );
-}
-
-/** Breadcrumb current page title (smaller). */
-export function BilingualAssistBreadcrumbTitle({
-  value,
-  lang,
-}: {
-  value: LocalizedString;
-  lang: Lang;
-}) {
-  if (lang !== "zh" || !isBilingual(value)) {
-    return <span className="line-clamp-2">{pickLocalized(value, lang)}</span>;
-  }
-  return (
-    <span className="line-clamp-4">
-      <span className={`block ${enMuted}`}>{value.en}</span>
-      <span
-        className={`mt-1 block border-l [border-color:var(--border)]/80 pl-2 text-sm sm:pl-3 ${zhPrimary}`}
-      >
-        {value.zh}
-      </span>
-    </span>
   );
 }
 
@@ -170,13 +135,10 @@ type BilingualTrustNoteProps = {
   children: ReactNode;
 };
 
-/** Dashed note shown in Chinese UI mode on story pages (bilingual assist disclaimer). */
+/** One quiet line in Chinese UI mode on story pages (bilingual assist disclaimer). */
 export function BilingualTrustNote({ children }: BilingualTrustNoteProps) {
   return (
-    <p
-      className="mb-4 rounded-md border border-dashed px-3 py-2 text-xs leading-relaxed [border-color:var(--border)] [background:var(--surface2)] [color:var(--text-muted)]"
-      role="note"
-    >
+    <p className="font-mono text-[11px] leading-relaxed tracking-[0.04em] [color:var(--text-muted)]" role="note">
       {children}
     </p>
   );

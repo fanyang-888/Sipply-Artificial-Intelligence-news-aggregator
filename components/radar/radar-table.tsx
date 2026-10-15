@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { radarSectorForTag, radarTitle, topicPlatforms } from "@/lib/utils/radar";
 import { RadarSparkline } from "@/components/radar/radar-bits";
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
+import { uiMicroLabel } from "@/lib/ui/classes";
 
 type RadarTableProps = {
   /** Already in display order (radarOrder); row numbers match the chart's blips. */
@@ -44,8 +45,8 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
   // Set once the reader uses a ring's button; until then a ring opens when its selected topic is folded away
   const [expanded, setExpanded] = useState<Partial<Record<RadarRing, boolean>>>({});
   return (
-    <section aria-label={t.radar.tableAria} className="text-[13.5px]">
-      <div aria-hidden="true" className={`${ROW_GRID} border-b px-2 pb-2 text-[11.5px] [border-color:var(--border)] [color:var(--text-muted)]`}>
+    <section aria-label={t.radar.tableAria} className="sp-glass px-4 pb-4 pt-5 text-[13.5px] sm:px-6">
+      <div aria-hidden="true" className={`${ROW_GRID} ${uiMicroLabel} border-b px-2 pb-3 [border-color:var(--panel-divider)]`}>
         <span>#</span>
         <span>{t.radar.colTopic}</span>
         <span className="hidden text-right sm:block">{t.radar.colSignals}</span>
@@ -62,9 +63,9 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
         const open = !folds || (expanded[ring] ?? shown.findIndex((x) => x.id === selectedId) >= RING_PREVIEW_ROWS);
         return (
           <div key={ring}>
-            <h3 className="px-2 pb-1.5 pt-6">
-              <span className="text-[15px] font-semibold text-foreground">{r.name}</span>
-              <span className="ml-2 text-[12.5px] [color:var(--text-muted)]">
+            <h3 className="px-2 pb-2 pt-7">
+              <span className="font-display text-[1.15rem] text-foreground">{r.name}</span>
+              <span className="ml-2.5 text-[12.5px] [color:var(--text-muted)]">
                 {r.rule} · {r.action} · {shown.length === all.length ? all.length : `${shown.length}/${all.length}`}
               </span>
             </h3>
@@ -85,7 +86,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                     hidden={!open && i >= RING_PREVIEW_ROWS}
                     aria-current={topic.id === selectedId}
                     onClick={() => onSelect(topic.id)}
-                    className={`${ROW_GRID} cursor-pointer border-t px-2 py-1.5 transition-colors [border-color:var(--border)] hover:[background:var(--surface)] aria-[current=true]:[background:var(--surface2)]`}
+                    className={`${ROW_GRID} cursor-pointer rounded-lg border-t px-2 py-2 transition-colors [border-color:var(--panel-divider)] hover:[background:var(--panel-hover)] aria-[current=true]:[background:var(--panel-fill-2)]`}
                   >
                     <span className="font-mono text-[12px] tabular-nums [color:var(--text-muted)]">{rankOf(topic.id)}</span>
                     <span className="min-w-0 leading-snug">
@@ -133,7 +134,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                 type="button"
                 aria-expanded={open}
                 onClick={() => setExpanded({ ...expanded, [ring]: !open })}
-                className="mt-1 px-2 py-1 text-[12.5px] [color:var(--accent)] hover:underline"
+                className="mt-2 px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] [color:var(--accent)] hover:underline"
               >
                 {open ? t.radar.showFewer : t.radar.showAllRows(shown.length)}
               </button>

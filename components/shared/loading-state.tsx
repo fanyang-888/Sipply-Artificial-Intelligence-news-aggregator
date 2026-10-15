@@ -7,7 +7,7 @@ export type LoadingLayout = "digest" | "archive" | "detail";
 function Skeleton({ className }: { className: string }) {
   return (
     <div
-      className={`animate-pulse rounded-md [background:var(--surface2)] ${className}`}
+      className={`animate-pulse rounded-xl [background:var(--panel-fill-2)] ${className}`}
       aria-hidden
     />
   );
@@ -18,7 +18,7 @@ type LoadingStateProps = {
 };
 
 /**
- * Page-level skeleton loading — visually distinct from empty (dashed) and error states.
+ * Skeletons in the shape of what is loading (glass panels, headline lines).
  */
 export function LoadingState({ layout }: LoadingStateProps) {
   const { t } = useI18n();
@@ -30,71 +30,53 @@ export function LoadingState({ layout }: LoadingStateProps) {
         : t.loading.detail;
 
   if (layout === "archive") {
+    // Day groups of rows, as the archive and hub lists render them
     return (
       <div className="space-y-6" aria-busy="true" aria-live="polite">
         <p className="sr-only">{label}</p>
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48 max-w-full" />
-          <Skeleton className="h-4 w-full max-w-xl" />
-        </div>
-        <Skeleton className="h-14 w-full rounded-xl" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-28" />
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Skeleton className="h-10 min-w-[10rem] flex-1" />
-          <Skeleton className="h-10 min-w-[10rem] flex-1" />
-          <Skeleton className="h-10 min-w-[10rem] flex-1" />
-        </div>
-        <Skeleton className="h-5 w-32" />
-        <ul className="space-y-4">
-          <li>
-            <Skeleton className="h-28 w-full rounded-lg" />
-          </li>
-          <li>
-            <Skeleton className="h-28 w-full rounded-lg" />
-          </li>
-        </ul>
+        {[3, 2].map((rows, g) => (
+          <div key={g} className="sp-glass sp-rows overflow-hidden">
+            {Array.from({ length: rows }, (_, i) => (
+              <div key={i} className="flex gap-5 px-5 py-4">
+                <Skeleton className="mt-1 hidden h-3 w-20 sm:block" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     );
   }
 
   if (layout === "digest") {
+    // The lead story's shape: label, a two-line headline, a paragraph
     return (
-      <div className="space-y-8" aria-busy="true" aria-live="polite">
+      <div className="space-y-5 pt-[12vh]" aria-busy="true" aria-live="polite">
         <p className="sr-only">{label}</p>
-        <div className="space-y-2 border-b [border-color:var(--border)] pb-8">
-          <Skeleton className="h-9 w-64 max-w-full" />
-          <Skeleton className="h-4 w-full max-w-2xl" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-        <div className="grid gap-8 lg:grid-cols-[1fr_min(18rem,34%)]">
-          <Skeleton className="h-72 w-full rounded-lg lg:min-h-[18rem]" />
-          <Skeleton className="h-56 w-full rounded-lg" />
-        </div>
-        <div className="space-y-3">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-        </div>
+        <Skeleton className="h-3 w-56" />
+        <Skeleton className="h-14 w-full max-w-3xl" />
+        <Skeleton className="h-14 w-2/3 max-w-2xl" />
+        <Skeleton className="mt-4 h-4 w-full max-w-xl" />
+        <Skeleton className="h-4 w-4/5 max-w-lg" />
       </div>
     );
   }
 
+  // A story page: label, headline, meta line, then the summary panel
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
+    <div className="mx-auto max-w-3xl space-y-5 pt-10" aria-busy="true" aria-live="polite">
       <p className="sr-only">{label}</p>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-8 w-full max-w-xl" />
-        <Skeleton className="h-4 w-full max-w-2xl" />
-      </div>
-      <Skeleton className="h-40 w-full rounded-lg" />
-      <div className="flex flex-wrap gap-3">
-        <Skeleton className="h-10 w-28" />
-        <Skeleton className="h-10 w-36" />
-        <Skeleton className="h-10 w-24" />
+      <Skeleton className="h-3 w-40" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-3/4" />
+      <Skeleton className="h-3 w-64" />
+      <div className="sp-glass mt-8 space-y-3 p-6">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-11/12" />
+        <Skeleton className="h-4 w-4/5" />
       </div>
     </div>
   );

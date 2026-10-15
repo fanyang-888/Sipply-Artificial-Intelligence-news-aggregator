@@ -96,6 +96,7 @@ export const en: Translations = {
     allCategories: "All categories",
     loading: "Loading archive…",
     suggestThemesLead: "Try browsing a category:",
+    sortLabel: "Sort",
     sortBestMatch: "Best match",
     sortNewest: "Newest",
     loadingMore: "Loading…",
@@ -292,7 +293,7 @@ export const en: Translations = {
   },
   notFound: {
     clusterTitle: "Story cluster not found",
-    clusterMessage: "That cluster id is not in the local mock catalog.",
+    clusterMessage: "This story does not exist or was removed.",
     backToDigest: "Back to Daily Digest",
   },
   error: {

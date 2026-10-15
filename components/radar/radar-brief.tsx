@@ -24,14 +24,14 @@ export function RadarBrief({ topics, totalSignals, windowDays, onSelect }: Radar
     <button
       type="button"
       onClick={() => onSelect(topic.id)}
-      className="text-left font-semibold text-foreground underline decoration-[var(--border)] underline-offset-[3px] hover:[color:var(--accent)] hover:decoration-current"
+      className="inline text-left font-medium text-foreground underline decoration-[var(--panel-edge-a)] underline-offset-[4px] hover:[color:var(--accent)] hover:decoration-current"
     >
       {radarTitle(topic.label, topic.labelZh, lang)}
     </button>
   );
   const moved = brief.moved[0];
   return (
-    <p aria-label={t.radar.briefAria} className="mt-2 max-w-3xl text-[15px] leading-relaxed [color:var(--text-muted)]">
+    <p aria-label={t.radar.briefAria} className="max-w-3xl text-[16px] leading-relaxed [color:var(--text-soft)] sm:text-[17px]">
       {t.radar.ledeTopics(topics.length, totalSignals, windowDays)} {t.radar.ledeRings(...brief.rings)}{" "}
       {brief.fastest ? (
         <>

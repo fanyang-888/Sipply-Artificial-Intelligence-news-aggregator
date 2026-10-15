@@ -3,6 +3,7 @@
 import { RADAR_SOURCE_ORDER, type ApiRadarTopic, type RadarMomentum, type RadarSourceKey } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
+import { uiInput, uiTab } from "@/lib/ui/classes";
 import {
   RADAR_SECTORS,
   hasActiveFilter,
@@ -32,20 +33,17 @@ export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={[
-        "border-b-2 pb-0.5 text-[13px] transition-colors",
-        on ? "font-semibold text-foreground [border-color:var(--accent)]" : "border-transparent [color:var(--text-muted)] hover:text-foreground",
-      ].join(" ")}
+      className={uiTab(on)}
     >
       {name}
-      <span className="ml-1 font-mono text-[11px] [color:var(--text-muted)]">{n}</span>
+      <span className="ml-1.5 [color:var(--text-dim)]">{n}</span>
     </button>
   );
-  const select = "rounded-md border px-2 py-1 text-[12.5px] [background:var(--surface)] [border-color:var(--border)] [color:var(--text)]";
+  const select = `${uiInput} h-8 appearance-none pr-8 text-[12.5px] [background-image:linear-gradient(45deg,transparent_50%,var(--text-muted)_50%),linear-gradient(135deg,var(--text-muted)_50%,transparent_50%)] [background-position:calc(100%-1.1rem)_55%,calc(100%-0.8rem)_55%] [background-repeat:no-repeat] [background-size:5px_5px,5px_5px]`;
 
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2" role="toolbar" aria-label={t.radar.filterAria}>
-      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5" role="group" aria-label={t.radar.filterCategory}>
+    <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-x-6" role="toolbar" aria-label={t.radar.filterAria}>
+      <div className="sp-no-scrollbar -mx-6 flex gap-x-5 overflow-x-auto whitespace-nowrap px-6 pt-1 sm:mx-0 sm:flex-wrap sm:gap-y-2 sm:overflow-visible sm:px-0" role="group" aria-label={t.radar.filterCategory}>
         {tab(!filters.group, () => onChange({ ...filters, group: "" }), t.radar.allCategories, topics.length, "all")}
         {RADAR_SECTORS.map((key) => {
           const g = key === "other" ? undefined : topicGroupByKey(key);
@@ -58,7 +56,7 @@ export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {
           );
         })}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <select
           aria-label={t.radar.filterMomentum}
           value={filters.momentum}
@@ -93,7 +91,7 @@ export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {
           <button
             type="button"
             onClick={() => onChange({ group: "", source: "", momentum: "" })}
-            className="text-xs underline underline-offset-2 [color:var(--text-muted)] hover:text-foreground"
+            className="font-mono text-[11px] uppercase tracking-[0.12em] [color:var(--text-muted)] hover:text-foreground"
           >
             {t.radar.clearFilters}
           </button>

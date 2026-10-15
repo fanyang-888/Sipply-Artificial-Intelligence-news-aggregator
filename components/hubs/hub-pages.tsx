@@ -10,24 +10,14 @@ import { radarSectorForTag } from "@/lib/utils/radar";
 import { formatWeekRange } from "@/lib/utils/weeks";
 import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { uiMicroLabel, uiSectionTitle } from "@/lib/ui/classes";
 
-const label = "font-mono text-[10.5px] uppercase tracking-[0.12em] [color:var(--text-muted)]";
+const label = uiMicroLabel;
 const UTC_DAY = {
   en: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
   zh: new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", timeZone: "UTC" }),
 };
-
-function PageHeader({ eyebrow, title, description }: { eyebrow?: string; title: string; description: string }) {
-  return (
-    <header className="mb-6">
-      {eyebrow ? <p className={label}>{eyebrow}</p> : null}
-      <h1 className="mt-1 text-4xl" style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, color: "var(--sp-navy)" }}>
-        {title}
-      </h1>
-      <p className="mt-1.5 max-w-3xl text-sm [color:var(--text-muted)]">{description}</p>
-    </header>
-  );
-}
 
 function Unavailable() {
   const { t } = useI18n();
@@ -39,7 +29,7 @@ function StoryList({ stories }: { stories: ApiTopicDetail["stories"] }) {
   // A fixed date on the server, "3h ago" after mount
   const now = useNowMinute();
   return (
-    <div>
+    <div className="sp-glass sp-rows overflow-hidden">
       {stories.map((s) => (
         <ArchiveTimelineRow key={s.id} row={apiRowToArchiveRow(s, t, lang, now)} />
       ))}
@@ -65,19 +55,21 @@ export function TopicsIndex({ topics }: { topics: ApiTopicSummary[] | null }) {
       {!topics ? (
         <Unavailable />
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {topics.map((topic) => (
             <li key={topic.slug}>
               <Link
                 href={`/topics/${topic.slug}`}
-                className="block h-full rounded-[10px] border p-4 no-underline transition-colors [background:var(--surface)] [border-color:var(--border)] hover:[border-color:var(--accent)]"
+                className="sp-glass group flex h-full flex-col p-6 no-underline"
               >
-                <span className="block text-lg font-semibold text-foreground">{topic.name}</span>
-                <span className="mt-1 block text-[13px] [color:var(--text-muted)]">
+                <span className="font-display text-[1.5rem] leading-tight text-foreground transition-colors group-hover:[color:var(--accent)]">
+                  {topic.name}
+                </span>
+                <span className="mt-3 block text-[13.5px] [color:var(--text-soft)]">
                   {t.hubs.recentStories(topic.storyCount)} · {t.hubs.totalStories(topic.totalStories)}
                 </span>
                 {topic.latestAt ? (
-                  <span className="mt-0.5 block font-mono text-[11px] [color:var(--text-dim)]">
+                  <span className={`${label} mt-auto block pt-5`}>
                     {t.hubs.latest(UTC_DAY[lang].format(new Date(topic.latestAt)))}
                   </span>
                 ) : null}
@@ -99,33 +91,29 @@ export function TopicPage({ topic }: { topic: ApiTopicDetail | null }) {
   if (!topic) return <Unavailable />;
   return (
     <div>
-      <p className="mb-3 text-sm">
-        <Link href="/topics" className="[color:var(--accent)] hover:underline">
-          ← {t.hubs.allTopics}
-        </Link>
-      </p>
       <PageHeader
+        back={{ href: "/topics", label: t.hubs.allTopics }}
         title={t.hubs.topicTitle(topic.name)}
         description={`${t.hubs.recentStories(topic.storyCount)} · ${t.hubs.totalStories(topic.totalStories)}`}
       />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0" aria-labelledby="topic-stories">
-          <h2 id="topic-stories" className={`${label} mb-2`}>
+          <h2 id="topic-stories" className={uiSectionTitle}>
             {t.hubs.storiesTitle}
           </h2>
           <StoryList stories={topic.stories} />
         </section>
         {topic.radar.length > 0 ? (
-          <aside className="h-fit rounded-[10px] border p-4 [background:var(--surface)] [border-color:var(--border)]">
-            <h2 className="text-sm font-semibold text-foreground">{t.hubs.onRadar}</h2>
-            <p className="mb-2 mt-0.5 text-xs [color:var(--text-muted)]">{t.hubs.onRadarDesc}</p>
-            <ul className="space-y-2">
+          <aside className="sp-glass h-fit p-6 lg:mt-[3.1rem]">
+            <h2 className="font-display text-[1.2rem] leading-tight text-foreground">{t.hubs.onRadar}</h2>
+            <p className="mb-4 mt-1 text-[13px] [color:var(--text-soft)]">{t.hubs.onRadarDesc}</p>
+            <ul className="sp-rows -mx-6">
               {topic.radar.map((r) => (
-                <li key={r.id} className="text-[13px] leading-snug">
-                  <Link href="/radar" className="text-foreground hover:[color:var(--accent)]">
+                <li key={r.id} className="px-6 py-3 text-[14px] leading-snug">
+                  <Link href="/radar" className="text-foreground no-underline hover:[color:var(--accent)]">
                     {r.label}
                   </Link>
-                  <span className="mt-0.5 block text-[11px] [color:var(--text-muted)]">
+                  <span className={`${label} mt-1 block normal-case tracking-[0.04em]`}>
                     {t.hubs.ringNames[r.ring]} · {t.hubs.signals(r.signalCount)}
                     {r.rising ? ` · ↑ ${t.hubs.rising}` : ""}
                   </span>
@@ -173,28 +161,28 @@ export function WeeksIndex({ weeks, currentWeek }: { weeks: ApiWeekSummary[] | n
       {!weeks ? (
         <Unavailable />
       ) : (
-        <ul className="max-w-4xl divide-y rounded-[10px] border [background:var(--surface)] [border-color:var(--border)] [&>*]:[border-color:var(--border)]">
+        <ul className="sp-glass sp-rows max-w-4xl overflow-hidden">
           {weeks.map((w) => (
-            <li key={w.week} className="px-4 py-3">
+            <li key={w.week} className="px-6 py-5">
               <div className="flex items-center justify-between gap-3">
-                <Link href={`/weekly/${w.week}`} className="text-[15px] font-medium text-foreground no-underline hover:[color:var(--accent)]">
+                <Link href={`/weekly/${w.week}`} className="font-display text-[1.25rem] leading-tight text-foreground no-underline hover:[color:var(--accent)]">
                   {t.hubs.weekTitle(formatWeekRange(w.start, w.end, lang))}
                   {w.week === currentWeek ? (
-                    <span className="ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold [background:var(--accent)] [color:var(--bg)]">
+                    <span className="ml-3 inline-block rounded-full px-2.5 py-0.5 align-[0.2em] font-mono text-[10px] uppercase tracking-[0.12em] [background:var(--accent)] [color:var(--bg)]">
                       {t.hubs.thisWeek}
                     </span>
                   ) : null}
                 </Link>
                 <span className="flex shrink-0 items-center gap-3">
                   <WeekBars counts={w.dailyCounts ?? []} max={maxDaily} label={t.hubs.weekDailyAria((w.dailyCounts ?? []).join(", "))} />
-                  <span className="w-[5.5rem] text-right font-mono text-[11px] [color:var(--text-muted)]">{t.hubs.weekStories(w.storyCount)}</span>
+                  <span className={`${label} w-[5.5rem] text-right normal-case tracking-[0.04em]`}>{t.hubs.weekStories(w.storyCount)}</span>
                 </span>
               </div>
               {w.headlines && w.headlines.length > 0 ? (
-                <ul className="mt-1.5 space-y-0.5">
+                <ul className="mt-2.5 space-y-1">
                   {w.headlines.map((h) => (
-                    <li key={h.id} className="truncate text-[13px] leading-snug">
-                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-muted)] no-underline hover:text-foreground">
+                    <li key={h.id} className="truncate text-[14px] leading-snug">
+                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-soft)] no-underline hover:text-foreground">
                         {lang === "zh" && h.titleZh ? h.titleZh : h.title}
                       </Link>
                     </li>
@@ -233,42 +221,43 @@ export function WeekPage({
   }
   return (
     <div>
-      <nav className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" aria-label={t.hubs.allWeeks}>
-        <Link href="/weekly" className="[color:var(--accent)] hover:underline">
-          ← {t.hubs.allWeeks}
-        </Link>
-        {older ? (
-          <Link href={`/weekly/${older.week}`} className="[color:var(--text-muted)] hover:underline">
-            ‹ {t.hubs.older}
-          </Link>
-        ) : null}
-        {newer ? (
-          <Link href={`/weekly/${newer.week}`} className="[color:var(--text-muted)] hover:underline">
-            {t.hubs.newer} ›
-          </Link>
-        ) : null}
-      </nav>
-      <PageHeader eyebrow={week.week} title={t.hubs.weekTitle(range)} description={t.hubs.weekStories(week.storyCount)} />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <PageHeader
+        back={{ href: "/weekly", label: t.hubs.allWeeks }}
+        eyebrow={
+          <>
+            <span>{week.week}</span>
+            {older ? (
+              <Link href={`/weekly/${older.week}`} className="no-underline hover:text-foreground">
+                ‹ {t.hubs.older}
+              </Link>
+            ) : null}
+            {newer ? (
+              <Link href={`/weekly/${newer.week}`} className="no-underline hover:text-foreground">
+                {t.hubs.newer} ›
+              </Link>
+            ) : null}
+          </>
+        }
+        title={t.hubs.weekTitle(range)}
+        description={t.hubs.weekStories(week.storyCount)}
+      />
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0" aria-labelledby="week-top">
-          <h2 id="week-top" className={`${label} mb-2`}>
+          <h2 id="week-top" className={uiSectionTitle}>
             {t.hubs.topStories}
           </h2>
           <StoryList stories={week.stories} />
         </section>
-        <aside className="h-fit space-y-5">
+        <aside className="sp-glass h-fit space-y-7 p-6 lg:mt-[3.1rem]">
           {week.topics.length > 0 ? (
             <section>
-              <h2 className={`${label} mb-2`}>{t.hubs.companies}</h2>
-              <ul className="flex flex-wrap gap-1.5">
+              <h2 className={`${label} mb-3`}>{t.hubs.companies}</h2>
+              <ul className="flex flex-wrap gap-2">
                 {week.topics.map((c) => (
                   <li key={c.key}>
-                    <Link
-                      href={`/topics/${c.key}`}
-                      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs no-underline [background:var(--surface)] [border-color:var(--border)] hover:[border-color:var(--accent)]"
-                    >
-                      <span className="text-foreground">{c.name}</span>
-                      <span className="font-mono [color:var(--text-muted)]">{c.count}</span>
+                    <Link href={`/topics/${c.key}`} className="sp-chip">
+                      <span>{c.name}</span>
+                      <span className="font-mono text-[11px] [color:var(--text-muted)]">{c.count}</span>
                     </Link>
                   </li>
                 ))}
@@ -276,12 +265,12 @@ export function WeekPage({
             </section>
           ) : null}
           <section>
-            <h2 className={`${label} mb-2`}>{t.hubs.byCategory}</h2>
-            <ul className="space-y-1 text-[13px]">
+            <h2 className={`${label} mb-3`}>{t.hubs.byCategory}</h2>
+            <ul className="sp-rows -mx-6 text-[14px]">
               {[...categories].sort((a, b) => b[1] - a[1]).map(([name, count]) => (
-                <li key={name} className="flex justify-between gap-3">
+                <li key={name} className="flex justify-between gap-3 px-6 py-2">
                   <span className="text-foreground">{name}</span>
-                  <span className="font-mono [color:var(--text-muted)]">{count}</span>
+                  <span className="font-mono text-[12px] [color:var(--text-muted)]">{count}</span>
                 </li>
               ))}
             </ul>

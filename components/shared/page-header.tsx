@@ -1,48 +1,39 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
-import {
-  uiPageDescription,
-  uiPageDescriptionCompact,
-  uiPageMetaLine,
-  uiPageTitle,
-  uiPageTitleHome,
-} from "@/lib/ui/classes";
+import { uiMicroLabel, uiPageDescription, uiPageTitle } from "@/lib/ui/classes";
 
 type PageHeaderProps = {
   title: ReactNode;
   description?: ReactNode;
-  /** Extra line under description (e.g. digest date). */
-  meta?: ReactNode;
-  /** Additional content inside the header (rare). */
+  /** Mono label line above the title (date, week, category). */
+  eyebrow?: ReactNode;
+  /** "← All topics" above everything else. */
+  back?: { href: string; label: string };
+  /** Meta lines or links under the description. */
   children?: ReactNode;
-  variant?: "default" | "home";
-  /** Bottom border under the header block (digest landing). */
-  bordered?: boolean;
-  /** Use slightly tighter description typography (archive-style). */
-  descriptionCompact?: boolean;
 };
 
-export function PageHeader({
-  title,
-  description,
-  meta,
-  children,
-  variant = "default",
-  bordered = false,
-  descriptionCompact = false,
-}: PageHeaderProps) {
-  const titleClass = variant === "home" ? uiPageTitleHome : uiPageTitle;
-  const descClass = descriptionCompact
-    ? uiPageDescriptionCompact
-    : uiPageDescription;
-  const marginClass = variant === "home" ? "mb-10" : "mb-8";
-  const borderClass = bordered ? "border-b [border-color:var(--border)] pb-8" : "";
-
+/**
+ * Every page's opening, in the home page's language: one light falls on a
+ * Fraunces title; labels are small mono capitals; the description is the
+ * only paragraph.
+ */
+export function PageHeader({ title, description, eyebrow, back, children }: PageHeaderProps) {
   return (
-    <header className={`${borderClass} ${marginClass}`.trim()}>
-      <h1 className={titleClass}>{title}</h1>
-      {description ? <p className={descClass}>{description}</p> : null}
-      {meta ? <p className={uiPageMetaLine}>{meta}</p> : null}
-      {children}
+    <header className="relative overflow-x-clip pb-10 pt-4 sm:pb-14 sm:pt-8">
+      <div className="sp-beam" aria-hidden />
+      <div className="relative z-[1]">
+        {back ? (
+          <Link href={back.href} className={`${uiMicroLabel} mb-6 inline-block no-underline hover:text-foreground`}>
+            <span aria-hidden>← </span>
+            {back.label}
+          </Link>
+        ) : null}
+        {eyebrow ? <p className={`${uiMicroLabel} mb-5 flex flex-wrap items-center gap-x-3 gap-y-1`}>{eyebrow}</p> : null}
+        <h1 className={uiPageTitle}>{title}</h1>
+        {description ? <p className={uiPageDescription}>{description}</p> : null}
+        {children ? <div className="mt-5">{children}</div> : null}
+      </div>
     </header>
   );
 }
