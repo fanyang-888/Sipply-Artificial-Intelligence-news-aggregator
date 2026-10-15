@@ -31,8 +31,8 @@ export const en: Translations = {
     allStories: "All stories",
     communityTitle: "What the AI community",
     communityTitle2: "is talking about.",
-    communitySubtitle: (signals, days) =>
-      `Grouped from ${signals.toLocaleString("en-US")} posts on Hacker News, Bluesky, YouTube and the news over the last ${days} days.`,
+    communitySubtitle: (signals, days, sources) =>
+      `Grouped from ${signals.toLocaleString("en-US")} posts on ${sources.length ? `${sources.join(", ")} and other communities` : "community sites"}, and the news, over the last ${days} days.`,
     signals: (n) => `${n} signals`,
     openRadar: "Open the Trend Radar",
     weekTitle: "This week,",

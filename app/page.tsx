@@ -47,6 +47,12 @@ export default async function HomePage() {
   ]);
   const radarTopics = radar ? radarOrder(radar.topics).slice(0, RADAR_PREVIEW) : [];
   const radarSignals = radar ? radar.sources.reduce((sum, s) => sum + s.signalCount, 0) : 0;
+  // The three busiest community platforms, named in the panel's subtitle (news is always mentioned)
+  const radarSourceLabels = (radar?.sources ?? [])
+    .filter((s) => s.active && s.signalCount > 0 && s.key !== "news")
+    .sort((a, b) => b.signalCount - a.signalCount)
+    .slice(0, 3)
+    .map((s) => s.label);
   return (
     <>
       {digest ? <JsonLd data={digestItemListJsonLd(digest)} /> : null}
@@ -55,6 +61,7 @@ export default async function HomePage() {
         pipelineUpdatedAt={pipelineUpdatedAt}
         radarTopics={radarTopics}
         radarSignals={radarSignals}
+        radarSourceLabels={radarSourceLabels}
         radarWindowDays={radar?.windowDays ?? 14}
         week={weeks?.[0] ?? null}
       />

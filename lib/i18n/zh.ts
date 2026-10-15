@@ -31,8 +31,8 @@ export const zh: Translations = {
     allStories: "全部报道",
     communityTitle: "AI 社区",
     communityTitle2: "此刻在讨论什么。",
-    communitySubtitle: (signals, days) =>
-      `由近 ${days} 天 Hacker News、Bluesky、YouTube 和新闻里的 ${signals.toLocaleString("en-US")} 条帖子归纳而来。`,
+    communitySubtitle: (signals, days, sources) =>
+      `由近 ${days} 天 ${sources.length ? `${sources.join("、")} 等社区` : "各社区"}和新闻里的 ${signals.toLocaleString("en-US")} 条帖子归纳而来。`,
     signals: (n) => `${n} 条信号`,
     openRadar: "打开趋势雷达",
     weekTitle: "本周要闻，",
