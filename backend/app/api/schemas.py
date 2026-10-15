@@ -187,10 +187,10 @@ class RadarCitation(BaseModel):
 
 
 class RadarAnswerCheck(BaseModel):
+    # Public: what the assistant cited. Whether it cited Sipply is for the editor only
+    # (GET /api/admin/radar/answers), never on the public radar
     checkedAt: str | None
     model: str
-    sipplyCited: bool
-    sipplyInSources: bool
     # Cited inline in the answer, in order (first few)
     citations: list[RadarCitation]
     sourceCount: int
@@ -304,23 +304,35 @@ class RadarRecentCheck(BaseModel):
     checkedAt: str | None
     question: str
     topicLabel: str | None
-    sipplyCited: bool
-    sipplyHasStory: bool
     citations: list[RadarCitation]
 
 
 class RadarAnswersResponse(BaseModel):
+    """Public: which sites AI assistants cite for the radar questions."""
+
     days: int
     model: str | None
     checks: int
     questions: int
+    topDomains: list[RadarDomainShare]
+    recent: list[RadarRecentCheck]
+
+
+class SipplyRecentCheck(RadarRecentCheck):
+    sipplyCited: bool
+    sipplyInSources: bool
+    sipplyHasStory: bool
+
+
+class SipplyAnswersResponse(RadarAnswersResponse):
+    """Admin: the same, plus how often the assistant cited (or read) Sipply."""
+
     sipplyCited: int
     sipplyInSources: int
     # Checks on topics Sipply had a story on (only those can cite it)
     sipplyCovered: int
     sipplyCitedWhenCovered: int
-    topDomains: list[RadarDomainShare]
-    recent: list[RadarRecentCheck]
+    recent: list[SipplyRecentCheck]
 
 
 class RadarResponse(BaseModel):

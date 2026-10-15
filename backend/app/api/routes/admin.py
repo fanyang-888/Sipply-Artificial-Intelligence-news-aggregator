@@ -170,6 +170,18 @@ def radar_gaps(db: Session = Depends(get_db), _user: str = Depends(get_current_u
     return build_gaps(db)
 
 
+@router.get("/radar/answers")
+def radar_answers(
+    days: int = Query(default=30, ge=1, le=90),
+    db: Session = Depends(get_db),
+    _user: str = Depends(get_current_user),
+):
+    """What AI assistants cited for the radar questions, with how often they cited Sipply (editor only)."""
+    from app.api.routes.radar import build_answers
+
+    return build_answers(db, days=days, sipply=True)
+
+
 @router.get("/sources", response_model=list[SourceRow])
 def list_sources(
     db: Session = Depends(get_db),

@@ -222,9 +222,6 @@ export type ApiRadarGaps = {
 export type ApiRadarAnswerCheck = {
   checkedAt: string | null;
   model: string;
-  sipplyCited: boolean;
-  /** Sipply was among the pages the search read, cited or not. */
-  sipplyInSources: boolean;
   citations: ApiRadarCitation[];
   sourceCount: number;
 };
@@ -235,19 +232,23 @@ export type ApiRadarAnswers = {
   model: string | null;
   checks: number;
   questions: number;
-  sipplyCited: number;
-  sipplyInSources: number;
-  sipplyCovered: number;
-  sipplyCitedWhenCovered: number;
   topDomains: { domain: string; citations: number; share: number }[];
   recent: {
     checkedAt: string | null;
     question: string;
     topicLabel: string | null;
-    sipplyCited: boolean;
-    sipplyHasStory: boolean;
     citations: ApiRadarCitation[];
   }[];
+};
+
+/** GET /api/admin/radar/answers (editor only): the same, plus how often the assistant cited or read Sipply. */
+export type ApiSipplyAnswers = Omit<ApiRadarAnswers, "recent"> & {
+  sipplyCited: number;
+  sipplyInSources: number;
+  /** Checks on topics Sipply had a story on (only those can cite it). */
+  sipplyCovered: number;
+  sipplyCitedWhenCovered: number;
+  recent: (ApiRadarAnswers["recent"][number] & { sipplyCited: boolean; sipplyInSources: boolean; sipplyHasStory: boolean })[];
 };
 
 /** Sipply's story on the topic. The public radar only lists covered topics; gaps are admin-only. */

@@ -196,18 +196,29 @@ def test_answers_endpoint_and_topic_check(db, make_cluster, monkeypatch):
             return sdk_response(cited=["https://www.sipply.dev/cluster/1", "https://www.theguardian.com/a"], sources=[])
         return sdk_response(cited=["https://www.theguardian.com/b", "https://www.reuters.com/x"], sources=[])
 
+    from app.auth import get_current_user
+
     A.run_checks(db, FakeOpenAI(respond), now=datetime.now(timezone.utc))
     app.dependency_overrides[get_db] = lambda: db
     try:
         client = TestClient(app)
         body = client.get("/api/radar/answers").json()
         topics = {t["label"]: t for t in client.get("/api/radar").json()["topics"]}
+        unauthorized = client.get("/api/admin/radar/answers").status_code
+        app.dependency_overrides[get_current_user] = lambda: "editor"
+        admin = client.get("/api/admin/radar/answers").json()
     finally:
         app.dependency_overrides.clear()
 
-    assert (body["checks"], body["questions"], body["sipplyCited"]) == (2, 2, 1)
-    assert (body["sipplyCovered"], body["sipplyCitedWhenCovered"]) == (1, 1)
+    # Public: which sites the assistant cites, nothing about whether it cited Sipply
+    assert (body["checks"], body["questions"]) == (2, 2)
+    assert not any("sipply" in key.lower() for key in body)
+    assert not any("sipply" in key.lower() for r in body["recent"] for key in r)
     assert body["topDomains"][0] == {"domain": "theguardian.com", "citations": 2, "share": 1.0}
+    # Editor: the Sipply numbers, behind the admin login
+    assert unauthorized == 401
+    assert (admin["checks"], admin["sipplyCited"], admin["sipplyCovered"], admin["sipplyCitedWhenCovered"]) == (2, 1, 1, 1)
+    assert {r["sipplyHasStory"] for r in admin["recent"]} == {True, False}
     assert {r["question"] for r in body["recent"]} == {
         "What did Microsoft's president say about AI and milk?",
         "Is NTT building a data center for Anthropic in Japan?",
@@ -215,6 +226,6 @@ def test_answers_endpoint_and_topic_check(db, make_cluster, monkeypatch):
 
     milk = topics["AI less regulated than milk"]
     assert milk["question"] == "What did Microsoft's president say about AI and milk?"
-    assert milk["answerCheck"]["sipplyCited"] is True
+    assert "sipplyCited" not in milk["answerCheck"]
     assert [c["domain"] for c in milk["answerCheck"]["citations"]] == ["sipply.dev", "theguardian.com"]
     assert topics["No question yet"]["answerCheck"] is None

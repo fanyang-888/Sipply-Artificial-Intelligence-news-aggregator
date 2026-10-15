@@ -25,6 +25,8 @@ from app.api.schemas import (
     RadarSignal,
     RadarSource,
     RadarTopic,
+    SipplyAnswersResponse,
+    SipplyRecentCheck,
     format_dt,
 )
 from app.cache import cache_get, cache_set
@@ -98,8 +100,6 @@ def _answer_check_out(check: AnswerCheck | None) -> RadarAnswerCheck | None:
     return RadarAnswerCheck(
         checkedAt=format_dt(check.checked_at),
         model=check.model,
-        sipplyCited=check.sipply_cited,
-        sipplyInSources=check.sipply_in_sources,
         citations=_citations(check, CITATIONS_SHOWN),
         sourceCount=len(check.sources or []),
     )
@@ -285,8 +285,12 @@ def get_radar(
     return JSONResponse(content=data)
 
 
-def build_answers(db: Session, *, days: int, now: datetime | None = None) -> dict[str, Any]:
-    """What AI assistants cited for the radar questions over the last ``days`` days."""
+def build_answers(db: Session, *, days: int, now: datetime | None = None, sipply: bool = False) -> dict[str, Any]:
+    """What AI assistants cited for the radar questions over the last ``days`` days.
+
+    ``sipply=True`` (admin only) adds how often the assistant cited or read Sipply;
+    the public radar never says so.
+    """
     now = now or datetime.now(timezone.utc)
     checks = list(
         db.execute(
@@ -304,30 +308,45 @@ def build_answers(db: Session, *, days: int, now: datetime | None = None) -> dic
         for d in set(domains):
             checks_per_domain[d] += 1
     top = sorted(checks_per_domain, key=lambda d: (-checks_per_domain[d], -citations_per_domain[d], d))[:TOP_DOMAINS]
+    base = {
+        "days": days,
+        "model": checks[0].model if checks else None,
+        "checks": len(checks),
+        "questions": len({c.question for c in checks}),
+        "topDomains": [
+            RadarDomainShare(domain=d, citations=citations_per_domain[d], share=round(checks_per_domain[d] / len(checks), 3))
+            for d in top
+        ],
+    }
+    recent = checks[:RECENT_CHECKS]
+    if not sipply:
+        return RadarAnswersResponse(
+            **base,
+            recent=[
+                RadarRecentCheck(
+                    checkedAt=format_dt(c.checked_at), question=c.question, topicLabel=c.topic_label, citations=_citations(c, 3)
+                )
+                for c in recent
+            ],
+        ).model_dump(mode="json")
     covered = [c for c in checks if c.covered_cluster_id]
-    return RadarAnswersResponse(
-        days=days,
-        model=checks[0].model if checks else None,
-        checks=len(checks),
-        questions=len({c.question for c in checks}),
+    return SipplyAnswersResponse(
+        **base,
         sipplyCited=sum(c.sipply_cited for c in checks),
         sipplyInSources=sum(c.sipply_in_sources for c in checks),
         sipplyCovered=len(covered),
         sipplyCitedWhenCovered=sum(c.sipply_cited for c in covered),
-        topDomains=[
-            RadarDomainShare(domain=d, citations=citations_per_domain[d], share=round(checks_per_domain[d] / len(checks), 3))
-            for d in top
-        ],
         recent=[
-            RadarRecentCheck(
+            SipplyRecentCheck(
                 checkedAt=format_dt(c.checked_at),
                 question=c.question,
                 topicLabel=c.topic_label,
-                sipplyCited=c.sipply_cited,
-                sipplyHasStory=c.covered_cluster_id is not None,
                 citations=_citations(c, 3),
+                sipplyCited=c.sipply_cited,
+                sipplyInSources=c.sipply_in_sources,
+                sipplyHasStory=c.covered_cluster_id is not None,
             )
-            for c in checks[:RECENT_CHECKS]
+            for c in recent
         ],
     ).model_dump(mode="json")
 
@@ -337,7 +356,7 @@ def get_radar_answers(
     days: int = Query(default=30, ge=1, le=90, description="Look-back window in days"),
     db: Session = Depends(get_db),
 ):
-    """Which sites an AI assistant with web search cited for the radar questions, and how often Sipply was one.
+    """Which sites an AI assistant with web search cited for the radar questions.
 
     Cached until the next pipeline run clears the ``ai_tool:*`` keys.
     """
