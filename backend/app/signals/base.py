@@ -140,6 +140,22 @@ def is_question(title: str) -> bool:
     return t.endswith("?") or bool(_QUESTION_START.match(t))
 
 
+# Where people ask each other things. Video and news titles phrased as questions
+# are mostly hooks ("Is this the start of AGI?"), so they don't count as asked.
+ASKING_FAMILIES = frozenset({"hn", "lobsters", "bluesky", "devto", "threads"})
+
+
+def is_asked_question(title: str, source_kind: str) -> bool:
+    """A question someone asked on a discussion platform: "Ask HN …" or a title ending in "?".
+
+    Stricter than :func:`is_question`, which also takes "How to …", "When …"
+    and "can't believe …" openers; this is what the radar shows as questions.
+    """
+    if source_family(source_kind) not in ASKING_FAMILIES:
+        return False
+    return bool(_ASK_HN.match(title)) or title.strip().endswith("?")
+
+
 def plain_text(value: str | None, limit: int = 2000) -> str | None:
     """HTML fragment → collapsed plain text (HN story_text, video descriptions)."""
     if not value:

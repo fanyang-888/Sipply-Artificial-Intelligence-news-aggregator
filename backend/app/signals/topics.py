@@ -59,8 +59,10 @@ RECENT_DAYS = 3
 # Baseline rate (signals/day) added to both sides of the velocity ratio
 VELOCITY_PRIOR_PER_DAY = 0.5
 MIN_GROUP_SIZE = 2
-# A lone post still counts as a topic when the community piled onto it
+# A lone post still counts as a topic when the community piled onto it, but not
+# a lone YouTube video: its likes measure a creator's reach, not a discussion
 SINGLETON_MIN_ENGAGEMENT = 100
+SINGLETON_EXCLUDED_FAMILIES = frozenset({"youtube"})
 MAX_TOPICS = 60
 RETENTION_DAYS = 60
 RISING_MIN_RATIO = 2.0
@@ -109,6 +111,14 @@ RelevanceFn = Callable[[str], float]
 def engagement_of(sig: Any) -> int:
     """Points + comments + likes; news items have none of these."""
     return int((sig.points or 0) + (sig.num_comments or 0) + (sig.like_count or 0))
+
+
+def lone_post_counts(sig: Any) -> bool:
+    """Whether a single post is enough for a topic of its own."""
+    return (
+        source_family(sig.source_kind) not in SINGLETON_EXCLUDED_FAMILIES
+        and engagement_of(sig) >= SINGLETON_MIN_ENGAGEMENT
+    )
 
 
 def _aware(dt: datetime) -> datetime:
@@ -379,7 +389,7 @@ def draft_topics(
     drafts: list[TopicDraft] = []
     for indices in groups:
         members = [signals[i] for i in indices]
-        if len(members) < MIN_GROUP_SIZE and sum(engagement_of(s) for s in members) < SINGLETON_MIN_ENGAGEMENT:
+        if len(members) < MIN_GROUP_SIZE and not lone_post_counts(members[0]):
             continue
         drafts.append(
             draft_group(

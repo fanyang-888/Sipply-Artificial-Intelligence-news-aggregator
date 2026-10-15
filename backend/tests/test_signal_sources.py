@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 
-from app.signals.base import is_question, plain_text, strip_hn_prefix
+from app.signals.base import is_asked_question, is_question, plain_text, strip_hn_prefix
 from app.signals.config import GNewsConfig, HNConfig, YouTubeConfig, load_radar_config
 from app.signals.gnews import date_chunks, fetch_gnews, range_query
 from app.signals.hn import fetch_hn, parse_hn_hit
@@ -61,6 +61,24 @@ def hn_hit(object_id: str, title: str, *, tags=("story",), url="https://example.
 )
 def test_is_question(title, expected):
     assert is_question(title) is expected
+
+
+@pytest.mark.parametrize(
+    ("title", "kind", "expected"),
+    [
+        ("Ask HN: Which vector DB do you use", "hn_ask", True),
+        ("Why isn't the industry freaking out about DeepSeek 4.1 Flash?", "hn_story", True),
+        ("Is anyone else seeing Claude refuse this?", "bsky_post", True),
+        # Question openers without a question mark are mostly how-tos and asides
+        ("How to Make a Roblox Game With Claude AI Step by Step", "hn_story", False),
+        ("can't believe OpenAI had someone on staff recording everyone", "bsky_post", False),
+        # Video and news titles phrased as questions are hooks, not questions people asked
+        ("Is this the Start of AGI? | Gemini 4 Argon review!", "yt_video", False),
+        ("Google restricts free Gemini: what changes on October 9?", "gnews_item", False),
+    ],
+)
+def test_is_asked_question(title, kind, expected):
+    assert is_asked_question(title, kind) is expected
 
 
 def test_strip_hn_prefix():

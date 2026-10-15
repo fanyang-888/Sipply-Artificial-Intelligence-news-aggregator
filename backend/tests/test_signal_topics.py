@@ -171,6 +171,18 @@ def test_draft_topics_keeps_groups_and_hot_singletons():
     assert drafts == sorted(drafts, key=lambda d: -d.score)
 
 
+def test_a_lone_youtube_video_is_not_a_topic():
+    video = sig("GEMINI 4 ARGON IS WEIRD...", 0.5, "yt_video", comments=40)
+    video.like_count = 2_900  # far past the singleton bar, but likes are reach, not discussion
+    hn = sig("Viral essay on LLM capability gap", 0.3, points=600, comments=300)
+    drafts, _ = T.draft_topics([video, hn], now=NOW, window_days=14, active_families=2, relevance_fn=lambda title: 50.0)
+    assert [d.label for d in drafts] == ["Viral essay on LLM capability gap"]
+    # Two videos on one story still make a (weak) topic
+    other = sig("Gemini 4 Argon is weird, full test", 0.4, "yt_video", comments=10)
+    drafts, _ = T.draft_topics([video, other], now=NOW, window_days=14, active_families=2, relevance_fn=lambda title: 50.0)
+    assert [d.signal_count for d in drafts] == [2]
+
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------

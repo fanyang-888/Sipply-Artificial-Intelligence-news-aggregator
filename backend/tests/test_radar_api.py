@@ -88,6 +88,28 @@ def test_radar_shape_and_order(client, radar_data):
     }
 
 
+def test_radar_questions_are_ones_people_asked(client, db):
+    db.execute(delete(SignalTopic))
+    db.execute(delete(Signal))
+    upsert_signals(
+        db,
+        [
+            _item("q1", "How do you evaluate coding agents?", kind="hn_ask", points=2, comments=1),
+            _item("q2", "Ask HN: Which eval harness do you use", kind="hn_ask", points=5, comments=3),
+            # Flagged as question-shaped at ingest, but a how-to, a video hook and a headline
+            _item("x1", "How to Make a Roblox Game With Claude AI Step by Step", points=40),
+            _item("x2", "Is this the Start of AGI? | Gemini 4 Argon review!", kind="yt_video", points=None, comments=900),
+            _item("x3", "Google restricts free Gemini: what changes on October 9?", kind="gnews_item", points=None, comments=None),
+        ],
+    )
+    build_topics(db, relevance_fn=lambda title: 50.0)
+    body = client.get("/api/radar").json()
+    assert {q["title"] for q in body["questions"]} == {
+        "How do you evaluate coding agents?",
+        "Ask HN: Which eval harness do you use",
+    }
+
+
 def test_radar_limit_is_validated(client):
     assert client.get("/api/radar", params={"limit": 0}).status_code == 422
     assert client.get("/api/radar", params={"limit": 61}).status_code == 422
