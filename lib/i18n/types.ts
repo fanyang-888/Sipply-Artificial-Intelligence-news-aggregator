@@ -130,6 +130,9 @@ export type Translations = {
     colTrend: (days: number) => string;
     colMomentum: string;
     colSipply: string;
+    tableTitle: string;
+    showAllRows: (n: number) => string;
+    showFewer: string;
     captionRings: string;
     captionOther: string;
     captionTrail: string;
