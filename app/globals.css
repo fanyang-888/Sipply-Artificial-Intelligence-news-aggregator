@@ -170,13 +170,13 @@ body {
 }
 
 /* A frosted card with a 1px gradient edge (mask keeps the fill transparent) */
+/* No backdrop-filter: the cards sit on a near-flat background where blur shows
+   nothing, and nine blurred cards make the carousel swipe janky on phones */
 .sp-glass {
   position: relative;
   background: var(--panel-fill);
   border-radius: 20px;
   box-shadow: var(--panel-shadow), var(--panel-inset);
-  -webkit-backdrop-filter: blur(14px) saturate(130%);
-  backdrop-filter: blur(14px) saturate(130%);
 }
 .sp-glass::before {
   content: "";
