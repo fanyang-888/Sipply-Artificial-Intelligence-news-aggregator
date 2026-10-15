@@ -53,6 +53,7 @@ export function apiClusterToCluster(c: ApiCluster): Cluster {
     })),
     relatedClusterIds: c.relatedClusterIds,
     topics: c.topics ?? [],
+    discussions: c.discussions ?? [],
   };
 }
 

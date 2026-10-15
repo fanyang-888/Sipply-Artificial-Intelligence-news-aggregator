@@ -7,6 +7,7 @@ from app.api.schemas import (
     AudienceBlocks,
     ArchiveClusterRow,
     ClusterResponse,
+    RadarSignal,
     TopicRef,
     format_dt,
     freshness_label,
@@ -20,6 +21,7 @@ from app.services.entities import entities_in
 def cluster_to_response(
     cluster: Cluster,
     related_cluster_ids: list[str] | None = None,
+    discussions: list[RadarSignal] | None = None,
 ) -> ClusterResponse:
     tags: list[str] = cluster.tags or []
     themes: list[str] = []
@@ -84,6 +86,7 @@ def cluster_to_response(
         articleIds=article_ids,
         articles=articles_in_cluster,
         relatedClusterIds=related_cluster_ids or [],
+        discussions=discussions or [],
         articleCount=cluster.article_count or 0,
         sourceCount=cluster.source_count or 0,
     )

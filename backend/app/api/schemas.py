@@ -110,6 +110,8 @@ class ClusterResponse(BaseModel):
     sourceCount: int
     # Company / model-family pages this story belongs to (see app/services/entities.py)
     topics: list[TopicRef] = []
+    # Community posts about this story (detail endpoint only; app/services/discussions.py)
+    discussions: list[RadarSignal] = []
 
 
 class DigestResponse(BaseModel):
@@ -342,3 +344,7 @@ class RadarResponse(BaseModel):
     topics: list[RadarTopic]
     # Question-shaped signals across all sources: what people are asking
     questions: list[RadarSignal]
+
+
+# ClusterResponse refers to RadarSignal, defined further down
+ClusterResponse.model_rebuild()

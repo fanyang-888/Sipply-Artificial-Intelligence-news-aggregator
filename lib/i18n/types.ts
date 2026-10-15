@@ -223,6 +223,8 @@ export type Translations = {
     coveredSources: string;
     relatedStories: string;
     relatedTopics: string;
+    communityTitle: string;
+    communityDesc: string;
     /** Shown in Chinese mode above product-structured story body (bilingual assist disclaimer). */
     bilingualAssistTrustNote: string;
     /** Under covered sources: originals stay in source language. */

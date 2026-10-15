@@ -248,6 +248,8 @@ export const en: Translations = {
     coveredSources: "Covered sources",
     relatedStories: "Related stories",
     relatedTopics: "Topics",
+    communityTitle: "What people are saying",
+    communityDesc: "The most-discussed posts about this story on Hacker News, Bluesky and other communities.",
     bilingualAssistTrustNote:
       "Chinese text is provided as reading assistance. Refer to the original language for exact wording.",
     sourceOriginalPreservedNote:
