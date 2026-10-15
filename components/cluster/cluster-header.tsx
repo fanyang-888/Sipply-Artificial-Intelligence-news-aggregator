@@ -4,13 +4,15 @@ import {
   BilingualAssistHeading,
   BilingualAssistSubline,
 } from "@/components/shared/bilingual-assist-text";
-import { useI18n } from "@/lib/i18n";
-import { uiPageTitle, uiMetaTextSm } from "@/lib/ui/classes";
 import { LocalDateTime } from "@/components/shared/local-date-time";
+import { PageHeader } from "@/components/shared/page-header";
+import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
+import { useI18n } from "@/lib/i18n";
 import {
   estimateClusterReadMinutes,
   getOutletDiversityFromArticles,
 } from "@/lib/utils/cluster-meta";
+import { topicGroupForTag } from "@/lib/utils/radar";
 import type { Cluster } from "@/types/cluster";
 import type { Article } from "@/types/article";
 
@@ -22,10 +24,11 @@ type ClusterHeaderProps = {
 const DAY_MS = 86_400_000;
 
 /**
- * Title, then two plain lines instead of a label: value grid: reading time
- * and dates, and how many outlets carry it (amber when it's a single outlet,
- * which readers should verify). Internal fields (cluster type, status,
- * cluster score) are left out: they mean nothing to a reader.
+ * The story's opening, in the home page's language: a mono line (category ·
+ * reading time · dates), the headline under one light, and how many outlets
+ * carry it (amber when it's a single outlet, which readers should verify).
+ * Internal fields (cluster type, status, score) are left out: they mean
+ * nothing to a reader.
  */
 export function ClusterHeader({ cluster, articles }: ClusterHeaderProps) {
   const { t, lang } = useI18n();
@@ -41,33 +44,34 @@ export function ClusterHeader({ cluster, articles }: ClusterHeaderProps) {
   // "First seen" only adds something when the story has been running for days
   const longRunning =
     cluster.firstSeenAt && cluster.lastSeenAt && Date.parse(cluster.lastSeenAt) - Date.parse(cluster.firstSeenAt) >= DAY_MS;
+  const group = cluster.topicTag ? topicGroupForTag(cluster.topicTag) : null;
+  const category = group ? topicGroupByKey(group) : undefined;
 
   return (
-    <header className="mb-6">
-      <h1 className={uiPageTitle}>
-        <BilingualAssistHeading value={cluster.title} lang={lang} />
-      </h1>
-      {cluster.subtitle ? (
-        <p className={`mt-2 ${uiMetaTextSm}`}>
-          <BilingualAssistSubline value={cluster.subtitle} lang={lang} />
-        </p>
-      ) : null}
-
-      <p className="mt-3 text-sm [color:var(--text-muted)]">
-        {t.cluster.formatReadTimeMinutes(readMinutes)} · {t.cluster.headerLastUpdated}{" "}
-        <LocalDateTime iso={cluster.lastSeenAt} lang={lang} />
-        {longRunning ? (
-          <>
-            {" · "}
-            {t.cluster.headerFirstSeen} <LocalDateTime iso={cluster.firstSeenAt} lang={lang} />
-          </>
-        ) : null}
-      </p>
+    <PageHeader
+      back={{ href: "/", label: t.nav.dailyDigest }}
+      eyebrow={
+        <>
+          {category ? <span className="[color:var(--accent)]">{topicGroupLabel(category, lang)}</span> : null}
+          <span>{t.cluster.formatReadTimeMinutes(readMinutes)}</span>
+          <span className="normal-case tracking-[0.06em]">
+            {t.cluster.headerLastUpdated} <LocalDateTime iso={cluster.lastSeenAt} lang={lang} />
+          </span>
+          {longRunning ? (
+            <span className="normal-case tracking-[0.06em]">
+              {t.cluster.headerFirstSeen} <LocalDateTime iso={cluster.firstSeenAt} lang={lang} />
+            </span>
+          ) : null}
+        </>
+      }
+      title={<BilingualAssistHeading value={cluster.title} lang={lang} />}
+      description={cluster.subtitle ? <BilingualAssistSubline value={cluster.subtitle} lang={lang} /> : undefined}
+    >
       {diversityLine ? (
-        <p className={`mt-1 text-sm leading-snug ${narrow ? "[color:var(--amber)]" : "[color:var(--text-muted)]"}`}>
+        <p className={`text-[13.5px] leading-snug ${narrow ? "[color:var(--amber)]" : "[color:var(--text-muted)]"}`}>
           {diversityLine}
         </p>
       ) : null}
-    </header>
+    </PageHeader>
   );
 }

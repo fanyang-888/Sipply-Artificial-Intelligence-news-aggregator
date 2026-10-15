@@ -1,5 +1,7 @@
 "use client";
 
+import { uiInput } from "@/lib/ui/classes";
+
 type SearchBarProps = {
   value: string;
   onChange: (value: string) => void;
@@ -29,8 +31,8 @@ export function SearchBar({
   name = "q",
 }: SearchBarProps) {
   const inputClasses = compact
-    ? `w-full min-w-0 rounded-md border [border-color:var(--border)] [background:var(--surface2)] px-2.5 py-1.5 text-sm text-foreground placeholder:[color:var(--text-muted)] focus:[border-color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] ${inputClassName}`
-    : `w-full rounded border [border-color:var(--border)] [background:var(--surface2)] px-3 py-2 text-sm text-foreground placeholder:[color:var(--text-muted)] focus:[border-color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] ${inputClassName}`;
+    ? `${uiInput} h-8 w-full min-w-0 text-[12.5px] ${inputClassName}`
+    : `${uiInput} w-full ${inputClassName}`;
 
   return (
     <div className={compact ? `min-w-0 ${className}` : `mb-4 ${className}`}>

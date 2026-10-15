@@ -82,6 +82,8 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-serif: 'Playfair Display', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* Headlines and section titles on every page */
+  --font-display: 'Fraunces', 'Playfair Display', serif;
 }
 
 * { transition: background-color .3s, border-color .3s, color .3s; }
@@ -155,6 +157,8 @@ body {
   --cta-text:     #080c12;
   /* Reading text on dark glass: brighter than --text-muted (#5a7a9a is too dim for paragraphs) */
   --text-soft:    #a9bdd3;
+  --panel-divider: rgba(255,255,255,.06);
+  --panel-hover:   rgba(255,255,255,.028);
 }
 [data-theme="light"] {
   --panel-fill:   rgba(255,255,255,.92);
@@ -167,16 +171,18 @@ body {
   --cta-bg:       #0b1829;
   --cta-text:     #f5f8ff;
   --text-soft:    #344a63;
+  --panel-divider: rgba(11,24,41,.08);
+  --panel-hover:   rgba(29,111,232,.04);
 }
 
 /* A frosted card with a 1px gradient edge (mask keeps the fill transparent) */
+/* No backdrop-filter: the cards sit on a near-flat background where blur shows
+   nothing, and nine blurred cards make the carousel swipe janky on phones */
 .sp-glass {
   position: relative;
   background: var(--panel-fill);
   border-radius: 20px;
   box-shadow: var(--panel-shadow), var(--panel-inset);
-  -webkit-backdrop-filter: blur(14px) saturate(130%);
-  backdrop-filter: blur(14px) saturate(130%);
 }
 .sp-glass::before {
   content: "";
@@ -191,7 +197,27 @@ body {
   pointer-events: none;
 }
 
-/* The one light on the page: behind the lead story's headline */
+/* Rows inside a glass panel: a hairline between them, a soft fill on hover */
+.sp-rows > * + * { border-top: 1px solid var(--panel-divider); }
+.sp-row-link:hover { background: var(--panel-hover); }
+
+/* Small pill for topics and companies */
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border-radius: 999px;
+  padding: .3rem .85rem;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--panel-fill-2);
+  box-shadow: inset 0 0 0 1px var(--panel-divider);
+  text-decoration: none;
+}
+.sp-chip:hover { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* The one light on the page: behind the lead story's headline (and each page's title) */
 .sp-beam {
   position: absolute;
   inset: -12% -10% auto -10%;
@@ -224,4 +250,6 @@ body {
   scrollbar-width: none;
 }
 .sp-carousel::-webkit-scrollbar { display: none; }
+.sp-no-scrollbar { scrollbar-width: none; }
+.sp-no-scrollbar::-webkit-scrollbar { display: none; }
 .sp-carousel > * { scroll-snap-align: center; scroll-snap-stop: always; }

@@ -93,6 +93,7 @@ export type Translations = {
     allCategories: string;
     loading: string;
     suggestThemesLead: string;
+    sortLabel: string;
     sortBestMatch: string;
     sortNewest: string;
     loadingMore: string;
@@ -262,6 +263,8 @@ export type Translations = {
     caughtUpViewArchive: string;
   };
   notFound: {
+    pageTitle: string;
+    pageMessage: string;
     clusterTitle: string;
     clusterMessage: string;
     backToDigest: string;

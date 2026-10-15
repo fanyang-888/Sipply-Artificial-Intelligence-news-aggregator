@@ -214,7 +214,7 @@ export function HomePageClient({
         }
         subtitle={activeCategory === "trending" && personalized ? <><span className="[color:var(--accent)]">✦</span> {t.home.personalizedNote}</> : undefined}
       >
-        <div role="tablist" aria-label={t.home.categoryBarAria} className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2">
+        <div role="tablist" aria-label={t.home.categoryBarAria} className="sp-no-scrollbar -mx-6 mb-6 flex gap-x-5 overflow-x-auto whitespace-nowrap px-6 sm:mx-0 sm:flex-wrap sm:justify-center sm:gap-y-2 sm:overflow-visible sm:px-0">
           {categoryKeys.map((key) => (
             <button
               key={key}
@@ -223,7 +223,7 @@ export function HomePageClient({
               aria-selected={activeCategory === key}
               onClick={() => setActiveCategory(key)}
               className={[
-                "border-b pb-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors",
+                "shrink-0 border-b pb-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors",
                 activeCategory === key ? "text-foreground [border-color:var(--accent)]" : "border-transparent [color:var(--text-muted)] hover:text-foreground",
               ].join(" ")}
             >

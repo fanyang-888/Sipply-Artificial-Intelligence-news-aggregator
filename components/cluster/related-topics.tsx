@@ -10,15 +10,12 @@ export function RelatedTopics({ topics }: { topics: Cluster["topics"] }) {
   const { t } = useI18n();
   if (!topics?.length) return null;
   return (
-    <section className="mb-6">
-      <SectionTitle>{t.cluster.relatedTopics}</SectionTitle>
+    <section aria-labelledby="story-topics">
+      <SectionTitle id="story-topics">{t.cluster.relatedTopics}</SectionTitle>
       <ul className="flex flex-wrap gap-2">
         {topics.map((topic) => (
           <li key={topic.slug}>
-            <Link
-              href={`/topics/${topic.slug}`}
-              className="inline-block rounded-full border px-3 py-1 text-sm no-underline [border-color:var(--border)] [background:var(--surface)] hover:[border-color:var(--accent)] hover:[color:var(--accent)]"
-            >
+            <Link href={`/topics/${topic.slug}`} className="sp-chip">
               {topic.name}
             </Link>
           </li>

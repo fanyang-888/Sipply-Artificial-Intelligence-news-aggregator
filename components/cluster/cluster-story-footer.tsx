@@ -1,42 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { BackLink } from "@/components/shared/back-link";
 import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/utils/localized-string";
-import { uiTextLinkNeutral, uiTextLinkPrimary } from "@/lib/ui/classes";
+import { uiButtonSecondary, uiMicroLabel, uiTextLinkPrimary } from "@/lib/ui/classes";
 import type { Cluster } from "@/types/cluster";
 
 type ClusterStoryFooterProps = {
   nextCluster: Cluster | undefined;
 };
 
+/** The way onward: the next story in today's order as one card, or the archive when there is none. */
 export function ClusterStoryFooter({ nextCluster }: ClusterStoryFooterProps) {
   const { t, lang } = useI18n();
 
   return (
-    <footer className="mt-10 border-t [border-color:var(--border)] pt-8">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
-          <BackLink href="/">{t.cluster.backToDigest}</BackLink>
-          {nextCluster ? (
-            <Link
-              href={`/cluster/${nextCluster.id}`}
-              className={uiTextLinkNeutral}
-            >
-              {t.cluster.nextStory}: {pickLocalized(nextCluster.title, lang)}
-            </Link>
-          ) : null}
-        </div>
-        {!nextCluster ? (
-          <p className="text-sm [color:var(--text-muted)]">
-            {t.cluster.allCaughtUpToday}{" "}
-            <Link href="/archive" className={uiTextLinkPrimary}>
-              {t.cluster.caughtUpViewArchive}
-            </Link>
-            <span aria-hidden> →</span>
-          </p>
-        ) : null}
+    <footer className="border-t pt-10 [border-color:var(--panel-divider)]">
+      {nextCluster ? (
+        <Link href={`/cluster/${nextCluster.id}`} className="sp-glass group block p-6 no-underline sm:p-8">
+          <span className={uiMicroLabel}>{t.cluster.nextStory}</span>
+          <span className="mt-3 block font-display text-[clamp(1.4rem,2.4vw,1.9rem)] leading-tight text-foreground transition-colors group-hover:[color:var(--accent)] [text-wrap:balance]">
+            {pickLocalized(nextCluster.title, lang)} <span aria-hidden>→</span>
+          </span>
+        </Link>
+      ) : (
+        <p className="text-[15px] [color:var(--text-soft)]">
+          {t.cluster.allCaughtUpToday}{" "}
+          <Link href="/archive" className={uiTextLinkPrimary}>
+            {t.cluster.caughtUpViewArchive} <span aria-hidden>→</span>
+          </Link>
+        </p>
+      )}
+      <div className="mt-6">
+        <Link href="/" className={uiButtonSecondary}>
+          <span aria-hidden>←</span> {t.cluster.backToDigest}
+        </Link>
       </div>
     </footer>
   );

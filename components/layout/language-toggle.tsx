@@ -4,9 +4,9 @@ import { useI18n } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 
 const btnBase =
-  "rounded px-1.5 py-0.5 text-xs font-medium transition-colors";
+  "rounded-full px-2 py-0.5 font-mono text-[11px] tracking-[0.06em] transition-colors";
 const inactive = "[color:var(--text-muted)] hover:text-foreground";
-const active = "[background:var(--surface2)] text-foreground";
+const active = "[background:var(--panel-fill-2)] text-foreground";
 
 export function LanguageToggle() {
   const { lang, setLang } = useI18n();
@@ -29,7 +29,7 @@ export function LanguageToggle() {
       >
         EN
       </button>
-      <span className="text-xs [color:var(--border)]" aria-hidden>
+      <span className="text-xs [color:var(--panel-edge-a)]" aria-hidden>
         |
       </span>
       <button

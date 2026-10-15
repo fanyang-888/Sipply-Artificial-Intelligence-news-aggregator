@@ -1,9 +1,10 @@
 "use client";
 
+import { RoleSwitch } from "@/components/home/role-switch";
 import { BilingualAssistBody } from "@/components/shared/bilingual-assist-text";
 import { SectionTitle } from "@/components/shared/section-title";
 import { useI18n } from "@/lib/i18n";
-import { ROLES, roleLabel, usePreferredRole, type Role } from "@/lib/preferred-role";
+import { ROLES, usePreferredRole, type Role } from "@/lib/preferred-role";
 import type { AudienceBlocks } from "@/types/cluster";
 import type { LocalizedString } from "@/types/localized";
 
@@ -20,7 +21,7 @@ type WhyItMattersSectionProps = {
  */
 export function WhyItMattersSection({ overview, audience }: WhyItMattersSectionProps) {
   const { t, lang } = useI18n();
-  const [role, setRole] = usePreferredRole();
+  const [role] = usePreferredRole();
   const heading: Record<Role, string> = {
     pm: t.cluster.audiencePm,
     developer: t.cluster.audienceDeveloper,
@@ -30,73 +31,54 @@ export function WhyItMattersSection({ overview, audience }: WhyItMattersSectionP
     <BilingualAssistBody
       value={audience[r]}
       lang={lang}
-      className="space-y-2 text-sm leading-relaxed [color:var(--text-muted)]"
+      className="space-y-2 text-[15px] leading-relaxed [color:var(--text-soft)]"
     />
   );
   const others = ROLES.filter((r) => r !== role);
 
   return (
-    <section className="mb-6">
-      <SectionTitle>{t.cluster.whyItMatters}</SectionTitle>
-      <div className="text-sm leading-relaxed text-foreground">
-        <BilingualAssistBody value={overview} lang={lang} />
-      </div>
+    <section aria-labelledby="story-why">
+      <SectionTitle id="story-why">{t.cluster.whyItMatters}</SectionTitle>
+      <BilingualAssistBody
+        value={overview}
+        lang={lang}
+        className="space-y-3 text-[15.5px] leading-relaxed text-foreground"
+      />
 
-      <div className="mt-5 border-t pt-4 [border-color:var(--border)]">
-        <div role="radiogroup" aria-label={t.home.readAs} className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-          <span className="[color:var(--text-muted)]">{t.home.readAs}:</span>
-          {[null, ...ROLES].map((r) => (
-            <button
-              key={r ?? "all"}
-              type="button"
-              role="radio"
-              aria-checked={role === r}
-              onClick={() => setRole(r)}
-              className={[
-                "border-b-2 pb-0.5 transition-colors",
-                role === r
-                  ? "font-semibold text-foreground [border-color:var(--accent)]"
-                  : "border-transparent [color:var(--text-muted)] hover:text-foreground",
-              ].join(" ")}
-            >
-              {r ? roleLabel(r, lang) : t.home.allReaders}
-            </button>
-          ))}
-        </div>
+      <div className="sp-glass mt-7 p-6 sm:p-7">
+        <RoleSwitch />
 
         {role ? (
           <>
-            <div className="border-l-2 pl-3 [border-color:var(--accent)]">
-              <h3 className="font-semibold text-foreground">{t.cluster.forYou(heading[role])}</h3>
-              <div className="mt-1 text-[15px] leading-relaxed text-foreground">
-                <BilingualAssistBody
-                  value={audience[role]}
-                  lang={lang}
-                  className="space-y-2 text-[15px] leading-relaxed text-foreground"
-                />
-              </div>
+            <div className="mt-5 border-l-2 pl-4 [border-color:var(--accent)]">
+              <h3 className="font-display text-[1.15rem] leading-tight text-foreground">{t.cluster.forYou(heading[role])}</h3>
+              <BilingualAssistBody
+                value={audience[role]}
+                lang={lang}
+                className="mt-2 space-y-2 text-[15.5px] leading-relaxed text-foreground"
+              />
             </div>
-            <details className="group mt-4 text-sm">
+            <details className="group mt-5 text-sm">
               <summary className="cursor-pointer list-none [color:var(--text-muted)] hover:text-foreground">
                 <span className="mr-1 inline-block transition-transform group-open:rotate-90">▸</span>
                 {t.cluster.otherReaders(others.map((r) => heading[r]).join(lang === "zh" ? "、" : ", "))}
               </summary>
-              <div className="mt-3 space-y-4">
+              <div className="sp-rows mt-3">
                 {others.map((r) => (
-                  <div key={r}>
-                    <h3 className="font-semibold text-foreground">{heading[r]}</h3>
-                    <div className="mt-1">{body(r)}</div>
+                  <div key={r} className="py-4">
+                    <h3 className="font-display text-[1.05rem] leading-tight text-foreground">{heading[r]}</h3>
+                    <div className="mt-1.5">{body(r)}</div>
                   </div>
                 ))}
               </div>
             </details>
           </>
         ) : (
-          <div className="space-y-4 text-sm leading-relaxed text-foreground">
+          <div className="sp-rows mt-3">
             {ROLES.map((r) => (
-              <div key={r}>
-                <h3 className="font-semibold text-foreground">{heading[r]}</h3>
-                <div className="mt-1">{body(r)}</div>
+              <div key={r} className="py-4">
+                <h3 className="font-display text-[1.05rem] leading-tight text-foreground">{heading[r]}</h3>
+                <div className="mt-1.5">{body(r)}</div>
               </div>
             ))}
           </div>

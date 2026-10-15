@@ -20,6 +20,8 @@ import { RadarToolbar } from "@/components/radar/radar-toolbar";
 import { RadarTopicCard } from "@/components/radar/radar-topic-card";
 import { RadarSignalItem, ageLabel } from "@/components/radar/radar-bits";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { uiMicroLabel, uiSectionTitle } from "@/lib/ui/classes";
 
 type RadarPageClientProps = {
   radar: ApiRadar | null;
@@ -72,35 +74,34 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
 
   return (
     <div>
-      <div className="mb-6">
-        <h1
-          className="text-4xl"
-          style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, color: "var(--sp-navy)" }}
-        >
-          {t.radar.title}
-        </h1>
+      <PageHeader
+        title={t.radar.title}
+        eyebrow={
+          radar ? (
+            <>
+              {radar.generatedAt ? (
+                <time dateTime={radar.generatedAt} className="normal-case tracking-[0.06em]">
+                  {t.radar.updated(ageLabel(radar.generatedAt, now, t))}
+                </time>
+              ) : null}
+              <a
+                href="#radar-method"
+                onClick={() => {
+                  const method = document.getElementById("radar-method");
+                  if (method instanceof HTMLDetailsElement) method.open = true;
+                }}
+                className="no-underline hover:text-foreground"
+              >
+                {t.radar.methodTitle}
+              </a>
+            </>
+          ) : undefined
+        }
+      >
         {radar && topics.length > 0 ? (
           <RadarBrief topics={topics} totalSignals={totalSignals} windowDays={radar.windowDays} onSelect={selectAndShow} />
         ) : null}
-        {radar ? (
-          <p className="mt-2 text-[12.5px] [color:var(--text-muted)]">
-            {radar.generatedAt ? (
-              <time dateTime={radar.generatedAt}>{t.radar.updated(ageLabel(radar.generatedAt, now, t))}</time>
-            ) : null}
-            {" · "}
-            <a
-              href="#radar-method"
-              onClick={() => {
-                const method = document.getElementById("radar-method");
-                if (method instanceof HTMLDetailsElement) method.open = true;
-              }}
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
-              {t.radar.methodTitle}
-            </a>
-          </p>
-        ) : null}
-      </div>
+      </PageHeader>
 
       {!radar ? (
         <EmptyState title={t.radar.unavailableTitle} description={t.radar.unavailableDesc} />
@@ -110,7 +111,7 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
         <>
           <RadarToolbar filters={filters} onChange={applyFilters} topics={topics} />
 
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <section className="min-w-0" aria-label={t.radar.title}>
               <RadarChart
                 topics={topics}
@@ -122,7 +123,7 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
                 onSelect={select}
                 onSector={toggleSector}
               />
-              <p className="mt-1 text-[12.5px] leading-relaxed [color:var(--text-muted)]">
+              <p className="mt-2 text-[12.5px] leading-relaxed [color:var(--text-muted)]">
                 {t.radar.captionRings}
                 <Dot color={MOMENTUM_FILL.rising} />
                 {t.radar.momentum.rising}
@@ -135,7 +136,7 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
 
             <aside
               id="radar-card"
-              className="min-w-0 rounded-[10px] border p-5 [background:var(--surface)] [border-color:var(--border)] lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+              className="sp-glass min-w-0 p-6 sm:p-7 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
               aria-live="polite"
             >
               {topics.map((topic) => (
@@ -154,13 +155,13 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
           </div>
 
           {/* Right under the chart: what people ask is what they will ask AI assistants too */}
-          <section className="mt-10">
-            <h2 className="text-lg font-semibold text-foreground">{t.radar.questionsTitle}</h2>
-            <p className="mb-2 mt-1 text-[12.5px] [color:var(--text-muted)]">{t.radar.questionsDesc(radar.windowDays)}</p>
+          <section className="mt-16">
+            <h2 className={`${uiSectionTitle} mb-1`}>{t.radar.questionsTitle}</h2>
+            <p className="mb-5 text-[13px] [color:var(--text-muted)]">{t.radar.questionsDesc(radar.windowDays)}</p>
             {radar.questions.length === 0 ? (
               <p className="text-sm [color:var(--text-muted)]">{t.radar.noQuestions}</p>
             ) : (
-              <ul className="grid gap-x-8 md:grid-cols-2">
+              <ul className="sp-glass sp-rows px-6 py-1 md:grid md:grid-cols-2 md:gap-x-10 md:[&>li:nth-child(2)]:border-t-0">
                 {radar.questions.map((q) => (
                   <RadarSignalItem key={q.id} signal={q} now={now} />
                 ))}
@@ -168,8 +169,8 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
             )}
           </section>
 
-          <section className="mt-10">
-            <h2 className="mb-1 text-lg font-semibold text-foreground">{t.radar.tableTitle}</h2>
+          <section className="mt-16">
+            <h2 className={uiSectionTitle}>{t.radar.tableTitle}</h2>
             <RadarTable
               topics={topics}
               rankOf={rankOf}
@@ -181,18 +182,18 @@ export function RadarPageClient({ radar, positions, answers }: RadarPageClientPr
           </section>
 
           {answers && answers.checks > 0 ? (
-            <div className="mt-12">
+            <div className="mt-16">
               <RadarAnswersSection answers={answers} now={now} />
             </div>
           ) : null}
 
           {/* Folded: few readers need it, but the method stays one click away (and in the HTML) */}
-          <details id="radar-method" className="group mt-12 max-w-3xl scroll-mt-24 border-t pt-4 [border-color:var(--border)]">
-            <summary className="cursor-pointer list-none text-[13px] font-semibold text-foreground">
+          <details id="radar-method" className="group mt-16 max-w-3xl scroll-mt-24 border-t pt-5 [border-color:var(--panel-divider)]">
+            <summary className={`${uiMicroLabel} cursor-pointer list-none hover:text-foreground`}>
               <span className="mr-1 inline-block transition-transform group-open:rotate-90">▸</span>
               {t.radar.methodTitle}
             </summary>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed [color:var(--text-muted)]">
+            <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed [color:var(--text-soft)]">
               {t.radar.methodBody} {sourceList ? t.radar.methodSources(radar.windowDays, sourceList) : null}
             </p>
           </details>

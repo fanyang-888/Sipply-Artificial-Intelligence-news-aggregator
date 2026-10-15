@@ -15,10 +15,10 @@ export function CommunityDiscussion({ posts }: { posts: Cluster["discussions"] }
   const now = useNowMinute();
   if (!posts?.length) return null;
   return (
-    <section className="mb-6">
-      <SectionTitle>{t.cluster.communityTitle}</SectionTitle>
-      <p className="-mt-1 mb-1 text-xs [color:var(--text-muted)]">{t.cluster.communityDesc}</p>
-      <ul>
+    <section aria-labelledby="story-community">
+      <SectionTitle id="story-community">{t.cluster.communityTitle}</SectionTitle>
+      <p className="mb-4 text-[13px] [color:var(--text-muted)]">{t.cluster.communityDesc}</p>
+      <ul className="sp-glass sp-rows px-6 py-1">
         {posts.map((s) => (
           <RadarSignalItem key={s.id} signal={s} now={now} />
         ))}

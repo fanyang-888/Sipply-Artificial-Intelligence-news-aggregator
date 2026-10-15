@@ -7,7 +7,7 @@ type NoResultsStateProps = {
 };
 
 /**
- * Filter/search produced no matches — solid panel, distinct from empty catalog (dashed) and 404.
+ * Filter/search produced no matches.
  */
 export function NoResultsState({
   title,
@@ -15,10 +15,10 @@ export function NoResultsState({
   children,
 }: NoResultsStateProps) {
   return (
-    <div className="rounded-lg border px-4 py-8 text-center shadow-sm [border-color:var(--border)] [background:var(--surface2)]">
-      <p className="font-medium text-foreground">{title}</p>
+    <div className="sp-glass px-6 py-12 text-center">
+      <p className="font-display text-[1.35rem] leading-snug text-foreground">{title}</p>
       {message ? (
-        <p className="mt-2 text-sm leading-relaxed [color:var(--text-muted)]">{message}</p>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed [color:var(--text-soft)]">{message}</p>
       ) : null}
       {children ? <div className="mt-5">{children}</div> : null}
     </div>

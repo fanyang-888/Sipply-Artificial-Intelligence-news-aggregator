@@ -120,18 +120,18 @@ export function RadarSignalItem({ signal, now }: { signal: ApiRadarSignal; now: 
   const engagement = engagementLabel(signal, t.radar);
   const showDiscussion = signal.discussionUrl && signal.discussionUrl !== signal.url;
   return (
-    <li className="border-b py-2 last:border-b-0 [border-color:var(--border)]">
+    <li className="py-3">
       <a
         href={signal.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[13.5px] font-medium leading-snug text-foreground no-underline hover:[color:var(--accent)]"
+        className="text-[14px] font-medium leading-snug text-foreground no-underline hover:[color:var(--accent)]"
         title={title !== signal.title ? signal.title : undefined}
       >
         {title}
       </a>
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] [color:var(--text-muted)]">
-        <span className="font-mono text-[10px] uppercase tracking-[0.08em] [color:var(--accent)]">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[11.5px] [color:var(--text-muted)]">
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] [color:var(--accent)]">
           {t.radar.sourceShort[signal.source]}
         </span>
         {signal.outlet ? <span>{signal.outlet}</span> : null}

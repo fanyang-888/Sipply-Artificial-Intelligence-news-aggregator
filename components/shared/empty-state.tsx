@@ -9,9 +9,9 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, action, children }: EmptyStateProps) {
   return (
-    <div className="rounded border border-dashed px-4 py-8 text-center [border-color:var(--border)] [background:var(--surface2)]">
-      <p className="font-medium text-foreground">{title}</p>
-      {description ? <p className="mt-2 text-sm [color:var(--text-muted)]">{description}</p> : null}
+    <div className="sp-glass px-6 py-12 text-center">
+      <p className="font-display text-[1.35rem] leading-snug text-foreground">{title}</p>
+      {description ? <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed [color:var(--text-soft)]">{description}</p> : null}
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
       {children ? <div className="mt-5">{children}</div> : null}
     </div>

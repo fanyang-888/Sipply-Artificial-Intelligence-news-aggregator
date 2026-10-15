@@ -92,6 +92,7 @@ export const zh: Translations = {
     allCategories: "全部分类",
     loading: "正在加载资料库…",
     suggestThemesLead: "试试按分类浏览：",
+    sortLabel: "排序",
     sortBestMatch: "最相关",
     sortNewest: "最新",
     loadingMore: "加载中…",
@@ -282,8 +283,10 @@ export const zh: Translations = {
     caughtUpViewArchive: "查看资料库",
   },
   notFound: {
+    pageTitle: "页面不存在",
+    pageMessage: "这个地址下没有内容。",
     clusterTitle: "未找到该故事集群",
-    clusterMessage: "该集群 id 不在本地 mock 目录中。",
+    clusterMessage: "这篇故事不存在或已被移除。",
     backToDigest: "返回每日摘要",
   },
   error: {
