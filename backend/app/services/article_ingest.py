@@ -29,6 +29,7 @@ from app.utils.text_stats import (
     word_count,
 )
 from app.utils.url_normalize import normalize_article_url
+from app.services.text_clean import clean_title
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +151,7 @@ def persist_fetched_article(
     ``content_hash`` uses SHA-256 over cleaned/raw text (see module comment in ``text_stats``); identical
     text across URLs yields identical hashes (possible future cross-post merge signal — not applied today).
     """
-    title = (normalized.title or "").strip()
+    title = clean_title(normalized.title)
     if not title:
         logger.warning(
             "ingest rejected reason=empty_title adapter=%s url=%s",

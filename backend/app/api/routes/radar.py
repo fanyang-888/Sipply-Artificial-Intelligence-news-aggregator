@@ -44,6 +44,7 @@ from app.signals.base import (
 )
 from app.signals.config import radar_config
 from app.signals.topics import engagement_of, evidence_ring, evidence_trail, topic_momentum
+from app.services.text_clean import clean_title
 
 router = APIRouter(prefix="/api/radar", tags=["radar"])
 
@@ -129,7 +130,7 @@ def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> Rad
     return RadarCoverage(
         status="covered",
         clusterId=str(story.id),
-        title=story.representative_title,
+        title=clean_title(story.representative_title),
         titleZh=story.representative_title_zh,
     )
 
