@@ -38,8 +38,7 @@ export function SubscribeBar() {
       ) : (
         <>
           <h2
-            className="text-[22px] leading-tight text-foreground"
-            style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 400 }}
+            className="font-display font-normal text-[22px] leading-tight text-foreground"
           >
             {s.heading}
           </h2>

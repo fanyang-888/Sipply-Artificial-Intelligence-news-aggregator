@@ -23,8 +23,7 @@ export function WeekPanel({ week }: { week: ApiWeekSummary | null }) {
                 <span className="pt-0.5 font-mono text-[12px] tabular-nums [color:var(--text-muted)]">{String(i + 1).padStart(2, "0")}</span>
                 <Link
                   href={`/cluster/${h.id}`}
-                  className="text-[17px] leading-snug text-foreground no-underline hover:[color:var(--accent)]"
-                  style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 400 }}
+                  className="font-display font-normal text-[17px] leading-snug text-foreground no-underline hover:[color:var(--accent)]"
                 >
                   {lang === "zh" && h.titleZh ? h.titleZh : h.title}
                 </Link>

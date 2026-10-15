@@ -58,8 +58,7 @@ export function LeadStory({ story, dateLabel, updatedAt, more }: LeadStoryProps)
           ) : null}
           <h1
             id="lead-story-title"
-            className="text-[clamp(2.3rem,5.4vw,4.6rem)] leading-[1.03] tracking-[-0.025em] text-foreground [text-wrap:balance]"
-            style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 300 }}
+            className="font-display font-light text-[clamp(2.3rem,5.4vw,4.6rem)] leading-[1.03] tracking-[-0.025em] text-foreground [text-wrap:balance]"
           >
             <Link href={`/cluster/${story.id}`} className="no-underline hover:opacity-90">
               {pickLocalized(story.title, lang)}
