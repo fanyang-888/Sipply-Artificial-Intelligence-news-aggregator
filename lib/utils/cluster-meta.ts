@@ -37,12 +37,3 @@ export function getOutletDiversityFromArticles(articles: Article[]): OutletDiver
     uniqueOutletCount: ids.size,
   };
 }
-
-/**
- * Next cluster in score-ranked order.
- * Returns undefined — real-time cluster ordering requires a server-side
- * query and is not available in the frontend without an additional API call.
- */
-export function getNextClusterInRankOrder(_clusterId: string): Cluster | undefined {
-  return undefined;
-}

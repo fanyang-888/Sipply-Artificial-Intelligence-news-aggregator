@@ -260,6 +260,7 @@ export type Translations = {
     formatSourceDiversityBroad: (outlets: number, articles: number) => string;
     formatSourceDiversityNarrow: (outlets: number, articles: number) => string;
     allCaughtUpToday: string;
+    moreToday: string;
     caughtUpViewArchive: string;
   };
   notFound: {
