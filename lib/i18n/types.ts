@@ -263,6 +263,8 @@ export type Translations = {
     caughtUpViewArchive: string;
   };
   notFound: {
+    pageTitle: string;
+    pageMessage: string;
     clusterTitle: string;
     clusterMessage: string;
     backToDigest: string;

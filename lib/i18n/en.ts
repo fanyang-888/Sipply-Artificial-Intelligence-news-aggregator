@@ -292,6 +292,8 @@ export const en: Translations = {
     caughtUpViewArchive: "View Archive",
   },
   notFound: {
+    pageTitle: "Page not found",
+    pageMessage: "There is nothing at this address.",
     clusterTitle: "Story cluster not found",
     clusterMessage: "This story does not exist or was removed.",
     backToDigest: "Back to Daily Digest",

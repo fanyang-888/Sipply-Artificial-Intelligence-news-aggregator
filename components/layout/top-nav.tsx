@@ -35,8 +35,8 @@ function ThemeToggle() {
         width: 32,
         height: 32,
         borderRadius: "50%",
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
+        boxShadow: "inset 0 0 0 1px var(--panel-divider)",
+        background: "var(--panel-fill-2)",
         color: "var(--text-muted)",
         cursor: "pointer",
         display: "flex",
@@ -66,7 +66,7 @@ export function TopNav() {
       className="sticky top-0 z-40"
       style={{
         background: "var(--masthead-bg)",
-        borderBottom: "1px solid var(--border)",
+        borderBottom: "1px solid var(--panel-divider)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         boxShadow: "var(--shadow)",
@@ -124,8 +124,8 @@ export function TopNav() {
             <Suspense
               fallback={
                 <div
-                  className="h-8 w-full rounded-md"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                  className="h-8 w-full rounded-full"
+                  style={{ background: "var(--panel-fill-2)", boxShadow: "inset 0 0 0 1px var(--panel-divider)" }}
                   aria-hidden
                 />
               }
@@ -136,8 +136,8 @@ export function TopNav() {
           {/* Search icon — mobile */}
           <Link
             href="/archive"
-            className="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            className="sm:hidden flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ background: "var(--panel-fill-2)", boxShadow: "inset 0 0 0 1px var(--panel-divider)" }}
             aria-label="Search"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
@@ -147,10 +147,10 @@ export function TopNav() {
           {/* Trend Radar — mobile (the desktop nav links are hidden below sm) */}
           <Link
             href="/radar"
-            className="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg"
+            className="sm:hidden flex h-8 w-8 items-center justify-center rounded-full"
             style={{
-              background: onRadar ? "var(--accent)" : "var(--surface)",
-              border: "1px solid var(--border)",
+              background: onRadar ? "var(--accent)" : "var(--panel-fill-2)",
+              boxShadow: onRadar ? "none" : "inset 0 0 0 1px var(--panel-divider)",
             }}
             aria-label={t.nav.radar}
           >
