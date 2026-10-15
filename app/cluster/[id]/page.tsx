@@ -8,6 +8,7 @@ import { getCluster, getDigest, isBuildPhase, isMissing } from "@/lib/api/server
 import type { ApiCluster } from "@/lib/api/types";
 import { newsArticleJsonLd } from "@/lib/seo/json-ld";
 import { storyPath } from "@/lib/seo/site";
+import { positionInDigest, type TodayPosition } from "@/lib/utils/today-position";
 import { ClusterPageClient } from "./cluster-page-client";
 
 type Props = {
@@ -36,18 +37,9 @@ export function generateStaticParams() {
   return [];
 }
 
-/** Where this story sits in today's digest: the story after it, or none if it's last / not in the digest. */
-export type TodayPosition = { next: ApiCluster | null; inDigest: boolean };
-
 async function todayPosition(id: string): Promise<TodayPosition | null> {
   try {
-    const digest = await getDigest();
-    // The home page reads the featured story first, then the rest of the list
-    const order = digest.featured
-      ? [digest.featured, ...digest.topClusters.filter((c) => c.id !== digest.featured?.id)]
-      : digest.topClusters;
-    const i = order.findIndex((c) => c.id === id);
-    return i < 0 ? { next: null, inDigest: false } : { next: order[i + 1] ?? null, inDigest: true };
+    return positionInDigest(await getDigest(), id);
   } catch {
     return null;
   }

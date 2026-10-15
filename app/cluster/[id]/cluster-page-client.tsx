@@ -11,7 +11,7 @@ import { apiClusterToCluster } from "@/lib/api/mappers";
 import { trackEvent } from "@/lib/api/track";
 import type { ApiCluster } from "@/lib/api/types";
 import type { Cluster } from "@/types/cluster";
-import type { TodayPosition } from "./page";
+import type { TodayPosition } from "@/lib/utils/today-position";
 
 type ClusterPageClientProps = {
   /** Server-fetched story; null when the server couldn't reach the API (fetch here instead). */
