@@ -172,7 +172,8 @@ class RadarSignal(BaseModel):
 
 
 class RadarCoverage(BaseModel):
-    # "covered": Sipply has a story on this topic; "gap": checked, no story yet
+    # Always "covered" on the public radar: topics Sipply has no story on are listed
+    # for the editor only (GET /api/admin/radar/gaps), never on the public page
     status: str
     clusterId: str | None = None
     title: str | None = None
@@ -186,13 +187,43 @@ class RadarCitation(BaseModel):
 
 
 class RadarAnswerCheck(BaseModel):
+    # Public: what the assistant cited. Whether it cited Sipply is for the editor only
+    # (GET /api/admin/radar/answers), never on the public radar
     checkedAt: str | None
     model: str
-    sipplyCited: bool
-    sipplyInSources: bool
     # Cited inline in the answer, in order (first few)
     citations: list[RadarCitation]
     sourceCount: int
+
+
+class RadarBriefSource(BaseModel):
+    title: str
+    url: str
+    platform: str  # source family: "hn", "news", "bluesky", …
+
+
+class RadarBriefText(BaseModel):
+    en: str
+    zh: str
+
+
+class RadarBriefFact(RadarBriefText):
+    source: RadarBriefSource
+
+
+class RadarBrief(BaseModel):
+    """What an editor needs to cover a topic Sipply hasn't (app.signals.briefs)."""
+
+    headlineEn: str
+    headlineZh: str
+    angleEn: str | None = None
+    angleZh: str | None = None
+    questions: list[RadarBriefText]
+    # Each fact comes from one of the topic's posts
+    facts: list[RadarBriefFact]
+    sources: list[RadarBriefSource]
+    model: str
+    writtenAt: str | None = None
 
 
 class RadarTopic(BaseModel):
@@ -230,6 +261,30 @@ class RadarTopic(BaseModel):
     questions: list[RadarSignal]
 
 
+class RadarGapTopic(BaseModel):
+    id: str
+    label: str
+    labelZh: str | None = None
+    ring: int
+    signalCount: int
+    score: float
+    summaryEn: str | None = None
+    summaryZh: str | None = None
+    question: str | None = None
+    # None until brief_signal_topics has written one (next pipeline run)
+    brief: RadarBrief | None = None
+    signals: list[RadarSignal]
+
+
+class RadarGapsResponse(BaseModel):
+    """Admin: mainstream / picking-up topics Sipply has no story on, with their content briefs."""
+
+    generatedAt: str | None
+    # Inner-ring topics whose coverage has been checked, gaps included
+    checked: int
+    topics: list[RadarGapTopic]
+
+
 class RadarSource(BaseModel):
     key: str
     label: str
@@ -249,23 +304,35 @@ class RadarRecentCheck(BaseModel):
     checkedAt: str | None
     question: str
     topicLabel: str | None
-    sipplyCited: bool
-    sipplyHasStory: bool
     citations: list[RadarCitation]
 
 
 class RadarAnswersResponse(BaseModel):
+    """Public: which sites AI assistants cite for the radar questions."""
+
     days: int
     model: str | None
     checks: int
     questions: int
+    topDomains: list[RadarDomainShare]
+    recent: list[RadarRecentCheck]
+
+
+class SipplyRecentCheck(RadarRecentCheck):
+    sipplyCited: bool
+    sipplyInSources: bool
+    sipplyHasStory: bool
+
+
+class SipplyAnswersResponse(RadarAnswersResponse):
+    """Admin: the same, plus how often the assistant cited (or read) Sipply."""
+
     sipplyCited: int
     sipplyInSources: int
     # Checks on topics Sipply had a story on (only those can cite it)
     sipplyCovered: int
     sipplyCitedWhenCovered: int
-    topDomains: list[RadarDomainShare]
-    recent: list[RadarRecentCheck]
+    recent: list[SipplyRecentCheck]
 
 
 class RadarResponse(BaseModel):

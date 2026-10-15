@@ -95,8 +95,6 @@ export function RadarTopicCard({ topic, rank, total, windowDays, builtAt, now, h
             {radarTitle(coverage.title ?? "", coverage.titleZh, lang)}
           </Link>
         </p>
-      ) : coverage?.status === "gap" ? (
-        <p className="text-sm font-semibold [color:var(--amber)]">{t.radar.coverageGap}</p>
       ) : null}
 
       <ScoreLine score={topic.score} components={topic.components} rank={rank} total={total} />

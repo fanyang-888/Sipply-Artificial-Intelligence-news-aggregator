@@ -179,13 +179,49 @@ export type ApiRadarScoreComponents = {
 
 export type ApiRadarCitation = { url: string; title: string; domain: string };
 
+/** A post a content brief cites. ``platform`` is a source family ("hn", "news", …). */
+export type ApiRadarBriefSource = { title: string; url: string; platform: RadarSourceKey };
+
+/**
+ * What an editor needs to cover a topic Sipply hasn't (backend app/signals/briefs.py; admin only):
+ * AI-drafted from the topic's posts; every fact names the post it comes from.
+ */
+export type ApiRadarBrief = {
+  headlineEn: string;
+  headlineZh: string;
+  angleEn: string | null;
+  angleZh: string | null;
+  questions: { en: string; zh: string }[];
+  facts: { en: string; zh: string; source: ApiRadarBriefSource }[];
+  sources: ApiRadarBriefSource[];
+  model: string;
+  writtenAt: string | null;
+};
+
+/** GET /api/admin/radar/gaps: inner-ring topics Sipply has no story on, with their briefs. */
+export type ApiRadarGaps = {
+  generatedAt: string | null;
+  /** Inner-ring topics whose coverage has been checked, gaps included. */
+  checked: number;
+  topics: {
+    id: string;
+    label: string;
+    labelZh: string | null;
+    ring: RadarRing;
+    signalCount: number;
+    score: number;
+    summaryEn: string | null;
+    summaryZh: string | null;
+    question: string | null;
+    brief: ApiRadarBrief | null;
+    signals: ApiRadarSignal[];
+  }[];
+};
+
 /** What an AI assistant with web search answered to the topic's question. */
 export type ApiRadarAnswerCheck = {
   checkedAt: string | null;
   model: string;
-  sipplyCited: boolean;
-  /** Sipply was among the pages the search read, cited or not. */
-  sipplyInSources: boolean;
   citations: ApiRadarCitation[];
   sourceCount: number;
 };
@@ -196,24 +232,28 @@ export type ApiRadarAnswers = {
   model: string | null;
   checks: number;
   questions: number;
-  sipplyCited: number;
-  sipplyInSources: number;
-  sipplyCovered: number;
-  sipplyCitedWhenCovered: number;
   topDomains: { domain: string; citations: number; share: number }[];
   recent: {
     checkedAt: string | null;
     question: string;
     topicLabel: string | null;
-    sipplyCited: boolean;
-    sipplyHasStory: boolean;
     citations: ApiRadarCitation[];
   }[];
 };
 
+/** GET /api/admin/radar/answers (editor only): the same, plus how often the assistant cited or read Sipply. */
+export type ApiSipplyAnswers = Omit<ApiRadarAnswers, "recent"> & {
+  sipplyCited: number;
+  sipplyInSources: number;
+  /** Checks on topics Sipply had a story on (only those can cite it). */
+  sipplyCovered: number;
+  sipplyCitedWhenCovered: number;
+  recent: (ApiRadarAnswers["recent"][number] & { sipplyCited: boolean; sipplyInSources: boolean; sipplyHasStory: boolean })[];
+};
+
+/** Sipply's story on the topic. The public radar only lists covered topics; gaps are admin-only. */
 export type ApiRadarCoverage = {
-  /** "covered": Sipply has a story on this topic; "gap": checked, no story yet. */
-  status: "covered" | "gap";
+  status: "covered";
   clusterId: string | null;
   title: string | null;
   titleZh: string | null;

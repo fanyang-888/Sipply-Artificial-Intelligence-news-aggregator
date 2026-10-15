@@ -97,6 +97,8 @@ DESCRIPTION_FIELDS = (
     "covered_cluster_id",
     "described_signal_count",
     "described_at",
+    "brief",
+    "brief_signal_count",
 )
 
 _VECTORIZER: dict[str, Any] = {"stop_words": "english", "sublinear_tf": True}

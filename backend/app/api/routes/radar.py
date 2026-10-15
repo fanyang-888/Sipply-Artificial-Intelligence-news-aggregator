@@ -14,6 +14,9 @@ from sqlalchemy.orm import Session
 from app.api.schemas import (
     RadarAnswerCheck,
     RadarAnswersResponse,
+    RadarBrief,
+    RadarGapTopic,
+    RadarGapsResponse,
     RadarCitation,
     RadarCoverage,
     RadarDomainShare,
@@ -22,6 +25,8 @@ from app.api.schemas import (
     RadarSignal,
     RadarSource,
     RadarTopic,
+    SipplyAnswersResponse,
+    SipplyRecentCheck,
     format_dt,
 )
 from app.cache import cache_get, cache_set
@@ -51,6 +56,7 @@ TOP_DOMAINS = 10
 RECENT_CHECKS = 20
 SIGNALS_PER_TOPIC = 5
 QUESTIONS_PER_TOPIC = 3
+GAP_SIGNALS = 3
 TOP_QUESTIONS = 12
 # Question-flagged signals read per page build; the stricter is_asked_question check runs on these
 QUESTION_CANDIDATES = 200
@@ -94,18 +100,29 @@ def _answer_check_out(check: AnswerCheck | None) -> RadarAnswerCheck | None:
     return RadarAnswerCheck(
         checkedAt=format_dt(check.checked_at),
         model=check.model,
-        sipplyCited=check.sipply_cited,
-        sipplyInSources=check.sipply_in_sources,
         citations=_citations(check, CITATIONS_SHOWN),
         sourceCount=len(check.sources or []),
     )
 
 
-def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
-    if ring > 2 or topic.described_at is None:
+def _brief_out(brief: dict[str, Any] | None) -> RadarBrief | None:
+    """The stored brief, or None if it is missing or no longer matches the schema."""
+    if not brief:
         return None
-    if topic.covered_cluster_id is None:
-        return RadarCoverage(status="gap")
+    try:
+        return RadarBrief.model_validate(brief)
+    except ValueError:
+        return None
+
+
+def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
+    """Sipply's story on the topic, when it has one.
+
+    Topics Sipply hasn't covered are an editorial matter, shown to the editor
+    (build_gaps, GET /api/admin/radar/gaps) and never on the public radar.
+    """
+    if ring > 2 or topic.covered_cluster_id is None:
+        return None
     story = stories.get(topic.covered_cluster_id)
     if story is None:  # deleted since the check; the next run checks again
         return None
@@ -268,8 +285,12 @@ def get_radar(
     return JSONResponse(content=data)
 
 
-def build_answers(db: Session, *, days: int, now: datetime | None = None) -> dict[str, Any]:
-    """What AI assistants cited for the radar questions over the last ``days`` days."""
+def build_answers(db: Session, *, days: int, now: datetime | None = None, sipply: bool = False) -> dict[str, Any]:
+    """What AI assistants cited for the radar questions over the last ``days`` days.
+
+    ``sipply=True`` (admin only) adds how often the assistant cited or read Sipply;
+    the public radar never says so.
+    """
     now = now or datetime.now(timezone.utc)
     checks = list(
         db.execute(
@@ -287,30 +308,45 @@ def build_answers(db: Session, *, days: int, now: datetime | None = None) -> dic
         for d in set(domains):
             checks_per_domain[d] += 1
     top = sorted(checks_per_domain, key=lambda d: (-checks_per_domain[d], -citations_per_domain[d], d))[:TOP_DOMAINS]
+    base = {
+        "days": days,
+        "model": checks[0].model if checks else None,
+        "checks": len(checks),
+        "questions": len({c.question for c in checks}),
+        "topDomains": [
+            RadarDomainShare(domain=d, citations=citations_per_domain[d], share=round(checks_per_domain[d] / len(checks), 3))
+            for d in top
+        ],
+    }
+    recent = checks[:RECENT_CHECKS]
+    if not sipply:
+        return RadarAnswersResponse(
+            **base,
+            recent=[
+                RadarRecentCheck(
+                    checkedAt=format_dt(c.checked_at), question=c.question, topicLabel=c.topic_label, citations=_citations(c, 3)
+                )
+                for c in recent
+            ],
+        ).model_dump(mode="json")
     covered = [c for c in checks if c.covered_cluster_id]
-    return RadarAnswersResponse(
-        days=days,
-        model=checks[0].model if checks else None,
-        checks=len(checks),
-        questions=len({c.question for c in checks}),
+    return SipplyAnswersResponse(
+        **base,
         sipplyCited=sum(c.sipply_cited for c in checks),
         sipplyInSources=sum(c.sipply_in_sources for c in checks),
         sipplyCovered=len(covered),
         sipplyCitedWhenCovered=sum(c.sipply_cited for c in covered),
-        topDomains=[
-            RadarDomainShare(domain=d, citations=citations_per_domain[d], share=round(checks_per_domain[d] / len(checks), 3))
-            for d in top
-        ],
         recent=[
-            RadarRecentCheck(
+            SipplyRecentCheck(
                 checkedAt=format_dt(c.checked_at),
                 question=c.question,
                 topicLabel=c.topic_label,
-                sipplyCited=c.sipply_cited,
-                sipplyHasStory=c.covered_cluster_id is not None,
                 citations=_citations(c, 3),
+                sipplyCited=c.sipply_cited,
+                sipplyInSources=c.sipply_in_sources,
+                sipplyHasStory=c.covered_cluster_id is not None,
             )
-            for c in checks[:RECENT_CHECKS]
+            for c in recent
         ],
     ).model_dump(mode="json")
 
@@ -320,7 +356,7 @@ def get_radar_answers(
     days: int = Query(default=30, ge=1, le=90, description="Look-back window in days"),
     db: Session = Depends(get_db),
 ):
-    """Which sites an AI assistant with web search cited for the radar questions, and how often Sipply was one.
+    """Which sites an AI assistant with web search cited for the radar questions.
 
     Cached until the next pipeline run clears the ``ai_tool:*`` keys.
     """
@@ -330,3 +366,39 @@ def get_radar_answers(
         data = build_answers(db, days=days)
         cache_set(key, data)
     return JSONResponse(content=data)
+
+
+def build_gaps(db: Session) -> dict[str, Any]:
+    """Mainstream and picking-up topics Sipply has no story on, best first, with content briefs (admin only)."""
+    generated = db.execute(select(func.max(SignalTopic.created_at))).scalar_one_or_none()
+    topics = db.execute(
+        select(SignalTopic).order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
+    ).scalars().all()
+    checked = [
+        t for t in topics if t.described_at is not None and evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2
+    ]
+    gaps = [t for t in checked if t.covered_cluster_id is None]
+    members: dict[Any, list[Signal]] = defaultdict(list)
+    if gaps:
+        for s in db.execute(select(Signal).where(Signal.topic_id.in_([t.id for t in gaps]))).scalars():
+            members[s.topic_id].append(s)
+    return RadarGapsResponse(
+        generatedAt=format_dt(generated),
+        checked=len(checked),
+        topics=[
+            RadarGapTopic(
+                id=str(t.id),
+                label=t.label,
+                labelZh=next((s.title_zh for s in members[t.id] if s.title == t.label and s.title_zh), None),
+                ring=evidence_ring(t.signal_count, len(t.source_counts or {})),
+                signalCount=t.signal_count,
+                score=t.score,
+                summaryEn=t.summary_en,
+                summaryZh=t.summary_zh,
+                question=t.question_en,
+                brief=_brief_out(t.brief),
+                signals=[_signal_out(s) for s in _by_engagement(members[t.id])[:GAP_SIGNALS]],
+            )
+            for t in gaps
+        ],
+    ).model_dump(mode="json")

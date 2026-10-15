@@ -105,8 +105,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                         <span className="sm:hidden"> · {topic.signalCount}</span>
                         <span className="md:hidden">
                           {loud(topic) ? <> · {momentum}</> : null}
-                          {coverage?.status === "gap" ? <span className="[color:var(--amber)]"> · {t.radar.noStoryShort}</span> : null}
-                        </span>
+                          </span>
                       </span>
                     </span>
                     <span className="hidden text-right font-mono tabular-nums text-foreground sm:block">{topic.signalCount}</span>
@@ -123,8 +122,6 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                         >
                           ✓
                         </Link>
-                      ) : coverage?.status === "gap" ? (
-                        <span className="[color:var(--amber)]">{t.radar.noStoryShort}</span>
                       ) : null}
                     </span>
                   </li>
