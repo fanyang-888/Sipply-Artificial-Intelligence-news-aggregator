@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ApiCluster, ApiDigest } from "@/lib/api/types";
-import { breadcrumbJsonLd, digestItemListJsonLd, newsArticleJsonLd, serializeJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
+import { breadcrumbJsonLd, digestItemListJsonLd, newsArticleJsonLd, pageListJsonLd, serializeJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { buildLlmsTxt } from "@/lib/seo/llms-txt";
 import { SITE_URL, storyUrl } from "@/lib/seo/site";
 
@@ -127,6 +127,22 @@ describe("breadcrumbJsonLd", () => {
       { "@type": "ListItem", position: 1, name: "Sipply", item: "https://www.sipply.dev/" },
       { "@type": "ListItem", position: 2, name: "Weekly recaps", item: "https://www.sipply.dev/weekly" },
       { "@type": "ListItem", position: 3, name: "AI news, Oct 12 – 18, 2026", item: "https://www.sipply.dev/weekly/2026-W42" },
+    ]);
+  });
+});
+
+describe("pageListJsonLd", () => {
+  it("lists hub pages as absolute URLs", () => {
+    const ld = pageListJsonLd({
+      name: "Companies & models",
+      description: "One page each.",
+      path: "/topics",
+      items: [{ name: "OpenAI", path: "/topics/openai" }],
+    });
+    expect(ld["@type"]).toBe("CollectionPage");
+    expect(ld.url).toBe("https://www.sipply.dev/topics");
+    expect((ld.mainEntity as { itemListElement: unknown[] }).itemListElement).toEqual([
+      { "@type": "ListItem", position: 1, name: "OpenAI", url: "https://www.sipply.dev/topics/openai" },
     ]);
   });
 });

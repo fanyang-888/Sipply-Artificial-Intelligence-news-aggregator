@@ -143,6 +143,35 @@ export function collectionPageJsonLd(page: {
   };
 }
 
+/** A hub index (companies, weeks): a collection whose main entity is its list of hub pages. */
+export function pageListJsonLd(page: {
+  name: string;
+  description: string;
+  path: string;
+  items: { name: string; path: string }[];
+}): JsonLd {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: page.name,
+    description: page.description,
+    url: `${SITE_URL}${page.path}`,
+    inLanguage: "en",
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    publisher: PUBLISHER,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: page.items.length,
+      itemListElement: page.items.map((item, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: item.name,
+        url: `${SITE_URL}${item.path}`,
+      })),
+    },
+  };
+}
+
 /** JSON for a <script> tag: "<" escaped so a title can never close the script element. */
 export function serializeJsonLd(data: JsonLd): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
