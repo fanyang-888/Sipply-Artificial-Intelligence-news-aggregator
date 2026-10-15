@@ -6,8 +6,8 @@ import { useI18n } from "@/lib/i18n";
 
 /**
  * Sets document.title from the current route and language, for the pages
- * whose title is just a section name. Every other page (stories, topics,
- * weekly recaps) keeps the specific title its generateMetadata rendered.
+ * whose title is just a section name. Every other page (stories, a topic,
+ * a week) keeps the specific title its generateMetadata rendered.
  */
 export function DocumentTitle() {
   const pathname = usePathname();
@@ -19,6 +19,8 @@ export function DocumentTitle() {
       pathname === "/" ? t.meta.titleHome
       : pathname === "/archive" ? t.meta.titleArchive
       : pathname === "/radar" ? t.meta.titleRadar
+      : pathname === "/topics" ? t.hubs.topicsTitle
+      : pathname === "/weekly" ? t.hubs.weeklyTitle
       : null;
     if (pagePart) document.title = `${pagePart} | ${t.meta.titleBrand}`;
   }, [i18nReady, pathname, t]);
