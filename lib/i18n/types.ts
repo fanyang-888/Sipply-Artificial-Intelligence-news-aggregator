@@ -10,6 +10,8 @@ export type Translations = {
     dailyDigestShort: string;
     archive: string;
     radar: string;
+    topics: string;
+    weekly: string;
     searchPlaceholder: string;
     searchAria: string;
     mainAria: string;
@@ -81,6 +83,35 @@ export type Translations = {
     freshnessHours: (h: number) => string;
     freshnessDays: (d: number) => string;
     sourceCountLabel: (n: number) => string;
+  };
+  hubs: {
+    topicsTitle: string;
+    topicsDescription: string;
+    recentStories: (n: number) => string;
+    totalStories: (n: number) => string;
+    latest: (date: string) => string;
+    topicTitle: (name: string) => string;
+    topicDescription: (name: string) => string;
+    onRadar: string;
+    onRadarDesc: string;
+    ringNames: Record<1 | 2 | 3, string>;
+    rising: string;
+    signals: (n: number) => string;
+    storiesTitle: string;
+    allTopics: string;
+    weeklyTitle: string;
+    weeklyDescription: string;
+    weekTitle: (range: string) => string;
+    weekStories: (n: number) => string;
+    thisWeek: string;
+    topStories: string;
+    byCategory: string;
+    companies: string;
+    newer: string;
+    older: string;
+    allWeeks: string;
+    browse: string;
+    unavailable: string;
   };
   radar: {
     title: string;
@@ -201,6 +232,7 @@ export type Translations = {
     audienceStudent: string;
     coveredSources: string;
     relatedStories: string;
+    relatedTopics: string;
     /** Shown in Chinese mode above product-structured story body (bilingual assist disclaimer). */
     bilingualAssistTrustNote: string;
     /** Under covered sources: originals stay in source language. */

@@ -3,7 +3,7 @@
  * Pure builders over the API wire types; rendered by components/shared/json-ld.tsx.
  */
 
-import type { ApiCluster, ApiDigest } from "@/lib/api/types";
+import type { ApiArchiveClusterRow, ApiCluster, ApiDigest } from "@/lib/api/types";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, storyUrl } from "@/lib/seo/site";
 
 type JsonLd = Record<string, unknown>;
@@ -68,6 +68,38 @@ export function digestItemListJsonLd(d: ApiDigest): JsonLd {
       url: storyUrl(c.id),
       name: c.title.en,
     })),
+  };
+}
+
+/** A topic or weekly page: a collection whose main entity is its list of story pages. */
+export function collectionPageJsonLd(page: {
+  name: string;
+  description: string;
+  path: string;
+  stories: ApiArchiveClusterRow[];
+  dateModified?: string | null;
+}): JsonLd {
+  const url = `${SITE_URL}${page.path}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: page.name,
+    description: page.description,
+    url,
+    inLanguage: "en",
+    dateModified: page.dateModified ?? undefined,
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    publisher: PUBLISHER,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: page.stories.length,
+      itemListElement: page.stories.map((s, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: storyUrl(s.id),
+        name: s.title,
+      })),
+    },
   };
 }
 

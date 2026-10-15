@@ -81,6 +81,11 @@ class ArticleInCluster(BaseModel):
     excerpt: str | None
 
 
+class TopicRef(BaseModel):
+    slug: str
+    name: str
+
+
 class ClusterResponse(BaseModel):
     id: str
     clusterType: str
@@ -103,6 +108,8 @@ class ClusterResponse(BaseModel):
     relatedClusterIds: list[str]
     articleCount: int
     sourceCount: int
+    # Company / model-family pages this story belongs to (see app/services/entities.py)
+    topics: list[TopicRef] = []
 
 
 class DigestResponse(BaseModel):

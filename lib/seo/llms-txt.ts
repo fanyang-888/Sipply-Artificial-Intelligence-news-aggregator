@@ -28,6 +28,9 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
       "engagement and how fast they are rising, " +
       "plus the questions people are asking",
     `- [Archive](${SITE_URL}/archive): every story, searchable by keyword and category`,
+    `- [Companies & models](${SITE_URL}/topics): every story about OpenAI, Anthropic, Google & Gemini, Meta, ` +
+      "DeepSeek and other AI companies and model families, one page each",
+    `- [Weekly recaps](${SITE_URL}/weekly): the top AI stories of each week, by category and company`,
   ];
 
   const stories = digest ? [digest.featured, ...digest.topClusters].filter((c) => c != null) : [];

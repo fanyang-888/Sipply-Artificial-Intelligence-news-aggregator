@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 
 /**
- * Sets document.title from the current route and language.
- * Story pages are left alone: their headline title comes from the server.
+ * Sets document.title from the current route and language, for the pages
+ * whose title is just a section name. Every other page (stories, topics,
+ * weekly recaps) keeps the specific title its generateMetadata rendered.
  */
 export function DocumentTitle() {
   const pathname = usePathname();
@@ -14,19 +15,12 @@ export function DocumentTitle() {
 
   useEffect(() => {
     if (!i18nReady) return;
-    // Story pages keep the headline title rendered by the server (generateMetadata)
-    if (pathname.startsWith("/cluster/")) return;
-
-    const brand = t.meta.titleBrand;
-    let pagePart = t.meta.titleHome;
-
-    if (pathname === "/archive") {
-      pagePart = t.meta.titleArchive;
-    } else if (pathname === "/radar") {
-      pagePart = t.meta.titleRadar;
-    }
-
-    document.title = `${pagePart} | ${brand}`;
+    const pagePart =
+      pathname === "/" ? t.meta.titleHome
+      : pathname === "/archive" ? t.meta.titleArchive
+      : pathname === "/radar" ? t.meta.titleRadar
+      : null;
+    if (pagePart) document.title = `${pagePart} | ${t.meta.titleBrand}`;
   }, [i18nReady, pathname, t]);
 
   return null;
