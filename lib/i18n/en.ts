@@ -242,6 +242,8 @@ export const en: Translations = {
     audiencePm: "PMs",
     audienceDeveloper: "Developers",
     audienceStudent: "Students & job seekers",
+    forYou: (role) => `For you · ${role}`,
+    otherReaders: (roles) => `Also for ${roles}`,
     coveredSources: "Covered sources",
     relatedStories: "Related stories",
     relatedTopics: "Topics",

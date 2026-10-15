@@ -126,3 +126,9 @@ def make_article(db, make_source):
 @pytest.fixture
 def days_ago():
     return lambda d: _now() - timedelta(days=d)
+
+
+@pytest.fixture(autouse=True)
+def _no_page_warm(monkeypatch):
+    """A pipeline run ends by requesting the live site's pages; tests that run the pipeline must not."""
+    monkeypatch.setattr("app.services.page_warm.warm_pages", lambda *args, **kwargs: {})

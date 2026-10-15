@@ -235,6 +235,8 @@ export const zh: Translations = {
     audiencePm: "产品经理",
     audienceDeveloper: "开发者",
     audienceStudent: "学生与求职者",
+    forYou: (role) => `你的视角 · ${role}`,
+    otherReaders: (roles) => `其他读者：${roles}`,
     coveredSources: "覆盖来源",
     relatedStories: "相关故事",
     relatedTopics: "相关话题",

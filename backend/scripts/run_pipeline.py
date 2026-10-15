@@ -268,6 +268,12 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
             logger.info("pipeline cache invalidated keys=%s", n)
         except Exception:
             logger.warning("pipeline cache invalidation failed", exc_info=True)
+        # Then have the site rebuild its pages now, not on the next reader's visit
+        try:
+            from app.services.page_warm import warm_pages
+            warm_pages()
+        except Exception:
+            logger.warning("pipeline page warm-up failed", exc_info=True)
 
     if failures:
         logger.error(
