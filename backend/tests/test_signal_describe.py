@@ -86,8 +86,8 @@ def test_candidate_stories_edge_cases():
 def test_describe_batch_maps_answers_and_only_accepts_own_candidates():
     a, b = uuid.uuid4(), uuid.uuid4()
     items = [
-        {"posts": ["Gemini 4 Argon"], "stories": [(a, "Google releases Gemini 4 Argon")]},
-        {"posts": ["Mistral Large 4"], "stories": [(b, "Mistral's new 1T model")]},
+        {"posts": ["Gemini 4 Argon"], "stories": [(a, "Google releases Gemini 4 Argon", "Google launched its new model.")]},
+        {"posts": ["Mistral Large 4"], "stories": [(b, "Mistral's new 1T model", "Mistral released a 1T model.")]},
         {"posts": ["Dropped one"], "stories": []},
         {"posts": ["No candidates"], "stories": []},
     ]
@@ -99,7 +99,10 @@ def test_describe_batch_maps_answers_and_only_accepts_own_candidates():
             return "s0"  # it had none
         return stories[0]["id"] if stories else None
 
-    results, p, c = D.describe_batch(FakeOpenAI(pick=pick, drop_ids={2}), items)
+    fake = FakeOpenAI(pick=pick, drop_ids={2})
+    results, p, c = D.describe_batch(fake, items)
+    # GPT sees each candidate's opening lines, not just its title
+    assert fake.calls[0][0]["stories"] == [{"id": "s0", "title": "Google releases Gemini 4 Argon", "about": "Google launched its new model."}]
     assert results[0] == {
         "summary_en": "EN Gemini 4 Argon",
         "summary_zh": "中文 Gemini 4 Argon",
@@ -179,6 +182,8 @@ def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
     assert len(fake.calls) == 2 and summary["cost_usd"] > 0
     # Old stories are not candidates
     sent_titles = [s["title"] for call in fake.calls for t in call for s in t["stories"]]
+    sent_about = [s["about"] for call in fake.calls for t in call for s in t["stories"]]
+    assert "Meta launched Muse Wonder, an AI model it says rivals OpenAI and Anthropic." in sent_about
     assert "Meta Muse ages out" not in sent_titles
 
     rows = {t.label[:10]: t for t in db.execute(select(SignalTopic)).scalars()}

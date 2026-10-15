@@ -40,6 +40,10 @@ TITLES_PER_TOPIC = 8
 CANDIDATES_PER_TOPIC = 5
 MIN_CANDIDATE_SIMILARITY = 0.02
 STORY_SUMMARY_CHARS = 300
+# Opening of each candidate story's summary sent to GPT with its title (2026-10-14:
+# from titles alone it matched "defenses against distillation attacks" to an
+# arXiv paper titled "Distillation for Incrimination and …")
+STORY_ABOUT_CHARS = 200
 REDESCRIBE_GROWTH = 1.5
 SUMMARY_MAX_CHARS = 400
 QUESTION_MAX_CHARS = 200
@@ -52,10 +56,10 @@ _SYSTEM = """You write for Sipply, an AI news site. Each input topic is a group 
 For every topic return:
 - "summary_en": one or two plain sentences (at most 45 words) saying what happened. Use only what the titles say; do not speculate or add hype; do not start with "This topic".
 - "summary_zh": the same in Simplified Chinese (简体中文). Keep names of products, models, companies and people in English.
-- "story": the id of the candidate story that reports the same event or announcement, or null if none does. A story about the same company but a different event is not a match.
+- "story": the id of the candidate story that reports the same event or announcement, or null if none does. Use each story's title and "about" text. A story about the same company but a different event is not a match, and neither is a research paper that only shares a keyword. Judge the topic as a whole: if the posts are a mix of unrelated items, a story matching just one of them is not a match.
 - "question": the question a curious reader would type into an AI assistant to learn about this story, in English, at most 15 words, naming the company or product (e.g. "What did Microsoft's president say about AI regulation and milk?").
 
-Input is a JSON list of {"id": ..., "posts": [...], "stories": [{"id": ..., "title": ...}]}.
+Input is a JSON list of {"id": ..., "posts": [...], "stories": [{"id": ..., "title": ..., "about": ...}]}.
 Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ..., "question": ...}, ...]} with one entry for every input id."""
 
 
@@ -122,7 +126,7 @@ def describe_batch(
 ) -> tuple[list[dict[str, Any] | None], int, int]:
     """Describe topics in one request.
 
-    ``items``: [{"posts": [title, …], "stories": [(story key, title), …]}].
+    ``items``: [{"posts": [title, …], "stories": [(story key, title, opening of its summary), …]}].
     Returns ({"summary_en", "summary_zh", "story": story key or None, "question": str or None} or None per item,
     prompt tokens, completion tokens).
     """
@@ -130,7 +134,9 @@ def describe_batch(
         {
             "id": i,
             "posts": item["posts"],
-            "stories": [{"id": f"s{j}", "title": title} for j, (_, title) in enumerate(item["stories"])],
+            "stories": [
+                {"id": f"s{j}", "title": title, "about": about} for j, (_, title, about) in enumerate(item["stories"])
+            ],
         }
         for i, item in enumerate(items)
     ]
@@ -162,7 +168,7 @@ def describe_batch(
         en, zh = row.get("summary_en"), row.get("summary_zh")
         if not (isinstance(en, str) and en.strip() and isinstance(zh, str) and zh.strip()):
             continue
-        keys = {f"s{j}": key for j, (key, _) in enumerate(items[idx]["stories"])}
+        keys = {f"s{j}": story[0] for j, story in enumerate(items[idx]["stories"])}
         question = row.get("question")
         out[idx] = {
             "summary_en": en.strip()[:SUMMARY_MAX_CHARS],
@@ -213,7 +219,10 @@ def run_describe(
         items = [
             {
                 "posts": titles[t.id],
-                "stories": [(stories[j].id, stories[j].representative_title) for j in candidates[start + i]],
+                "stories": [
+                    (stories[j].id, stories[j].representative_title, (stories[j].summary or "")[:STORY_ABOUT_CHARS])
+                    for j in candidates[start + i]
+                ],
             }
             for i, t in enumerate(batch)
         ]
