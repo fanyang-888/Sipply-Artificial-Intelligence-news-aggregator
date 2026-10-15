@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       alternates: { canonical: storyPath(id) },
       openGraph: { type: "article", title, description, url: storyPath(id) },
-      twitter: { card: "summary", title, description },
+      twitter: { card: "summary_large_image", title, description },
     };
   } catch {
     return {};
