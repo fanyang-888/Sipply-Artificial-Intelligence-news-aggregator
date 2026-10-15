@@ -24,8 +24,7 @@ export function HomePanel({ id, title, subtitle, children, className = "" }: Hom
       {title ? (
         <Reveal className="mx-auto mb-8 max-w-3xl text-center sm:mb-10">
           <h2
-            className="text-[clamp(1.85rem,3.3vw,2.9rem)] leading-[1.08] tracking-[-0.02em] text-foreground"
-            style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 300 }}
+            className="font-display font-light text-[clamp(1.85rem,3.3vw,2.9rem)] leading-[1.08] tracking-[-0.02em] text-foreground"
           >
             {title}
           </h2>

@@ -27,8 +27,7 @@ function StoryCard({ story, now }: { story: Cluster; now: number | null }) {
         </span>
       </div>
       <h3
-        className="mt-5 text-[clamp(1.4rem,2.3vw,1.95rem)] leading-[1.14] tracking-[-0.015em] text-foreground line-clamp-3 [text-wrap:balance]"
-        style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 300 }}
+        className="font-display font-light mt-5 text-[clamp(1.4rem,2.3vw,1.95rem)] leading-[1.14] tracking-[-0.015em] text-foreground line-clamp-3 [text-wrap:balance]"
       >
         <Link href={`/cluster/${story.id}`} className="no-underline hover:opacity-90">
           {pickLocalized(story.title, lang)}
