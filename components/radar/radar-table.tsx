@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import type { ApiRadarTopic, RadarRing } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
@@ -26,14 +27,22 @@ type RadarTableProps = {
 const ROW_GRID =
   "grid grid-cols-[2rem_minmax(0,1fr)_4.75rem] items-center gap-x-3 sm:grid-cols-[2rem_minmax(0,1fr)_3.5rem_4.75rem] md:grid-cols-[2rem_minmax(0,1fr)_3.5rem_4.75rem_6rem_6.5rem]";
 
+/** Rows shown per outer ring before "Show all"; the mainstream ring always shows in full. */
+export const RING_PREVIEW_ROWS = 5;
+
 /**
  * Every topic in one table, grouped by ring. The sparklines share one scale,
- * so a topic with one signal a day looks quieter than one with twenty.
+ * so a topic with one signal a day looks quieter than one with twenty. The
+ * outer rings show their first RING_PREVIEW_ROWS rows; the rest stay in the
+ * HTML (hidden) and open with "Show all N", or on their own when the selected
+ * topic is among them.
  */
 export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, onSelect }: RadarTableProps) {
   const { t, lang } = useI18n();
   const scaleMax = Math.max(1, ...topics.flatMap((x) => x.dailyCounts));
   const loud = (x: ApiRadarTopic) => x.momentum === "new" || x.momentum === "rising";
+  // Set once the reader uses a ring's button; until then a ring opens when its selected topic is folded away
+  const [expanded, setExpanded] = useState<Partial<Record<RadarRing, boolean>>>({});
   return (
     <section aria-label={t.radar.tableAria} className="text-[13.5px]">
       <div aria-hidden="true" className={`${ROW_GRID} border-b px-2 pb-2 text-[11.5px] [border-color:var(--border)] [color:var(--text-muted)]`}>
@@ -49,6 +58,8 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
         const shown = all.filter(isShown);
         if (all.length === 0) return null;
         const r = t.radar.rings[ring];
+        const folds = ring !== 1 && shown.length > RING_PREVIEW_ROWS;
+        const open = !folds || (expanded[ring] ?? shown.findIndex((x) => x.id === selectedId) >= RING_PREVIEW_ROWS);
         return (
           <div key={ring}>
             <h3 className="px-2 pb-1.5 pt-6">
@@ -58,7 +69,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
               </span>
             </h3>
             <ol>
-              {shown.map((topic) => {
+              {shown.map((topic, i) => {
                 const sector = radarSectorForTag(topic.topicTag);
                 const group = sector === "other" ? undefined : topicGroupByKey(sector);
                 const platforms = topicPlatforms(topic).map((k) => t.radar.sourceShort[k]);
@@ -71,6 +82,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                 return (
                   <li
                     key={topic.id}
+                    hidden={!open && i >= RING_PREVIEW_ROWS}
                     aria-current={topic.id === selectedId}
                     onClick={() => onSelect(topic.id)}
                     className={`${ROW_GRID} cursor-pointer border-t px-2 py-1.5 transition-colors [border-color:var(--border)] hover:[background:var(--surface)] aria-[current=true]:[background:var(--surface2)]`}
@@ -119,6 +131,16 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                 );
               })}
             </ol>
+            {folds ? (
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setExpanded({ ...expanded, [ring]: !open })}
+                className="mt-1 px-2 py-1 text-[12.5px] [color:var(--accent)] hover:underline"
+              >
+                {open ? t.radar.showFewer : t.radar.showAllRows(shown.length)}
+              </button>
+            ) : null}
           </div>
         );
       })}
