@@ -224,4 +224,6 @@ body {
   scrollbar-width: none;
 }
 .sp-carousel::-webkit-scrollbar { display: none; }
+.sp-no-scrollbar { scrollbar-width: none; }
+.sp-no-scrollbar::-webkit-scrollbar { display: none; }
 .sp-carousel > * { scroll-snap-align: center; scroll-snap-stop: always; }
