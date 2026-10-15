@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { SourceLink } from "@/components/digest/source-link";
+import { RelativeAge } from "@/components/radar/radar-bits";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
 import { usePreferredRole } from "@/lib/preferred-role";
+import { useNowMinute } from "@/lib/use-now-minute";
 import { pickLocalized } from "@/lib/utils/localized-string";
 import { topicGroupForTag } from "@/lib/utils/radar";
 import type { Cluster } from "@/types/cluster";
 
-function StoryCard({ story }: { story: Cluster }) {
+function StoryCard({ story, now }: { story: Cluster; now: number | null }) {
   const { t, lang } = useI18n();
   const [role] = usePreferredRole();
   const group = story.topicTag ? topicGroupForTag(story.topicTag) : null;
@@ -20,7 +22,9 @@ function StoryCard({ story }: { story: Cluster }) {
     <article className="sp-glass flex h-full flex-col p-6 sm:p-8">
       <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.14em] [color:var(--text-muted)]">
         <span>{category ? topicGroupLabel(category, lang) : story.topicTag ?? ""}</span>
-        {story.freshnessLabel ? <span className="normal-case tracking-[0.04em]">{story.freshnessLabel}</span> : null}
+        <span className="normal-case tracking-[0.04em]">
+          <RelativeAge iso={story.lastSeenAt} now={now} />
+        </span>
       </div>
       <h3
         className="mt-5 text-[clamp(1.4rem,2.3vw,1.95rem)] leading-[1.14] tracking-[-0.015em] text-foreground line-clamp-3 [text-wrap:balance]"
@@ -61,6 +65,7 @@ type StoryCarouselProps = {
  */
 export function StoryCarousel({ stories, label, moreHref }: StoryCarouselProps) {
   const { t } = useI18n();
+  const now = useNowMinute();
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const count = stories.length;
@@ -146,7 +151,7 @@ export function StoryCarousel({ stories, label, moreHref }: StoryCarouselProps) 
             className="w-[min(40rem,86vw)] shrink-0 transition-opacity duration-300"
             style={{ opacity: i === index ? 1 : 0.55 }}
           >
-            <StoryCard story={story} />
+            <StoryCard story={story} now={now} />
           </div>
         ))}
       </div>
