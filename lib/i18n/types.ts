@@ -103,6 +103,7 @@ export type Translations = {
     weeklyDescription: string;
     weekTitle: (range: string) => string;
     weekStories: (n: number) => string;
+    weekDailyAria: (counts: string) => string;
     thisWeek: string;
     topStories: string;
     byCategory: string;
@@ -228,9 +229,6 @@ export type Translations = {
     bilingualAssistTrustNote: string;
     /** Under covered sources: originals stay in source language. */
     sourceOriginalPreservedNote: string;
-    headerStoryStatus: string;
-    headerSourceCount: string;
-    headerScore: string;
     headerFirstSeen: string;
     headerLastUpdated: string;
     emptyCoveredSources: string;

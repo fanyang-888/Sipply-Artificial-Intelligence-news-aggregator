@@ -71,6 +71,10 @@ export type ApiWeekSummary = {
   start: string;
   end: string;
   storyCount: number;
+  /** New stories per day, Monday first. Optional: an older API (mid-deploy) doesn't send it. */
+  dailyCounts?: number[];
+  /** The week's highest-scoring stories. Optional for the same reason. */
+  headlines?: { id: string; title: string; titleZh: string | null }[];
 };
 
 /** GET /api/weeks/{week} */

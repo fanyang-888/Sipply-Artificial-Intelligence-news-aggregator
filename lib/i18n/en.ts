@@ -106,6 +106,7 @@ export const en: Translations = {
     weeklyDescription: "The week's top AI stories, by category and company. A new recap starts every Monday (UTC).",
     weekTitle: (range) => `AI news, ${range}`,
     weekStories: (n) => `${n} ${n === 1 ? "story" : "stories"}`,
+    weekDailyAria: (counts) => `New stories per day, Monday to Sunday: ${counts}`,
     thisWeek: "this week",
     topStories: "Top stories",
     byCategory: "By category",
@@ -254,9 +255,6 @@ export const en: Translations = {
       "Chinese text is provided as reading assistance. Refer to the original language for exact wording.",
     sourceOriginalPreservedNote:
       "Source titles and excerpts stay in their original language for accuracy and traceability.",
-    headerStoryStatus: "Status",
-    headerSourceCount: "Coverage",
-    headerScore: "Cluster score",
     headerFirstSeen: "First seen",
     headerLastUpdated: "Last updated",
     emptyCoveredSources: "No linked articles in the mock catalog for this cluster.",

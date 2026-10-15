@@ -143,28 +143,64 @@ export function TopicPage({ topic }: { topic: ApiTopicDetail | null }) {
 // /weekly
 // ---------------------------------------------------------------------------
 
+/** New stories per day, Monday to Sunday, on a scale shared by every week in the list. */
+function WeekBars({ counts, max, label }: { counts: number[]; max: number; label: string }) {
+  if (counts.length === 0) return null;
+  const height = 20;
+  const bar = 5;
+  const gap = 2;
+  return (
+    <svg role="img" aria-label={label} width={counts.length * (bar + gap) - gap} height={height} className="shrink-0">
+      <title>{label}</title>
+      {counts.map((c, i) => {
+        const h = c === 0 ? 1 : Math.max(2, Math.round((c / Math.max(1, max)) * height));
+        return <rect key={i} x={i * (bar + gap)} y={height - h} width={bar} height={h} rx={1} fill="var(--accent)" opacity={0.75} />;
+      })}
+    </svg>
+  );
+}
+
+/**
+ * Each week with its top headlines (so the list says what happened, not just
+ * when) and a 7-day bar strip; all strips share one scale, so busy weeks look busy.
+ */
 export function WeeksIndex({ weeks, currentWeek }: { weeks: ApiWeekSummary[] | null; currentWeek: string }) {
   const { t, lang } = useI18n();
+  const maxDaily = Math.max(1, ...(weeks ?? []).flatMap((w) => w.dailyCounts ?? []));
   return (
     <div>
       <PageHeader title={t.hubs.weeklyTitle} description={t.hubs.weeklyDescription} />
       {!weeks ? (
         <Unavailable />
       ) : (
-        <ul className="max-w-2xl divide-y rounded-[10px] border [background:var(--surface)] [border-color:var(--border)] [&>*]:[border-color:var(--border)]">
+        <ul className="max-w-4xl divide-y rounded-[10px] border [background:var(--surface)] [border-color:var(--border)] [&>*]:[border-color:var(--border)]">
           {weeks.map((w) => (
-            <li key={w.week}>
-              <Link href={`/weekly/${w.week}`} className="flex items-baseline justify-between gap-3 px-4 py-3 no-underline hover:[background:var(--surface2)]">
-                <span className="text-[15px] font-medium text-foreground">
+            <li key={w.week} className="px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <Link href={`/weekly/${w.week}`} className="text-[15px] font-medium text-foreground no-underline hover:[color:var(--accent)]">
                   {t.hubs.weekTitle(formatWeekRange(w.start, w.end, lang))}
                   {w.week === currentWeek ? (
                     <span className="ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold [background:var(--accent)] [color:var(--bg)]">
                       {t.hubs.thisWeek}
                     </span>
                   ) : null}
+                </Link>
+                <span className="flex shrink-0 items-center gap-3">
+                  <WeekBars counts={w.dailyCounts ?? []} max={maxDaily} label={t.hubs.weekDailyAria((w.dailyCounts ?? []).join(", "))} />
+                  <span className="w-[5.5rem] text-right font-mono text-[11px] [color:var(--text-muted)]">{t.hubs.weekStories(w.storyCount)}</span>
                 </span>
-                <span className="shrink-0 font-mono text-[11px] [color:var(--text-muted)]">{t.hubs.weekStories(w.storyCount)}</span>
-              </Link>
+              </div>
+              {w.headlines && w.headlines.length > 0 ? (
+                <ul className="mt-1.5 space-y-0.5">
+                  {w.headlines.map((h) => (
+                    <li key={h.id} className="truncate text-[13px] leading-snug">
+                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-muted)] no-underline hover:text-foreground">
+                        {lang === "zh" && h.titleZh ? h.titleZh : h.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           ))}
         </ul>

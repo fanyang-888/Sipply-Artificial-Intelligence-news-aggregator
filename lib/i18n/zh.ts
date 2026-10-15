@@ -101,6 +101,7 @@ export const zh: Translations = {
     weeklyDescription: "一周最重要的 AI 报道，按分类和公司整理。每周一（UTC）开始新的一期。",
     weekTitle: (range) => `AI 周报：${range}`,
     weekStories: (n) => `${n} 篇报道`,
+    weekDailyAria: (counts) => `每天新增报道（周一到周日）：${counts}`,
     thisWeek: "本周",
     topStories: "本周要闻",
     byCategory: "分类",
@@ -246,9 +247,6 @@ export const zh: Translations = {
     bilingualAssistTrustNote: "以下内容为 AI 自动翻译，英文原文附后供参考。",
     sourceOriginalPreservedNote:
       "来源标题与摘录保留原文，以便核对与追溯。",
-    headerStoryStatus: "状态",
-    headerSourceCount: "覆盖",
-    headerScore: "集群分数",
     headerFirstSeen: "首次出现",
     headerLastUpdated: "最近更新",
     emptyCoveredSources: "该集群在 mock 目录中没有关联文章。",
