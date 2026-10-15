@@ -24,6 +24,25 @@ export type Translations = {
     titleRadar: string;
   };
   home: {
+    leadEyebrow: string;
+    updated: (age: string) => string;
+    readStory: string;
+    moreBelow: (n: number) => string;
+    todayTitle: string;
+    todaySubtitle: string;
+    carouselKeysHint: string;
+    slideLabel: (i: number, n: number) => string;
+    prevStory: string;
+    nextStory: string;
+    allStories: string;
+    communityTitle: string;
+    communityTitle2: string;
+    communitySubtitle: (signals: number, days: number) => string;
+    signals: (n: number) => string;
+    openRadar: string;
+    weekTitle: string;
+    weekTitle2: string;
+    openWeek: string;
     title: string;
     subtitle: string;
     emptyFeaturedTitle: string;

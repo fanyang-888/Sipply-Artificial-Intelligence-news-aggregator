@@ -1,35 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { formatDigestDate } from "@/lib/utils/format-date";
 import { useI18n } from "@/lib/i18n";
-import { pickLocalized } from "@/lib/utils/localized-string";
-import { uiTextLinkPrimary } from "@/lib/ui/classes";
-import { FeaturedStoryCard } from "@/components/digest/featured-story-card";
-import { ClusterCard } from "@/components/digest/cluster-card";
-import { DiscoverArchiveCta } from "@/components/digest/quick-archive-entry";
-import { AIBasicCard } from "@/components/digest/ai-basic-card";
-import { SubscribeBar } from "@/components/shared/subscribe-bar";
-import { SippyHero } from "@/components/layout/sipply-hero";
-import { SectionBlock } from "@/components/shared/section-block";
-import { CategoryBar, type CategoryKey } from "@/components/shared/category-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ErrorState } from "@/components/shared/error-state";
-import { MobileClusterRow } from "@/components/digest/mobile-cluster-row";
-import { RoleTabs } from "@/components/digest/role-tabs";
-import { SourceLink } from "@/components/digest/source-link";
-import { TopicFilter } from "@/components/shared/topic-filter";
+import { HomePanel } from "@/components/home/home-panel";
+import { LeadStory } from "@/components/home/lead-story";
+import { RadarTeaser } from "@/components/home/radar-teaser";
+import { StoryCarousel } from "@/components/home/story-carousel";
+import { WeekPanel } from "@/components/home/week-panel";
 import { fetchSearch, fetchTodayDigest } from "@/lib/api";
 import { apiClusterToCluster, archiveRowToCluster } from "@/lib/api/mappers";
 import { getDeviceId } from "@/lib/api/track";
-import { topicTagsForGroup, type TopicGroupKey } from "@/lib/constants/topic-groups";
+import { TOPIC_GROUPS, TRENDING_LABEL, topicGroupLabel, topicTagsForGroup, type TopicGroupKey } from "@/lib/constants/topic-groups";
 import { readPreferredRole, usePreferredRole, type Role } from "@/lib/preferred-role";
 import { archiveTopicHref } from "@/lib/utils/archive-url";
 import { useMounted } from "@/lib/use-mounted";
-import type { ApiDigest } from "@/lib/api/types";
+import type { ApiDigest, ApiRadarTopic, ApiWeekSummary } from "@/lib/api/types";
 import type { Cluster } from "@/types/cluster";
+
+type CategoryKey = "trending" | TopicGroupKey;
 
 const CATEGORY_PAGE_SIZE = 12;
 
@@ -46,11 +38,29 @@ function freshnessLabelFrom(lastSeenAt: string | null, t: HomeT): string | undef
 type HomePageClientProps = {
   /** Server-rendered global digest (so crawlers see the stories); null if the API was unreachable. */
   initialDigest: ApiDigest | null;
-  /** When the last pipeline run finished; null hides the "Pipeline updated" line. */
+  /** When the last pipeline run finished; null hides the "Updated" line. */
   pipelineUpdatedAt: string | null;
+  /** The radar's leading topics for panel 03; empty hides the panel. */
+  radarTopics: ApiRadarTopic[];
+  radarSignals: number;
+  radarWindowDays: number;
+  /** This ISO week's summary (headlines) for panel 04. */
+  week: ApiWeekSummary | null;
 };
 
-export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageClientProps) {
+/**
+ * The home page as four full-screen panels: 01 today's lead story, 02 today's
+ * stories as a sideways carousel, 03 what the AI community is discussing (Trend
+ * Radar), 04 this week + the weekly email.
+ */
+export function HomePageClient({
+  initialDigest,
+  pipelineUpdatedAt,
+  radarTopics,
+  radarSignals,
+  radarWindowDays,
+  week,
+}: HomePageClientProps) {
   const { t, lang } = useI18n();
   const [role] = usePreferredRole();
   // The reader's local date only after mount: the server's date/time zone may differ
@@ -65,7 +75,6 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
   );
   const [loading, setLoading] = useState(initialDigest === null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [personalized, setPersonalized] = useState(false);
   // Role the current list was ranked for; undefined until the first load finishes
   const rankedForRoleRef = useRef<Role | null | undefined>(undefined);
@@ -164,28 +173,6 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
     return () => { cancelled = true; };
   }, [role]);
 
-  const personalizedNote =
-    activeCategory === "trending" && personalized ? (
-      <p className="mb-3 text-xs [color:var(--text-muted)]">
-        <span className="[color:var(--accent)]">✦</span> {t.home.personalizedNote}
-      </p>
-    ) : null;
-
-  const topicOptions = Array.from(
-    new Set(
-      topClusters
-        .map((c) => c.topicTag)
-        .filter((tag): tag is string => Boolean(tag && tag.trim())),
-    ),
-  );
-
-  const filteredClusters =
-    selectedTopics.length === 0
-      ? topClusters
-      : topClusters.filter(
-          (c) => c.topicTag != null && selectedTopics.includes(c.topicTag),
-        );
-
   if (loading) {
     return <LoadingState layout="digest" />;
   }
@@ -200,224 +187,91 @@ export function HomePageClient({ initialDigest, pipelineUpdatedAt }: HomePageCli
     );
   }
 
+  const lead = featured ?? topClusters[0] ?? null;
+  const rest = topClusters.filter((c) => c.id !== lead?.id);
+  const categoryStories = activeCategory === "trending" ? rest : categoryClusters;
+  const categoryKeys: CategoryKey[] = ["trending", ...TOPIC_GROUPS.map((g) => g.key)];
+  const categoryName = (key: CategoryKey) =>
+    key === "trending" ? TRENDING_LABEL[lang] : topicGroupLabel(TOPIC_GROUPS.find((g) => g.key === key)!, lang);
+
   return (
     <div>
-      <SippyHero dateLabel={dateLabel} updatedAt={pipelineUpdatedAt} />
+      {lead ? (
+        <LeadStory story={lead} dateLabel={dateLabel} updatedAt={pipelineUpdatedAt} more={rest.length} />
+      ) : (
+        <div className="py-24">
+          <EmptyState title={t.home.emptyFeaturedTitle} description={t.home.emptyFeaturedDesc} />
+        </div>
+      )}
 
-      {/* ── Mobile layout (< sm) ── */}
-      <div className="sm:hidden">
-        <RoleTabs />
-        {/* Featured story */}
-        {featured ? (
-          <div
-            className="mb-4 rounded-xl border border-l-4 p-4"
-            style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              borderLeftColor: "var(--accent)",
-            }}
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <span
-                className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
-                style={{
-                  border: "1px solid var(--accent)",
-                  color: "var(--accent)",
-                  background: "var(--accent-faint)",
-                  fontFamily: "'IBM Plex Mono', monospace",
-                }}
-              >
-                {featured.storyStatus ?? "new"}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                {featured.articleIds.length} source{featured.articleIds.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <h2
-              className="mb-2 leading-snug font-bold"
-              style={{ fontSize: 17, color: "var(--text)", letterSpacing: "-0.2px" }}
-            >
-              {pickLocalized(featured.title, lang)}
-            </h2>
-            <p
-              className="mb-3 line-clamp-3 leading-relaxed"
-              style={{ fontSize: 13, color: "var(--text-muted)" }}
-            >
-              {pickLocalized(featured.summary, lang)}
-            </p>
-            {role && pickLocalized(featured.audience[role], lang) ? (
-              <p className="mb-3 line-clamp-3 leading-relaxed" style={{ fontSize: 13, color: "var(--text)" }}>
-                <span style={{ color: "var(--accent)", fontWeight: 500 }}>
-                  {t.cluster.whyItMattersForYou}
-                  {lang === "zh" ? "：" : ": "}
-                </span>
-                {pickLocalized(featured.audience[role], lang)}
-              </p>
-            ) : null}
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5 flex-wrap">
-                {(featured.tags ?? []).slice(0, 2).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded px-2 py-0.5"
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-muted)",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
-                      fontFamily: "'IBM Plex Mono', monospace",
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <Link
-                href={`/cluster/${featured.id}`}
-                className="font-semibold"
-                style={{ fontSize: 12, color: "var(--accent)" }}
-              >
-                {t.digest.viewStory} →
-              </Link>
-            </div>
-            <SourceLink cluster={featured} className="mt-3" />
-          </div>
-        ) : null}
-
-        {/* Category bar + more stories */}
-        {topClusters.length > 1 ? (
+      <HomePanel
+        id="today"
+        title={
           <>
-            <CategoryBar
-              active={activeCategory}
-              onSelect={setActiveCategory}
-              trailing={
-                <Link
-                  href={activeCategory === "trending" ? "/archive" : archiveTopicHref(activeCategory)}
-                  style={{ color: "var(--accent)", fontSize: 10, textDecoration: "none", whiteSpace: "nowrap" }}
-                >
-                  {t.home.viewAllInsights} →
-                </Link>
-              }
-            />
-            {activeCategory === "trending" ? (
-              <>
-                {personalizedNote}
-                <TopicFilter tags={topicOptions} onChange={setSelectedTopics} />
-                <div>
-                  {filteredClusters.filter((c) => c.id !== featured?.id).map((c) => (
-                    <MobileClusterRow key={c.id} cluster={c} />
-                  ))}
-                </div>
-              </>
-            ) : categoryLoading ? (
-              <div className="space-y-3 py-2">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-16 animate-pulse rounded-lg [background:var(--surface2)]" />
-                ))}
-              </div>
-            ) : categoryClusters && categoryClusters.length > 0 ? (
-              <div>
-                {categoryClusters.map((c) => (
-                  <MobileClusterRow key={c.id} cluster={c} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState title={t.archive.noResultsTitle} />
-            )}
+            {t.home.todayTitle}
+            <span className="block [color:var(--text-muted)]">{t.home.todaySubtitle}</span>
           </>
-        ) : null}
-
-        <div className="mt-6">
-          <SubscribeBar />
+        }
+        subtitle={activeCategory === "trending" && personalized ? <><span className="[color:var(--accent)]">✦</span> {t.home.personalizedNote}</> : undefined}
+      >
+        <div role="tablist" aria-label={t.home.categoryBarAria} className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          {categoryKeys.map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={activeCategory === key}
+              onClick={() => setActiveCategory(key)}
+              className={[
+                "border-b pb-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors",
+                activeCategory === key ? "text-foreground [border-color:var(--accent)]" : "border-transparent [color:var(--text-muted)] hover:text-foreground",
+              ].join(" ")}
+            >
+              {categoryName(key)}
+            </button>
+          ))}
         </div>
-      </div>
+        {activeCategory !== "trending" && categoryLoading ? (
+          <div className="flex justify-center gap-6 overflow-hidden" aria-busy="true">
+            {[0, 1].map((i) => (
+              <div key={i} className="sp-glass h-[24rem] w-[min(40rem,86vw)] shrink-0 animate-pulse" />
+            ))}
+          </div>
+        ) : categoryStories && categoryStories.length > 0 ? (
+          <StoryCarousel
+            stories={categoryStories}
+            label={categoryName(activeCategory)}
+            moreHref={activeCategory === "trending" ? "/archive" : archiveTopicHref(activeCategory)}
+          />
+        ) : (
+          <EmptyState title={activeCategory === "trending" ? t.home.emptyClustersTitle : t.archive.noResultsTitle} />
+        )}
+      </HomePanel>
 
-      {/* ── Desktop layout (sm+) ── */}
-      <div className="hidden sm:block">
-        <RoleTabs />
-        <div className="mb-10">
-          {featured ? (
-            <FeaturedStoryCard cluster={featured} />
-          ) : (
-            <EmptyState
-              title={t.home.emptyFeaturedTitle}
-              description={t.home.emptyFeaturedDesc}
-            />
-          )}
-        </div>
-
-        <SectionBlock>
-          <CategoryBar active={activeCategory} onSelect={setActiveCategory} />
-          {activeCategory === "trending" ? (
+      {radarTopics.length > 0 ? (
+        <HomePanel
+          title={
             <>
-              {personalizedNote}
-              <TopicFilter tags={topicOptions} onChange={setSelectedTopics} />
-              {filteredClusters.length > 0 ? (
-                <>
-                  <ul className="space-y-4">
-                    {filteredClusters.map((c) => (
-                      <ClusterCard key={c.id} cluster={c} />
-                    ))}
-                  </ul>
-                  <div className="mt-6">
-                    <Link href="/archive" className={uiTextLinkPrimary}>
-                      {t.home.viewAllInsights}
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <EmptyState
-                  title={t.home.emptyClustersTitle}
-                  description={t.home.emptyClustersDesc}
-                  action={
-                    <Link href="/archive" className={uiTextLinkPrimary}>
-                      {t.home.goToArchive}
-                    </Link>
-                  }
-                />
-              )}
+              {t.home.communityTitle}
+              <span className="block [color:var(--text-muted)]">{t.home.communityTitle2}</span>
             </>
-          ) : categoryLoading ? (
-            <div className="space-y-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-28 animate-pulse rounded-xl [background:var(--surface2)]" />
-              ))}
-            </div>
-          ) : categoryClusters && categoryClusters.length > 0 ? (
-            <>
-              <ul className="space-y-4">
-                {categoryClusters.map((c) => (
-                  <ClusterCard key={c.id} cluster={c} />
-                ))}
-              </ul>
-              <div className="mt-6">
-                <Link href={archiveTopicHref(activeCategory)} className={uiTextLinkPrimary}>
-                  {t.home.viewAllInsights}
-                </Link>
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              title={t.archive.noResultsTitle}
-              action={
-                <Link href="/archive" className={uiTextLinkPrimary}>
-                  {t.home.goToArchive}
-                </Link>
-              }
-            />
-          )}
-        </SectionBlock>
+          }
+          subtitle={t.home.communitySubtitle(radarSignals, radarWindowDays)}
+        >
+          <RadarTeaser topics={radarTopics} windowDays={radarWindowDays} />
+        </HomePanel>
+      ) : null}
 
-        <SectionBlock>
-          <AIBasicCard />
-        </SectionBlock>
-
-        <SectionBlock>
-          <SubscribeBar />
-        </SectionBlock>
-
-        <DiscoverArchiveCta />
-      </div>{/* end hidden sm:block */}
+      <HomePanel
+        title={
+          <>
+            {t.home.weekTitle}
+            <span className="block [color:var(--text-muted)]">{t.home.weekTitle2}</span>
+          </>
+        }
+      >
+        <WeekPanel week={week} />
+      </HomePanel>
     </div>
   );
 }
