@@ -229,6 +229,8 @@ export const zh: Translations = {
     relatedStories: "相关故事",
     relatedTopics: "相关话题",
     communityTitle: "大家怎么说",
+    share: "分享",
+    linkCopied: "链接已复制",
     communityDesc: "Hacker News、Bluesky 等社区里关于这件事讨论最多的帖子。",
     bilingualAssistTrustNote: "以下内容为 AI 自动翻译，英文原文附后供参考。",
     sourceOriginalPreservedNote:

@@ -4,6 +4,7 @@ import {
   BilingualAssistHeading,
   BilingualAssistSubline,
 } from "@/components/shared/bilingual-assist-text";
+import { ShareButton } from "@/components/cluster/share-button";
 import { LocalDateTime } from "@/components/shared/local-date-time";
 import { PageHeader } from "@/components/shared/page-header";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
@@ -13,6 +14,7 @@ import {
   getOutletDiversityFromArticles,
 } from "@/lib/utils/cluster-meta";
 import { topicGroupForTag } from "@/lib/utils/radar";
+import { pickLocalized } from "@/lib/utils/localized-string";
 import type { Cluster } from "@/types/cluster";
 import type { Article } from "@/types/article";
 
@@ -67,11 +69,14 @@ export function ClusterHeader({ cluster, articles }: ClusterHeaderProps) {
       title={<BilingualAssistHeading value={cluster.title} lang={lang} />}
       description={cluster.subtitle ? <BilingualAssistSubline value={cluster.subtitle} lang={lang} /> : undefined}
     >
-      {diversityLine ? (
-        <p className={`text-[13.5px] leading-snug ${narrow ? "[color:var(--amber)]" : "[color:var(--text-muted)]"}`}>
-          {diversityLine}
-        </p>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        {diversityLine ? (
+          <p className={`text-[13.5px] leading-snug ${narrow ? "[color:var(--amber)]" : "[color:var(--text-muted)]"}`}>
+            {diversityLine}
+          </p>
+        ) : null}
+        <ShareButton title={pickLocalized(cluster.title, lang)} />
+      </div>
     </PageHeader>
   );
 }
