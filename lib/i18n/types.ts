@@ -7,7 +7,6 @@ export type ChannelLabels = Record<SourceChannel, string>;
 export type Translations = {
   nav: {
     dailyDigest: string;
-    dailyDigestShort: string;
     archive: string;
     radar: string;
     topics: string;
@@ -48,44 +47,21 @@ export type Translations = {
     emptyFeaturedTitle: string;
     emptyFeaturedDesc: string;
     topClusters: string;
-    viewAllInsights: string;
     categoryBarAria: string;
     personalizedNote: string;
     readAs: string;
     allReaders: string;
-    readAsPrompt: string;
-    readAsHint: (role: string) => string;
     emptyClustersTitle: string;
-    emptyClustersDesc: string;
-    goToArchive: string;
   };
   digest: {
-    ingestChannelsAria: string;
-    sourcesPrefix: string;
-    whyItMattersPrefix: string;
-    viewStory: string;
     originalPrefix: string;
-    featuredFallback: string;
-    formatMoreChannelTypesHidden: (extraTypeCount: number) => string;
-    srOnlySources: string;
-    srOnlyFreshness: string;
-    srOnlyRelevance: string;
-    formatChannelBadgeAria: (count: number, channelLabel: string) => string;
   };
   formatSourceCount: (n: number) => string;
-  discover: {
-    title: string;
-    bodyBeforeEmphasis: string;
-    bodyEmphasis: string;
-    bodyAfterEmphasis: string;
-    cta: string;
-  };
   archive: {
     title: string;
     description: string;
     searchPlaceholder: string;
     searchLabel: string;
-    results: string;
     emptyCatalog: string;
     noResultsTitle: string;
     noResultsMessage: string;
@@ -111,7 +87,6 @@ export type Translations = {
     totalStories: (n: number) => string;
     latest: (date: string) => string;
     topicTitle: (name: string) => string;
-    topicDescription: (name: string) => string;
     onRadar: string;
     onRadarDesc: string;
     ringNames: Record<1 | 2 | 3, string>;
@@ -229,12 +204,10 @@ export type Translations = {
     likesReplies: (likes: string, replies: number) => string;
     reactionsComments: (reactions: number, comments: number) => string;
   };
-  channels: ChannelLabels;
   cluster: {
     summary: string;
     takeaways: string;
     whyItMatters: string;
-    whyItMattersForYou: string;
     audiencePm: string;
     audienceDeveloper: string;
     audienceStudent: string;
@@ -253,7 +226,6 @@ export type Translations = {
     headerLastUpdated: string;
     emptyCoveredSources: string;
     credibilityPrefix: string;
-    breadcrumbAria: string;
     backToDigest: string;
     nextStory: string;
     formatReadTimeMinutes: (minutes: number) => string;

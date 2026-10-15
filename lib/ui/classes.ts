@@ -43,9 +43,3 @@ export const uiButtonSecondary =
 /** Inline link in the accent colour. */
 export const uiTextLinkPrimary =
   "text-sm font-medium no-underline [color:var(--accent)] underline-offset-4 hover:underline";
-
-/** Inline link that reads as text until hovered. */
-export const uiTextLinkNeutral =
-  "text-sm font-medium text-foreground no-underline hover:[color:var(--accent)]";
-
-export const uiMetaTextSm = "text-sm [color:var(--text-muted)]";
