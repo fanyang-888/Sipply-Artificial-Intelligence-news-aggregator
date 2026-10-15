@@ -43,6 +43,8 @@ type HomePageClientProps = {
   /** The radar's leading topics for panel 03; empty hides the panel. */
   radarTopics: ApiRadarTopic[];
   radarSignals: number;
+  /** The busiest community platforms, by name, for the panel's subtitle. */
+  radarSourceLabels: string[];
   radarWindowDays: number;
   /** This ISO week's summary (headlines) for panel 04. */
   week: ApiWeekSummary | null;
@@ -58,6 +60,7 @@ export function HomePageClient({
   pipelineUpdatedAt,
   radarTopics,
   radarSignals,
+  radarSourceLabels,
   radarWindowDays,
   week,
 }: HomePageClientProps) {
@@ -256,7 +259,7 @@ export function HomePageClient({
               <span className="block [color:var(--text-muted)]">{t.home.communityTitle2}</span>
             </>
           }
-          subtitle={t.home.communitySubtitle(radarSignals, radarWindowDays)}
+          subtitle={t.home.communitySubtitle(radarSignals, radarWindowDays, radarSourceLabels)}
         >
           <RadarTeaser topics={radarTopics} windowDays={radarWindowDays} />
         </HomePanel>

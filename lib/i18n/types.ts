@@ -36,7 +36,8 @@ export type Translations = {
     allStories: string;
     communityTitle: string;
     communityTitle2: string;
-    communitySubtitle: (signals: number, days: number) => string;
+    /** ``sources``: the busiest community platforms this run, by name (news is always mentioned). */
+    communitySubtitle: (signals: number, days: number, sources: string[]) => string;
     signals: (n: number) => string;
     openRadar: string;
     weekTitle: string;
