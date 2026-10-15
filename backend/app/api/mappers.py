@@ -16,6 +16,7 @@ from app.api.schemas import (
 )
 from app.models.cluster import Cluster
 from app.services.entities import entities_in
+from app.services.text_clean import clean_title
 
 
 def cluster_to_response(
@@ -52,7 +53,7 @@ def cluster_to_response(
     articles_in_cluster = [
         ArticleInCluster(
             id=str(a.id),
-            title=a.title or "",
+            title=clean_title(a.title),
             url=a.url or "",
             sourceName=a.organization_name,
             publishedAt=format_dt(a.published_at),
@@ -69,7 +70,7 @@ def cluster_to_response(
         id=str(cluster.id),
         topics=[TopicRef(slug=e.slug, name=e.name) for e in entities_in(cluster.representative_title or "")],
         clusterType=cluster.type or "event",
-        title=localized_bilingual(cluster.representative_title, getattr(cluster, "representative_title_zh", None), "Untitled Story"),
+        title=localized_bilingual(clean_title(cluster.representative_title), getattr(cluster, "representative_title_zh", None), "Untitled Story"),
         theme=cluster.type or "event",
         themes=themes,
         tags=tags,
@@ -79,7 +80,7 @@ def cluster_to_response(
         freshnessLabel=freshness_label(cluster.last_seen_at),
         firstSeenAt=format_dt(cluster.first_seen_at),
         lastSeenAt=format_dt(cluster.last_seen_at),
-        summary=localized_bilingual(cluster.summary, getattr(cluster, "summary_zh", None), cluster.representative_title),
+        summary=localized_bilingual(cluster.summary, getattr(cluster, "summary_zh", None), clean_title(cluster.representative_title)),
         takeaways=bilingual_takeaways,
         whyItMatters=localized_bilingual(cluster.why_it_matters, getattr(cluster, "why_it_matters_zh", None), ""),
         audience=audience,
@@ -99,7 +100,7 @@ def cluster_to_archive_row(cluster: Cluster) -> ArchiveClusterRow:
     return ArchiveClusterRow(
         id=str(cluster.id),
         type="cluster",
-        title=cluster.representative_title or "",
+        title=clean_title(cluster.representative_title),
         title_zh=getattr(cluster, "representative_title_zh", None),
         summary=cluster.summary,
         summary_zh=getattr(cluster, "summary_zh", None),

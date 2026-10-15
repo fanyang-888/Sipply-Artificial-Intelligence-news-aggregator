@@ -30,6 +30,7 @@ from app.models.source import Source
 from app.models.signal import SignalTopic
 from app.services.entities import BY_SLUG, ENTITIES, entities_in
 from app.signals.topics import evidence_ring
+from app.services.text_clean import clean_title
 
 topics_router = APIRouter(prefix="/api/topics", tags=["topics"])
 weeks_router = APIRouter(prefix="/api/weeks", tags=["weeks"])
@@ -261,7 +262,7 @@ def _summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> Wee
         storyCount=len(stories),
         dailyCounts=daily,
         headlines=[
-            WeekHeadline(id=str(c.id), title=c.representative_title, titleZh=c.representative_title_zh)
+            WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=c.representative_title_zh)
             for c in week_headlines(stories, news_source_ids)
         ],
     )

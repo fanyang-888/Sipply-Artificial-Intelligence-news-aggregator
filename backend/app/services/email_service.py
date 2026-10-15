@@ -12,10 +12,13 @@ Requires:
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 from datetime import date
 from typing import TYPE_CHECKING
+
+from app.services.text_clean import clean_title
 
 if TYPE_CHECKING:
     from app.models.cluster import Cluster
@@ -40,8 +43,9 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
 
     featured_block = ""
     if featured:
-        title = featured.representative_title or "Today's top story"
-        summary = featured.summary or ""
+        # Feed titles may carry leftover entities; decode, then escape for HTML
+        title = html.escape(clean_title(featured.representative_title) or "Today's top story")
+        summary = html.escape(featured.summary or "")
         featured_block = f"""
         <div style="background:#f0f7ff;border-left:4px solid #0ea5e9;padding:16px 20px;border-radius:6px;margin-bottom:24px;">
           <p style="margin:0 0 6px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Featured Story</p>
@@ -55,8 +59,8 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
     if rest:
         items = "".join(
             f'<li style="margin-bottom:10px;font-size:14px;color:#334155;line-height:1.5;">'
-            f'<strong>{c.representative_title or "Story"}</strong>'
-            f'{"<br><span style=\'color:#64748b;font-size:13px;\'>" + (c.summary or "")[:120] + "…</span>" if c.summary else ""}'
+            f'<strong>{html.escape(clean_title(c.representative_title) or "Story")}</strong>'
+            f'{"<br><span style=\'color:#64748b;font-size:13px;\'>" + html.escape((c.summary or "")[:120]) + "…</span>" if c.summary else ""}'
             f"</li>"
             for c in rest
         )
@@ -102,7 +106,7 @@ def _build_text(clusters: list["Cluster"], today: date) -> str:
     lines = [f"SIPPLY — AI Intelligence Digest · {date_str}", "=" * 50, ""]
     for i, c in enumerate(clusters[:4]):
         prefix = "FEATURED: " if i == 0 else f"{i}. "
-        lines.append(f"{prefix}{c.representative_title or 'Story'}")
+        lines.append(f"{prefix}{clean_title(c.representative_title) or 'Story'}")
         if c.summary:
             lines.append(c.summary[:200] + ("…" if len(c.summary) > 200 else ""))
         lines.append("")

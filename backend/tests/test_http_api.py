@@ -120,3 +120,9 @@ def test_story_lists_community_discussion_from_the_radar(client, db, make_cluste
     assert body["discussions"][0]["source"] == "hn"
     other = make_cluster(title="Unrelated story")
     assert client.get(f"/api/clusters/{other.id}").json()["discussions"] == []
+
+
+def test_story_titles_come_out_decoded(client, make_cluster):
+    story = make_cluster(title="Eight states sue OpenAI, saying ChatGPT isn&#8217;t safe for kids")
+    body = client.get(f"/api/clusters/{story.id}").json()
+    assert body["title"]["en"] == "Eight states sue OpenAI, saying ChatGPT isn’t safe for kids"
