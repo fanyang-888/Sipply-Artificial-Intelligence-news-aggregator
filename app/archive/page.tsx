@@ -7,8 +7,12 @@ import { getLatestStories } from "@/lib/api/server";
 import { collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { ARCHIVE_PAGE_SIZE } from "@/lib/utils/archive-url";
 
-// New stories arrive 4× a day; re-render the first page at most every 5 minutes
-export const revalidate = 300;
+// Rendered per request, not prerendered: the client list reads the URL's
+// search params, and in a static render that bails out to the Suspense
+// fallback, so the prerendered HTML carried no stories (checked on the live
+// site). The story data itself is still cached for 5 minutes in the fetch
+// cache, so a request costs one cheap function call.
+export const dynamic = "force-dynamic";
 
 const DESCRIPTION =
   "Every AI story Sipply has synthesized, newest first: searchable by keyword and filtered by category (models, research, funding, products, policy & safety, open source & infra).";
