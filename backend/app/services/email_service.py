@@ -34,6 +34,25 @@ _SITE = "https://sipply.dev"
 # HTML builder
 # ---------------------------------------------------------------------------
 
+# The site's light theme, in colours mail clients can show: a serif headline,
+# small mono capitals for labels, one accent, a white card on a pale page.
+_SERIF = "Georgia, 'Times New Roman', serif"
+_SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+_MONO = "'SF Mono', Menlo, Consolas, 'Courier New', monospace"
+_INK = "#0b1829"
+_SOFT = "#344a63"
+_MUTED = "#4a6480"
+_ACCENT = "#1d6fe8"
+_PAGE = "#f5f8ff"
+_RULE = "rgba(11,24,41,.10)"
+_LABEL = f"margin:0;font-family:{_MONO};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:{_MUTED};"
+
+
+def _story_url(cluster: "Cluster") -> str:
+    story_id = getattr(cluster, "id", None)
+    return f"{_SITE}/cluster/{story_id}" if story_id else _SITE
+
+
 def _build_html(clusters: list["Cluster"], today: date) -> str:
     date_str = today.strftime("%B %-d, %Y")
 
@@ -46,56 +65,70 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
         # Feed titles may carry leftover entities; decode, then escape for HTML
         title = html.escape(clean_title(featured.representative_title) or "Today's top story")
         summary = html.escape(featured.summary or "")
+        summary_html = (
+            f'<p style="margin:0 0 20px;font-family:{_SANS};font-size:15.5px;line-height:1.65;color:{_SOFT};">'
+            f'{summary[:320]}{"…" if len(summary) > 320 else ""}</p>'
+            if summary
+            else ""
+        )
         featured_block = f"""
-        <div style="background:#f0f7ff;border-left:4px solid #0ea5e9;padding:16px 20px;border-radius:6px;margin-bottom:24px;">
-          <p style="margin:0 0 6px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Featured Story</p>
-          <h2 style="margin:0 0 10px;font-size:18px;color:#0f172a;line-height:1.4;">{title}</h2>
-          {f'<p style="margin:0 0 12px;font-size:14px;color:#334155;line-height:1.6;">{summary[:300]}{"…" if len(summary) > 300 else ""}</p>' if summary else ""}
-          <a href="{_SITE}" style="font-size:13px;color:#0ea5e9;text-decoration:none;font-weight:600;">Read full story →</a>
-        </div>
+        <p style="{_LABEL}color:{_ACCENT};">Today's lead</p>
+        <h2 style="margin:10px 0 14px;font-family:{_SERIF};font-size:27px;font-weight:normal;line-height:1.18;letter-spacing:-.01em;color:{_INK};">{title}</h2>
+        {summary_html}
+        <a href="{_story_url(featured)}" style="display:inline-block;background:{_INK};color:{_PAGE};text-decoration:none;padding:11px 20px;border-radius:999px;font-family:{_SANS};font-size:14px;font-weight:500;">Read the story &rarr;</a>
         """
 
     more_block = ""
     if rest:
         items = "".join(
-            f'<li style="margin-bottom:10px;font-size:14px;color:#334155;line-height:1.5;">'
-            f'<strong>{html.escape(clean_title(c.representative_title) or "Story")}</strong>'
-            f'{"<br><span style=\'color:#64748b;font-size:13px;\'>" + html.escape((c.summary or "")[:120]) + "…</span>" if c.summary else ""}'
-            f"</li>"
+            f'<tr><td style="padding:14px 0;border-top:1px solid {_RULE};">'
+            f'<a href="{_story_url(c)}" style="font-family:{_SERIF};font-size:17px;line-height:1.3;color:{_INK};text-decoration:none;">'
+            f'{html.escape(clean_title(c.representative_title) or "Story")}</a>'
+            + (
+                f'<p style="margin:5px 0 0;font-family:{_SANS};font-size:13.5px;line-height:1.5;color:{_MUTED};">'
+                f'{html.escape((c.summary or "")[:140])}{"…" if len(c.summary or "") > 140 else ""}</p>'
+                if c.summary
+                else ""
+            )
+            + "</td></tr>"
             for c in rest
         )
         more_block = f"""
-        <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">More stories today</h3>
-        <ul style="margin:0 0 24px;padding-left:18px;">{items}</ul>
+        <p style="{_LABEL}margin-top:36px;">More today</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin-top:6px;border-collapse:collapse;">{items}</table>
         """
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <div style="max-width:580px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+<body style="margin:0;padding:0;background:{_PAGE};font-family:{_SANS};">
+  <div style="max-width:600px;margin:32px auto;padding:0 16px;">
+    <div style="background:#ffffff;border:1px solid {_RULE};border-radius:20px;box-shadow:0 18px 44px rgba(29,111,232,.08);overflow:hidden;">
 
-    <!-- Header -->
-    <div style="background:#0e3f62;padding:24px 32px;">
-      <p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.3px;">Sipply</p>
-      <p style="margin:4px 0 0;font-size:13px;color:#7dd3fc;">AI Intelligence Digest · {date_str}</p>
+      <!-- Header -->
+      <div style="padding:26px 32px 0;">
+        <p style="margin:0;font-family:{_SERIF};font-size:24px;line-height:1;color:{_INK};">Sip<span style="color:{_ACCENT};">ply</span></p>
+        <p style="{_LABEL}margin-top:10px;">Daily digest &middot; {date_str}</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:30px 32px 32px;">
+        {featured_block}
+        {more_block}
+        <p style="margin:32px 0 0;font-family:{_SANS};font-size:14px;">
+          <a href="{_SITE}" style="color:{_ACCENT};text-decoration:none;font-weight:500;">Open today's full digest &rarr;</a>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:16px 32px;border-top:1px solid {_RULE};background:{_PAGE};">
+        <p style="margin:0;font-family:{_SANS};font-size:12px;line-height:1.6;color:{_MUTED};">
+          You're receiving this because you subscribed at <a href="{_SITE}" style="color:{_ACCENT};text-decoration:none;">sipply.dev</a>.
+          To unsubscribe, reply with "unsubscribe" in the subject.
+        </p>
+      </div>
+
     </div>
-
-    <!-- Body -->
-    <div style="padding:28px 32px;">
-      {featured_block}
-      {more_block}
-      <a href="{_SITE}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:600;">Open today's full digest</a>
-    </div>
-
-    <!-- Footer -->
-    <div style="padding:16px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-      <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
-        You're receiving this because you subscribed at <a href="{_SITE}" style="color:#0ea5e9;text-decoration:none;">sipply.dev</a>.
-        To unsubscribe, reply with "unsubscribe" in the subject.
-      </p>
-    </div>
-
   </div>
 </body>
 </html>"""
@@ -103,12 +136,13 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
 
 def _build_text(clusters: list["Cluster"], today: date) -> str:
     date_str = today.strftime("%B %-d, %Y")
-    lines = [f"SIPPLY — AI Intelligence Digest · {date_str}", "=" * 50, ""]
+    lines = [f"SIPPLY — Daily digest · {date_str}", "=" * 50, ""]
     for i, c in enumerate(clusters[:4]):
         prefix = "FEATURED: " if i == 0 else f"{i}. "
         lines.append(f"{prefix}{clean_title(c.representative_title) or 'Story'}")
         if c.summary:
             lines.append(c.summary[:200] + ("…" if len(c.summary) > 200 else ""))
+        lines.append(_story_url(c))
         lines.append("")
     lines += [f"Read more: {_SITE}", "", "---", "Unsubscribe: reply with 'unsubscribe' in subject"]
     return "\n".join(lines)
