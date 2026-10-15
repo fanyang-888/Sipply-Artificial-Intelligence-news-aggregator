@@ -47,6 +47,7 @@ describe("newsArticleJsonLd", () => {
     const ld = newsArticleJsonLd(cluster("c1", "Big launch"));
     expect(ld["@type"]).toBe("NewsArticle");
     expect(ld.url).toBe("https://www.sipply.dev/cluster/c1");
+    expect(ld.image).toEqual(["https://www.sipply.dev/cluster/c1/opengraph-image"]);
     expect(ld.datePublished).toBe("2026-10-10T08:00:00+00:00");
     expect(ld.isBasedOn).toEqual(["https://news.example/a1"]);
     expect(ld.citation).toEqual([

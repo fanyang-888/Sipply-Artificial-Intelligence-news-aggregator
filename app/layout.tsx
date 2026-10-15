@@ -15,6 +15,8 @@ export const metadata: Metadata = {
     template: "%s | Sipply",
   },
   description: "AI-curated insights served fresh each morning — drink in what matters, set aside the rest.",
+  openGraph: { siteName: "Sipply", type: "website", locale: "en_US" },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
