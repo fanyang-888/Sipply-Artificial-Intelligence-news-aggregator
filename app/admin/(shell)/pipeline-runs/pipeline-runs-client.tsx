@@ -32,9 +32,9 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 const STAGE_CHIP: Record<StageResult["status"], { cls: string; icon: string }> = {
-  ok: { cls: "border-emerald-200 bg-emerald-50 text-emerald-800", icon: "✓" },
-  failed: { cls: "border-red-200 bg-red-50 text-red-700", icon: "✗" },
-  skipped: { cls: "border-zinc-200 bg-zinc-100 text-zinc-500", icon: "–" },
+  ok: { cls: "[border-color:transparent] [background:color-mix(in_srgb,var(--green)_16%,transparent)] [color:var(--green)]", icon: "✓" },
+  failed: { cls: "[border-color:transparent] [background:color-mix(in_srgb,var(--red)_16%,transparent)] [color:var(--red)]", icon: "✗" },
+  skipped: { cls: "[border-color:var(--panel-divider)] [background:var(--panel-fill-2)] [color:var(--text-muted)]", icon: "–" },
 };
 
 function fmt(sec: number) {
@@ -50,7 +50,7 @@ function fmtDate(iso: string) {
 }
 
 function StatusDot({ status }: { status: PipelineRun["status"] }) {
-  const bg = status === "success" ? "#16a34a" : status === "failed" ? "#dc2626" : "#d97706";
+  const bg = status === "success" ? "var(--green)" : status === "failed" ? "var(--red)" : "var(--amber)";
   return (
     <span
       className={`inline-block h-2 w-2 rounded-full ${status === "running" ? "animate-pulse" : ""}`}
@@ -70,22 +70,22 @@ function RunRow({ run, lang }: { run: PipelineRun; lang: "en" | "zh" }) {
 
   return (
     <>
-      <tr className="cursor-pointer border-t border-zinc-100 hover:bg-zinc-50" onClick={() => setOpen(v => !v)}>
+      <tr className="cursor-pointer border-t [border-color:var(--panel-divider)] hover:[background:var(--panel-hover)]" onClick={() => setOpen(v => !v)}>
         <td className="py-2.5 pl-4 pr-2">
           <span className="flex items-center gap-2">
             <StatusDot status={run.status} />
-            <span className="text-xs font-medium text-zinc-700">{statusLabel}</span>
+            <span className="text-xs font-medium text-foreground">{statusLabel}</span>
           </span>
         </td>
-        <td className="px-2 py-2.5 text-xs text-zinc-600">{fmtDate(run.started_at)}</td>
-        <td className="px-2 py-2.5 text-xs text-zinc-600">
+        <td className="px-2 py-2.5 text-xs [color:var(--text-soft)]">{fmtDate(run.started_at)}</td>
+        <td className="px-2 py-2.5 text-xs [color:var(--text-soft)]">
           {run.total_elapsed_sec != null ? fmt(run.total_elapsed_sec) : run.finished_at ? "—" : (lang === "zh" ? "运行中…" : "running…")}
         </td>
-        <td className="px-2 py-2.5 text-xs text-zinc-500">{run.triggered_by ?? "—"}</td>
-        <td className="py-2.5 pl-2 pr-4 text-xs text-zinc-400">{open ? "▲" : "▼"}</td>
+        <td className="px-2 py-2.5 text-xs [color:var(--text-muted)]">{run.triggered_by ?? "—"}</td>
+        <td className="py-2.5 pl-2 pr-4 text-xs [color:var(--text-muted)]">{open ? "▲" : "▼"}</td>
       </tr>
       {open && (
-        <tr className="border-t border-zinc-100 bg-zinc-50/60">
+        <tr className="border-t [border-color:var(--panel-divider)] [background:var(--panel-hover)]">
           <td colSpan={5} className="px-4 py-3">
             <div className="flex flex-wrap gap-2">
               {STAGE_ORDER.map((key) => {
@@ -138,29 +138,29 @@ export function PipelineRunsClient() {
   return (
     <div className="px-8 py-8 max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-light" style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}>
+        <h1 className="font-display text-[2rem] font-light leading-tight text-foreground">
           Pipeline Runs
         </h1>
-        <p className="mt-0.5 text-sm text-zinc-400">
+        <p className="mt-0.5 text-sm [color:var(--text-muted)]">
           {zh ? "最近 30 次 · 每 30 秒自动刷新" : "Last 30 runs · auto-refreshes every 30s"}
         </p>
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 animate-pulse rounded-md bg-zinc-100" />)}</div>
+        <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />)}</div>
       ) : error ? (
-        <p className="text-sm text-red-600">Error: {error}</p>
+        <p className="text-sm [color:var(--red)]">Error: {error}</p>
       ) : runs.length === 0 ? (
-        <p className="text-sm text-zinc-500">{zh ? "暂无运行记录。" : "No pipeline runs yet."}</p>
+        <p className="text-sm [color:var(--text-muted)]">{zh ? "暂无运行记录。" : "No pipeline runs yet."}</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="sp-glass overflow-hidden">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50">
-                <th className="py-2 pl-4 pr-2 text-xs font-medium text-zinc-500">{zh ? "状态" : "Status"}</th>
-                <th className="px-2 py-2 text-xs font-medium text-zinc-500">{zh ? "开始时间（北京）" : "Started (CST)"}</th>
-                <th className="px-2 py-2 text-xs font-medium text-zinc-500">{zh ? "耗时" : "Duration"}</th>
-                <th className="px-2 py-2 text-xs font-medium text-zinc-500">{zh ? "触发方式" : "Trigger"}</th>
+              <tr className="border-b [border-color:var(--panel-divider)] [background:var(--panel-fill-2)]">
+                <th className="py-2 pl-4 pr-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "状态" : "Status"}</th>
+                <th className="px-2 py-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "开始时间（北京）" : "Started (CST)"}</th>
+                <th className="px-2 py-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "耗时" : "Duration"}</th>
+                <th className="px-2 py-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "触发方式" : "Trigger"}</th>
                 <th className="py-2 pl-2 pr-4" />
               </tr>
             </thead>

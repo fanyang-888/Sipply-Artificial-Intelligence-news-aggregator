@@ -79,7 +79,7 @@ function MiniBarChart({ daily }: { daily: { date: string; count: number }[] }) {
               style={{
                 height: `${heightPct}%`,
                 minHeight: d.count > 0 ? 2 : 0,
-                background: heightPct > 0 ? "var(--sp-accent-mid, #3b82f6)" : "#e4e4e7",
+                background: heightPct > 0 ? "var(--accent)" : "var(--panel-divider)",
                 opacity: heightPct > 0 ? 0.85 : 1,
               }}
             />
@@ -95,11 +95,11 @@ function EventCard({ stat, t }: { stat: EventStats; t: typeof L[keyof typeof L] 
   const allZero = stat.daily_totals.every((d) => d.count === 0) && top3.every((e) => e.count === 0);
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5">
-      <p className="text-sm font-medium text-zinc-700">{formatTypeName(stat.type)}</p>
+    <div className="sp-glass p-5">
+      <p className="text-sm font-medium text-foreground">{formatTypeName(stat.type)}</p>
 
       {allZero ? (
-        <p className="mt-3 text-xs text-zinc-400">{t.noData}</p>
+        <p className="mt-3 text-xs [color:var(--text-muted)]">{t.noData}</p>
       ) : (
         <>
           {/* 7-day bar chart */}
@@ -107,7 +107,7 @@ function EventCard({ stat, t }: { stat: EventStats; t: typeof L[keyof typeof L] 
             <MiniBarChart daily={stat.daily_totals} />
             <div className="mt-1 flex justify-between">
               {stat.daily_totals.slice(0, 7).map((d, i) => (
-                <span key={i} className="flex-1 text-center text-[9px] text-zinc-300 leading-none">
+                <span key={i} className="flex-1 text-center text-[9px] [color:var(--text-muted)] leading-none">
                   {d.date.slice(5)} {/* MM-DD */}
                 </span>
               ))}
@@ -117,16 +117,16 @@ function EventCard({ stat, t }: { stat: EventStats; t: typeof L[keyof typeof L] 
           {/* Top 3 entities */}
           {top3.length > 0 && (
             <div className="mt-4">
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider [color:var(--text-muted)]">
                 {t.top3}
               </p>
               <div className="space-y-1">
                 {top3.map((e) => (
                   <div key={e.entity_id} className="flex items-center justify-between gap-2">
-                    <span className="truncate font-mono text-xs text-zinc-600">
+                    <span className="truncate font-mono text-xs [color:var(--text-soft)]">
                       {e.entity_id.length > 12 ? `${e.entity_id.slice(0, 12)}…` : e.entity_id}
                     </span>
-                    <span className="shrink-0 text-xs text-zinc-400">
+                    <span className="shrink-0 text-xs [color:var(--text-muted)]">
                       {e.count} {t.times}
                     </span>
                   </div>
@@ -147,19 +147,18 @@ function MetricsPanel({ m, t }: { m: ProductMetrics; t: typeof L[keyof typeof L]
     { value: m.total_read_events_7d, label: t.totalReads },
   ];
   return (
-    <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-5">
-      <p className="text-sm font-medium text-zinc-700">{t.nsmTitle}</p>
-      <p className="mt-0.5 text-[11px] text-zinc-400">{t.nsmSubtitle}</p>
+    <div className="mb-8 sp-glass p-5">
+      <p className="text-sm font-medium text-foreground">{t.nsmTitle}</p>
+      <p className="mt-0.5 text-[11px] [color:var(--text-muted)]">{t.nsmSubtitle}</p>
       <div className="mt-4 grid grid-cols-3 gap-4">
         {stats.map((s) => (
           <div key={s.label}>
             <p
-              className="text-3xl font-light"
-              style={{ color: "var(--sp-navy)", fontFamily: "'Fraunces', serif" }}
+              className="font-display text-3xl font-light text-foreground"
             >
               {s.value}
             </p>
-            <p className="mt-1 text-[11px] text-zinc-500">{s.label}</p>
+            <p className="mt-1 text-[11px] [color:var(--text-muted)]">{s.label}</p>
           </div>
         ))}
       </div>
@@ -193,29 +192,28 @@ export function EventsClient() {
     <div className="px-8 py-8 max-w-4xl">
       <div className="mb-6">
         <h1
-          className="text-2xl font-light"
-          style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}
+          className="font-display text-[2rem] font-light leading-tight text-foreground"
         >
           {t.title}
         </h1>
-        <p className="mt-0.5 text-sm text-zinc-400">{t.subtitle}</p>
+        <p className="mt-0.5 text-sm [color:var(--text-muted)]">{t.subtitle}</p>
       </div>
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl bg-zinc-100" />
+            <div key={i} className="h-40 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-600">
+        <p className="text-sm [color:var(--red)]">
           {t.loadFailed} {error}
         </p>
       ) : (
         <>
           {metrics ? <MetricsPanel m={metrics} t={t} /> : null}
           {events.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t.noEvents}</p>
+            <p className="text-sm [color:var(--text-muted)]">{t.noEvents}</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {events.map((stat) => (

@@ -21,11 +21,11 @@ type ClusterRow = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  new:        { bg: "#dbeafe", text: "#1d4ed8" },
-  ongoing:    { bg: "#dcfce7", text: "#15803d" },
-  escalating: { bg: "#fef9c3", text: "#92400e" },
-  peaking:    { bg: "#fee2e2", text: "#b91c1c" },
-  fading:     { bg: "#f3f4f6", text: "#6b7280" },
+  new:        { bg: "color-mix(in srgb, var(--accent) 16%, transparent)", text: "var(--accent)" },
+  ongoing:    { bg: "color-mix(in srgb, var(--green) 16%, transparent)",  text: "var(--green)" },
+  escalating: { bg: "color-mix(in srgb, var(--amber) 16%, transparent)",  text: "var(--amber)" },
+  peaking:    { bg: "color-mix(in srgb, var(--red) 16%, transparent)",    text: "var(--red)" },
+  fading:     { bg: "var(--panel-fill-2)",                                 text: "var(--text-muted)" },
 };
 
 const STATUS_LABELS: Record<string, { en: string; zh: string }> = {
@@ -62,10 +62,10 @@ export function ClustersClient() {
     <div className="px-8 py-8 max-w-6xl">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-light" style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}>
+          <h1 className="font-display text-[2rem] font-light leading-tight text-foreground">
             Clusters
           </h1>
-          <p className="mt-0.5 text-sm text-zinc-400">
+          <p className="mt-0.5 text-sm [color:var(--text-muted)]">
             {zh
               ? `共 ${filtered.length} 个${filterStatus ? "（已筛选）" : ""}`
               : `${filtered.length} clusters${filterStatus ? " (filtered)" : ""}`}
@@ -74,7 +74,7 @@ export function ClustersClient() {
         <select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
-          className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 focus:outline-none"
+          className="h-9 rounded-full px-4 text-[13px] text-foreground outline-none ring-1 ring-inset [--tw-ring-color:var(--panel-divider)] [background:var(--panel-fill-2)] focus:[--tw-ring-color:var(--accent)]"
         >
           <option value="">{zh ? "全部状态" : "All statuses"}</option>
           {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -84,21 +84,21 @@ export function ClustersClient() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-md bg-zinc-100" />)}</div>
+        <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />)}</div>
       ) : error ? (
-        <p className="text-sm text-red-600">{zh ? "加载失败：" : "Failed: "}{error}</p>
+        <p className="text-sm [color:var(--red)]">{zh ? "加载失败：" : "Failed: "}{error}</p>
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div className="sp-glass overflow-hidden">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50">
-                  <th className="py-2.5 pl-4 pr-2 text-xs font-medium text-zinc-500">{zh ? "标题" : "Title"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "状态" : "Status"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "分数" : "Score"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "文章" : "Articles"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "更新" : "Updated"}</th>
-                  <th className="px-2 py-2.5 pr-4 text-xs font-medium text-zinc-500">{zh ? "操作" : "Actions"}</th>
+                <tr className="border-b [border-color:var(--panel-divider)] [background:var(--panel-fill-2)]">
+                  <th className="py-2.5 pl-4 pr-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "标题" : "Title"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "状态" : "Status"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "分数" : "Score"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "文章" : "Articles"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "更新" : "Updated"}</th>
+                  <th className="px-2 py-2.5 pr-4 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "操作" : "Actions"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -106,14 +106,14 @@ export function ClustersClient() {
                   const st = STATUS_STYLE[c.storyStatus] ?? STATUS_STYLE.fading;
                   const stLabel = STATUS_LABELS[c.storyStatus];
                   return (
-                    <tr key={c.id} className="border-t border-zinc-100 hover:bg-zinc-50">
+                    <tr key={c.id} className="border-t [border-color:var(--panel-divider)] hover:[background:var(--panel-hover)]">
                       <td className="py-3 pl-4 pr-2 max-w-xs">
                         <div>
-                          <p className="text-sm font-medium text-zinc-800 line-clamp-1">
+                          <p className="text-sm font-medium text-foreground line-clamp-1">
                             {zh ? (c.title.zh ?? c.title.en) : c.title.en}
                           </p>
                           {zh && c.title.zh && (
-                            <p className="text-xs text-zinc-400 line-clamp-1">{c.title.en}</p>
+                            <p className="text-xs [color:var(--text-muted)] line-clamp-1">{c.title.en}</p>
                           )}
                         </div>
                       </td>
@@ -122,11 +122,11 @@ export function ClustersClient() {
                           {stLabel ? (zh ? stLabel.zh : stLabel.en) : c.storyStatus}
                         </span>
                       </td>
-                      <td className="px-2 py-3 text-sm tabular-nums text-zinc-600">
+                      <td className="px-2 py-3 text-sm tabular-nums [color:var(--text-soft)]">
                         {c.clusterScore != null ? Math.round(c.clusterScore) : "—"}
                       </td>
-                      <td className="px-2 py-3 text-sm text-zinc-600">{c.articleCount}</td>
-                      <td className="px-2 py-3 text-xs text-zinc-400">{c.freshnessLabel}</td>
+                      <td className="px-2 py-3 text-sm [color:var(--text-soft)]">{c.articleCount}</td>
+                      <td className="px-2 py-3 text-xs [color:var(--text-muted)]">{c.freshnessLabel}</td>
                       <td className="px-2 py-3 pr-4">
                         <div className="flex items-center gap-2">
                           <Link href={`/cluster/${c.id}`} target="_blank" className="text-xs" style={{ color: "var(--sp-accent-mid)" }}>
@@ -142,12 +142,12 @@ export function ClustersClient() {
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-zinc-500">
-              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="rounded border px-3 py-1 disabled:opacity-40">
+            <div className="mt-4 flex items-center gap-2 text-sm [color:var(--text-muted)]">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="rounded-full px-3 py-1 text-foreground ring-1 ring-inset [--tw-ring-color:var(--panel-divider)] hover:[--tw-ring-color:var(--accent)] disabled:opacity-40">
                 {zh ? "← 上一页" : "← Prev"}
               </button>
               <span>{page + 1} / {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="rounded border px-3 py-1 disabled:opacity-40">
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="rounded-full px-3 py-1 text-foreground ring-1 ring-inset [--tw-ring-color:var(--panel-divider)] hover:[--tw-ring-color:var(--accent)] disabled:opacity-40">
                 {zh ? "下一页 →" : "Next →"}
               </button>
             </div>
