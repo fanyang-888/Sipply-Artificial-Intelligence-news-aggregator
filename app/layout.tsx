@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { AppProviders } from "@/components/app-providers";
 import { TopNav } from "@/components/layout/top-nav";
@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     apple: "/logo.png",
   },
 };
+
+/** The browser chrome's colour on phones: the dark stage (the default theme). */
+export const viewport: Viewport = { themeColor: "#080c12" };
 
 export default function RootLayout({
   children,
