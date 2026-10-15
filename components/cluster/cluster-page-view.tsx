@@ -13,7 +13,6 @@ import {
   BilingualAssistBody,
   BilingualTrustNote,
 } from "@/components/shared/bilingual-assist-text";
-import { getNextClusterInRankOrder } from "@/lib/utils/cluster-meta";
 import type { Cluster } from "@/types/cluster";
 import type { Article } from "@/types/article";
 
@@ -21,6 +20,10 @@ type ClusterPageViewProps = {
   cluster: Cluster;
   articles: Article[];
   related: Cluster[];
+  /** The story after this one in today's digest, when there is one. */
+  next?: Cluster;
+  /** Whether this story is in today's digest at all. */
+  inDigest: boolean;
 };
 
 /**
@@ -32,9 +35,10 @@ export function ClusterPageView({
   cluster,
   articles,
   related,
+  next,
+  inDigest,
 }: ClusterPageViewProps) {
   const { t, lang } = useI18n();
-  const nextCluster = getNextClusterInRankOrder(cluster.id);
 
   return (
     <article>
@@ -63,7 +67,7 @@ export function ClusterPageView({
         <CommunityDiscussion posts={cluster.discussions} />
         <RelatedTopics topics={cluster.topics} />
         <RelatedStories clusters={related} />
-        <ClusterStoryFooter nextCluster={nextCluster} />
+        <ClusterStoryFooter next={next} inDigest={inDigest} />
       </div>
     </article>
   );

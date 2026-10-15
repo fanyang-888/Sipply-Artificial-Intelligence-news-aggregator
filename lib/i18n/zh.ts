@@ -280,6 +280,7 @@ export const zh: Translations = {
     formatSourceDiversityNarrow: (outlets, articles) =>
       `${outlets} 家来源 · ${articles} 篇报道 — 来源较集中（请仔细核对）`,
     allCaughtUpToday: "今日要闻已读完。",
+    moreToday: "今日要闻",
     caughtUpViewArchive: "查看资料库",
   },
   notFound: {

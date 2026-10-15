@@ -11,10 +11,11 @@ import { apiClusterToCluster } from "@/lib/api/mappers";
 import { trackEvent } from "@/lib/api/track";
 import type { ApiCluster } from "@/lib/api/types";
 import type { Cluster } from "@/types/cluster";
+import type { TodayPosition } from "./page";
 
 type ClusterPageClientProps = {
   /** Server-fetched story; null when the server couldn't reach the API (fetch here instead). */
-  initial: { cluster: ApiCluster; related: ApiCluster[] } | null;
+  initial: { cluster: ApiCluster; related: ApiCluster[]; today: TodayPosition | null } | null;
 };
 
 export function ClusterPageClient({ initial }: ClusterPageClientProps) {
@@ -83,5 +84,14 @@ export function ClusterPageClient({ initial }: ClusterPageClientProps) {
     );
   }
 
-  return <ClusterPageView cluster={cluster} articles={cluster.articles ?? []} related={related} />;
+  const today = initial?.today ?? null;
+  return (
+    <ClusterPageView
+      cluster={cluster}
+      articles={cluster.articles ?? []}
+      related={related}
+      next={today?.next ? apiClusterToCluster(today.next) : undefined}
+      inDigest={today?.inDigest ?? false}
+    />
+  );
 }

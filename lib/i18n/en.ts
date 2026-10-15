@@ -289,6 +289,7 @@ export const en: Translations = {
     formatSourceDiversityNarrow: (outlets, articles) =>
       `${outlets} outlet${outlets === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"} — narrow sourcing (verify claims carefully)`,
     allCaughtUpToday: "You're all caught up for today.",
+    moreToday: "Today's stories",
     caughtUpViewArchive: "View Archive",
   },
   notFound: {

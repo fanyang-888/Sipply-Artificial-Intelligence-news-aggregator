@@ -41,13 +41,14 @@ So I built it — including the ingestion pipeline, the ML scoring model, the LL
 | Role personalisation | PM / Developer / Student lenses with tailored "why it matters" context |
 | Bilingual | Every field (title, summary, takeaways, why it matters) auto-translated to Chinese |
 | Email digest | Daily digest sent to subscribers via Resend, on the 20:00 UTC run only |
-| Category bar | Homepage and archive filter by category (models, research, funding, products, policy & safety, open source & infra) |
+| Home page | Four full-screen panels: the lead story, today's stories as a sideways carousel (category tabs: models, research, funding, products, policy & safety, open source & infra), what the AI community is discussing, this week + the email |
+| One visual language | Fraunces headlines, mono micro-labels, glass panels and one accent on every page (`lib/ui/classes.ts`, `PageHeader`) |
 | Trend Radar | Community and news signals grouped into topics; rings by evidence, color by momentum, AI summaries, Sipply coverage — see [Trend Radar](#trend-radar) |
 | Readable by AI assistants | Server-rendered pages, JSON-LD, sitemap, `robots.txt`, `llms.txt` — see [GEO](#readable-by-ai-assistants-geo) |
 | Dark / light mode | Theme toggle with localStorage persistence; all colours via CSS custom properties |
 | Recency ranking | Digest ranks stories by `score × e^(-0.15 × age_days)` — fresh beats stale |
 | Full-text search | Archive search across all clusters and articles |
-| SEO / Open Graph | Per-page `<title>` and `og:` tags for story pages |
+| SEO / Open Graph | Per-page `<title>`, `og:` tags and generated share images (`opengraph-image.tsx`) for the site, stories, topics and weeks |
 
 ---
 
@@ -272,13 +273,13 @@ Turned off, with the reason in the YAML: VentureBeat AI (feed stopped updating, 
 
 ```
 ├── app/                    Next.js pages (digest, cluster, archive, radar, admin) + sitemap/robots/llms.txt
-├── components/             UI components (digest cards, cluster view, archive, radar...)
+├── components/             UI components (home panels, story view, archive, topics/weekly, radar, shared states)
 ├── lib/
 │   ├── api/                Type-safe backend API client (+ server-side fetchers)
 │   ├── i18n/               EN/ZH locale strings with typed keys
 │   ├── seo/                Site URL, JSON-LD, llms.txt builders
-│   ├── utils/              Pure helpers (radar layout and filters, archive URLs...)
-│   └── data/               Static content (AI Basics daily rotation)
+│   ├── ui/                 Shared class strings: titles, labels, tabs, inputs, buttons
+│   └── utils/              Pure helpers (radar layout and filters, archive URLs...)
 ├── types/                  Shared TypeScript type definitions
 ├── middleware.ts           Next.js middleware — admin route guard
 └── backend/
