@@ -29,7 +29,14 @@ from app.db import get_db
 from app.models.answer_check import AnswerCheck
 from app.models.cluster import Cluster
 from app.models.signal import Signal, SignalTopic
-from app.signals.base import FAMILY_LABELS, credentials_from_settings, source_family
+from app.signals.base import (
+    ASKING_FAMILIES,
+    FAMILY_LABELS,
+    credentials_from_settings,
+    is_asked_question,
+    kinds_for_family,
+    source_family,
+)
 from app.signals.config import radar_config
 from app.signals.topics import engagement_of, evidence_ring, evidence_trail, topic_momentum
 
@@ -45,6 +52,8 @@ RECENT_CHECKS = 20
 SIGNALS_PER_TOPIC = 5
 QUESTIONS_PER_TOPIC = 3
 TOP_QUESTIONS = 12
+# Question-flagged signals read per page build; the stricter is_asked_question check runs on these
+QUESTION_CANDIDATES = 200
 
 
 def _signal_out(s: Signal) -> RadarSignal:
@@ -187,19 +196,27 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
                 question=t.question_en,
                 answerCheck=_answer_check_out(latest_check.get(t.question_en)) if t.question_en else None,
                 signals=[_signal_out(s) for s in ranked[:SIGNALS_PER_TOPIC]],
-                questions=[_signal_out(s) for s in ranked if s.is_question][:QUESTIONS_PER_TOPIC],
+                questions=[
+                    _signal_out(s) for s in ranked if s.is_question and is_asked_question(s.title, s.source_kind)
+                ][:QUESTIONS_PER_TOPIC],
             )
         )
 
     engagement_sql = (
         func.coalesce(Signal.points, 0) + func.coalesce(Signal.num_comments, 0) + func.coalesce(Signal.like_count, 0)
     )
-    questions = db.execute(
+    asking_kinds = [k for fam in sorted(ASKING_FAMILIES) for k in kinds_for_family(fam)]
+    candidates = db.execute(
         select(Signal)
-        .where(Signal.is_question.is_(True), Signal.published_at >= window_start)
+        .where(
+            Signal.is_question.is_(True),
+            Signal.source_kind.in_(asking_kinds),
+            Signal.published_at >= window_start,
+        )
         .order_by(engagement_sql.desc(), Signal.published_at.desc())
-        .limit(TOP_QUESTIONS)
+        .limit(QUESTION_CANDIDATES)
     ).scalars().all()
+    questions = [s for s in candidates if is_asked_question(s.title, s.source_kind)][:TOP_QUESTIONS]
 
     per_kind = db.execute(
         select(Signal.source_kind, func.count(), func.max(Signal.fetched_at))
