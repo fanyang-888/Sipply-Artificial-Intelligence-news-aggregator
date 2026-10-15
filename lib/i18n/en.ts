@@ -3,7 +3,6 @@ import type { Translations } from "./types";
 export const en: Translations = {
   nav: {
     dailyDigest: "Daily Digest",
-    dailyDigestShort: "Digest",
     archive: "Archive",
     radar: "Trend Radar",
     topics: "Topics",
@@ -45,41 +44,15 @@ export const en: Translations = {
     emptyFeaturedTitle: "No featured story",
     emptyFeaturedDesc: "Today's featured story will appear here once the pipeline has run.",
     topClusters: "Top Story Clusters",
-    viewAllInsights: "View all daily insights",
     categoryBarAria: "Browse by category",
     personalizedNote: "Reordered to match what you read and your role",
     readAs: "Read as",
     allReaders: "All readers",
-    readAsPrompt: "Pick a role: today's order and each story's “why it matters” switch to that angle.",
-    readAsHint: (role) => `Ordered and explained for a ${role}.`,
     emptyClustersTitle: "Waiting for more data",
-    emptyClustersDesc:
-      "We need a bit more signal to synthesize today's clusters. Check back soon or browse the archive.",
-    goToArchive: "Go to Archive",
   },
   formatSourceCount: (n) => (n === 1 ? `${n} source` : `${n} sources`),
   digest: {
-    ingestChannelsAria: "Ingest channels",
-    sourcesPrefix: "Sources:",
-    whyItMattersPrefix: "Why it matters:",
-    viewStory: "View Story",
     originalPrefix: "Original:",
-    featuredFallback: "Featured",
-    formatMoreChannelTypesHidden: (n) =>
-      `${n} more ingest channel types not shown`,
-    srOnlySources: "Sources",
-    srOnlyFreshness: "Freshness",
-    srOnlyRelevance: "Relevance",
-    formatChannelBadgeAria: (c, label) =>
-      `${c === 1 ? "1 source" : `${c} sources`} from ${label}`,
-  },
-  discover: {
-    title: "Discover in the Archive",
-    bodyBeforeEmphasis:
-      "Browse the full catalog of synthesized clusters and sources. Use the ",
-    bodyEmphasis: "search field in the header",
-    bodyAfterEmphasis: " to find companies, models, themes, or keywords.",
-    cta: "Go to Archive",
   },
   archive: {
     title: "Archive",
@@ -87,7 +60,6 @@ export const en: Translations = {
       "Search every story Sipply has synthesized — filter by category or keyword.",
     searchPlaceholder: "Keyword in title or summary…",
     searchLabel: "Search",
-    results: "Results",
     emptyCatalog: "No stories in catalog",
     noResultsTitle: "No results",
     noResultsMessage:
@@ -114,8 +86,6 @@ export const en: Translations = {
     totalStories: (n) => `${n} in total`,
     latest: (date) => `latest ${date}`,
     topicTitle: (name) => `${name}: the latest AI news`,
-    topicDescription: (name) =>
-      `Every Sipply story about ${name}, newest first, with what the AI community is discussing about it right now.`,
     onRadar: "On the Trend Radar now",
     onRadarDesc: "Topics people are posting about this week.",
     ringNames: { 1: "Mainstream", 2: "Picking up", 3: "Weak signal" },
@@ -250,17 +220,10 @@ export const en: Translations = {
     likesReplies: (likes, replies) => `♥ ${likes} · ${replies} replies`,
     reactionsComments: (reactions, comments) => `${reactions} reactions · ${comments} comments`,
   },
-  channels: {
-    email: "Email",
-    chat: "Chat",
-    web: "Web",
-    feed: "Feed",
-  },
   cluster: {
     summary: "Summary",
     takeaways: "Takeaways",
     whyItMatters: "Why it matters",
-    whyItMattersForYou: "Why it matters for you",
     audiencePm: "PMs",
     audienceDeveloper: "Developers",
     audienceStudent: "Students & job seekers",
@@ -279,7 +242,6 @@ export const en: Translations = {
     headerLastUpdated: "Last updated",
     emptyCoveredSources: "No linked articles in the mock catalog for this cluster.",
     credibilityPrefix: "Credibility:",
-    breadcrumbAria: "Breadcrumb",
     backToDigest: "Back to Daily Digest",
     nextStory: "Next story",
     formatReadTimeMinutes: (minutes) =>
