@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { RADAR_SOURCE_ORDER, type ApiRadarTopic, type RadarMomentum } from "@/lib/api/types";
+import { RADAR_SOURCE_ORDER, type ApiRadarTopic, type RadarMomentum, type RadarSourceKey } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -20,99 +19,86 @@ type RadarToolbarProps = {
 
 const MOMENTA: RadarMomentum[] = ["new", "rising", "steady", "cooling"];
 
-/** Three filter rows (platform, momentum, category); each pill shows how many topics it keeps. */
+/**
+ * One row: categories as text tabs (the same ones the chart's sector names
+ * toggle), momentum and platform as two compact selects. Counts are topics kept.
+ */
 export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {
   const { t, lang } = useI18n();
-
-  const pill = (on: boolean, onClick: () => void, children: ReactNode, key: string) => (
+  const platforms = RADAR_SOURCE_ORDER.filter((k) => topics.some((x) => topicPlatforms(x).includes(k)));
+  const tab = (on: boolean, onClick: () => void, name: string, n: number, key: string) => (
     <button
       key={key}
       type="button"
       aria-pressed={on}
       onClick={onClick}
       className={[
-        "rounded-full border px-3 py-1 text-xs transition-colors",
-        on
-          ? "border-transparent font-semibold [background:var(--accent)] [color:var(--bg)]"
-          : "[border-color:var(--border)] [background:var(--surface)] [color:var(--text-muted)] hover:[border-color:var(--accent)] hover:[color:var(--accent)]",
+        "border-b-2 pb-0.5 text-[13px] transition-colors",
+        on ? "font-semibold text-foreground [border-color:var(--accent)]" : "border-transparent [color:var(--text-muted)] hover:text-foreground",
       ].join(" ")}
     >
-      {children}
+      {name}
+      <span className="ml-1 font-mono text-[11px] [color:var(--text-muted)]">{n}</span>
     </button>
   );
-  const count = (n: number) => <span className="ml-1 font-mono text-[10.5px] opacity-75">{n}</span>;
-  const row = (label: string, children: ReactNode) => (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="w-[4.2em] shrink-0 font-mono text-[11px] [color:var(--text-muted)]">{label}</span>
-      {children}
-    </div>
-  );
-
-  const platforms = RADAR_SOURCE_ORDER.filter((k) => topics.some((x) => topicPlatforms(x).includes(k)));
+  const select = "rounded-md border px-2 py-1 text-[12.5px] [background:var(--surface)] [border-color:var(--border)] [color:var(--text)]";
 
   return (
-    <div className="mb-3 grid gap-2" role="toolbar" aria-label={t.radar.filterAria}>
-      {row(
-        t.radar.filterPlatform,
-        <>
-          {pill(!filters.source, () => onChange({ ...filters, source: "" }), t.radar.allSources, "all")}
-          {platforms.map((k) =>
-            pill(
-              filters.source === k,
-              () => onChange({ ...filters, source: k }),
-              <>
-                {t.radar.sourceShort[k]}
-                {count(topics.filter((x) => (x.sourceCounts[k] ?? 0) > 0).length)}
-              </>,
-              k,
-            ),
-          )}
-        </>,
-      )}
-      {row(
-        t.radar.filterMomentum,
-        <>
-          {pill(!filters.momentum, () => onChange({ ...filters, momentum: "" }), t.radar.allSources, "all")}
-          {MOMENTA.map((m) =>
-            pill(
-              filters.momentum === m,
-              () => onChange({ ...filters, momentum: m }),
-              <>
-                {t.radar.momentum[m]}
-                {count(topics.filter((x) => x.momentum === m).length)}
-              </>,
-              m,
-            ),
-          )}
-        </>,
-      )}
-      {row(
-        t.radar.filterCategory,
-        <>
-          {pill(!filters.group, () => onChange({ ...filters, group: "" }), t.radar.allCategories, "all")}
-          {RADAR_SECTORS.map((key) => {
-            const g = key === "other" ? undefined : topicGroupByKey(key);
-            return pill(
-              filters.group === key,
-              () => onChange({ ...filters, group: key }),
-              <>
-                {g ? topicGroupLabel(g, lang) : t.radar.otherCategory}
-                {count(topics.filter((x) => radarSectorForTag(x.topicTag) === key).length)}
-              </>,
-              key,
-            );
-          })}
-          {hasActiveFilter(filters) ? (
-            <button
-              type="button"
-              onClick={() => onChange({ group: "", source: "", momentum: "" })}
-              className="ml-1 text-xs underline underline-offset-2 [color:var(--text-muted)] hover:text-foreground"
-            >
-              {t.radar.clearFilters}
-            </button>
-          ) : null}
-        </>,
-      )}
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2" role="toolbar" aria-label={t.radar.filterAria}>
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5" role="group" aria-label={t.radar.filterCategory}>
+        {tab(!filters.group, () => onChange({ ...filters, group: "" }), t.radar.allCategories, topics.length, "all")}
+        {RADAR_SECTORS.map((key) => {
+          const g = key === "other" ? undefined : topicGroupByKey(key);
+          return tab(
+            filters.group === key,
+            () => onChange({ ...filters, group: filters.group === key ? "" : key }),
+            g ? topicGroupLabel(g, lang) : t.radar.otherCategory,
+            topics.filter((x) => radarSectorForTag(x.topicTag) === key).length,
+            key,
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2">
+        <select
+          aria-label={t.radar.filterMomentum}
+          value={filters.momentum}
+          onChange={(e) => onChange({ ...filters, momentum: e.target.value as RadarMomentum | "" })}
+          className={select}
+        >
+          <option value="">
+            {t.radar.filterMomentum}: {t.radar.allSources}
+          </option>
+          {MOMENTA.map((m) => (
+            <option key={m} value={m}>
+              {t.radar.momentum[m]} ({topics.filter((x) => x.momentum === m).length})
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t.radar.filterPlatform}
+          value={filters.source}
+          onChange={(e) => onChange({ ...filters, source: e.target.value as RadarSourceKey | "" })}
+          className={select}
+        >
+          <option value="">
+            {t.radar.filterPlatform}: {t.radar.allSources}
+          </option>
+          {platforms.map((k) => (
+            <option key={k} value={k}>
+              {t.radar.sourceShort[k]} ({topics.filter((x) => (x.sourceCounts[k] ?? 0) > 0).length})
+            </option>
+          ))}
+        </select>
+        {hasActiveFilter(filters) ? (
+          <button
+            type="button"
+            onClick={() => onChange({ group: "", source: "", momentum: "" })}
+            className="text-xs underline underline-offset-2 [color:var(--text-muted)] hover:text-foreground"
+          >
+            {t.radar.clearFilters}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

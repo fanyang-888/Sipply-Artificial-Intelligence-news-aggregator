@@ -58,18 +58,6 @@ export function topicPlatforms(t: ApiRadarTopic): RadarSourceKey[] {
   return RADAR_SOURCE_ORDER.filter((k) => (t.sourceCounts[k] ?? 0) > 0);
 }
 
-/** Bar colors per platform (fixed hues; readable on both themes). */
-export const PLATFORM_COLORS: Record<RadarSourceKey, string> = {
-  hn: "#ff8a3d",
-  news: "var(--accent)",
-  youtube: "#e05470",
-  bluesky: "#3fa9f5",
-  threads: "#8fa3b8",
-  github: "#9b8cff",
-  devto: "#8fa3b8",
-  lobsters: "#b5651d",
-};
-
 /**
  * Fill in fields an older API doesn't send yet (ring, momentum, isNew, summary,
  * coverage). Vercel usually deploys before Railway, so for a few minutes the new
@@ -111,6 +99,20 @@ export function withRadarDefaults(radar: ApiRadar): ApiRadar {
       };
     }),
   };
+}
+
+/** Display order: inner ring first, then score. Blip numbers and table rows follow it. */
+export function radarOrder(topics: ApiRadarTopic[]): ApiRadarTopic[] {
+  return [...topics].sort((a, b) => a.ring - b.ring || b.score - a.score);
+}
+
+/** "News 24, YouTube 6, HN 3": the topic's platforms, busiest first. */
+export function platformBreakdown(t: ApiRadarTopic, short: Record<RadarSourceKey, string>, sep: string): string {
+  return topicPlatforms(t)
+    .map((k) => [k, t.sourceCounts[k] ?? 0] as const)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${short[k]} ${n}`)
+    .join(sep);
 }
 
 /** Days back the radar compares against for "moved inward". */
@@ -201,10 +203,14 @@ export function formatCompact(n: number): string {
   return `${k < 10 ? k.toFixed(1).replace(/\.0$/, "") : Math.round(k)}k`;
 }
 
-/** Bar heights (px) for a daily-count sparkline; empty days keep a 1px baseline. */
-export function sparklineHeights(counts: number[], maxHeight: number): number[] {
-  const max = Math.max(0, ...counts);
-  return counts.map((c) => (max === 0 || c === 0 ? 1 : Math.max(2, Math.round((c / max) * maxHeight))));
+/**
+ * Bar heights (px) for a daily-count sparkline; empty days keep a 1px baseline.
+ * Pass ``scaleMax`` to draw several sparklines on one shared scale (so a topic
+ * with 1 signal a day doesn't look as busy as one with 20).
+ */
+export function sparklineHeights(counts: number[], maxHeight: number, scaleMax?: number): number[] {
+  const max = scaleMax ?? Math.max(0, ...counts);
+  return counts.map((c) => (max === 0 || c === 0 ? 1 : Math.max(2, Math.round((Math.min(c, max) / max) * maxHeight))));
 }
 
 /** Whole hours/days since an ISO timestamp, for "5h" / "3d" labels. */

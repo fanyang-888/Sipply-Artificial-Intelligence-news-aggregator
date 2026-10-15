@@ -14,10 +14,11 @@ import {
   type BlipPosition,
 } from "@/lib/utils/radar-layout";
 
+/** Only new and rising topics get a color; steady and cooling stay gray. */
 export const MOMENTUM_FILL = {
-  new: "var(--radar-new)",
+  new: "var(--accent)",
   rising: "var(--green)",
-  steady: "var(--accent)",
+  steady: "var(--radar-cool)",
   cooling: "var(--radar-cool)",
 } as const;
 
@@ -30,12 +31,6 @@ type RadarChartProps = {
   sector: RadarSectorKey | "";
   onSelect: (id: string) => void;
   onSector: (key: RadarSectorKey) => void;
-};
-
-const RING_FILL: Record<RadarRing, string> = {
-  1: "color-mix(in srgb, var(--accent) 11%, transparent)",
-  2: "color-mix(in srgb, var(--accent) 6%, transparent)",
-  3: "color-mix(in srgb, var(--accent) 2.5%, transparent)",
 };
 
 /** Long English sector names go on two lines so they fit beside the chart. */
@@ -53,8 +48,8 @@ function wedge(a0: number, a1: number, r: number): string {
 }
 
 /**
- * Rings = evidence (mainstream inside), sectors = category, color = momentum,
- * a dashed ring = no Sipply story yet. Blip numbers match the ranked lists.
+ * Rings = evidence (mainstream inside), sectors = category, color = momentum
+ * (new, rising; gray otherwise). Blip numbers match the table rows.
  */
 export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, sector, onSelect, onSector }: RadarChartProps) {
   const { t, lang } = useI18n();
@@ -89,9 +84,6 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
         aria-label={t.radar.chartAria}
         onMouseLeave={() => setHover(null)}
       >
-        {([3, 2, 1] as RadarRing[]).map((r) => (
-          <circle key={r} r={RING_OUTER[r]} fill={RING_FILL[r]} />
-        ))}
         {sector ? (
           <path
             d={wedge(
@@ -128,8 +120,8 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
           const name = sectorName(key);
           const lines = splitSectorLabel(name);
           const extra = (lines.length - 1) * 21;
-          const yy = Math.sin(a) < -0.3 ? y - 18 - extra : Math.sin(a) > 0.3 ? y + 14 : y - extra / 2;
-          const n = topics.filter((x) => radarSectorForTag(x.topicTag) === key).length;
+          const yy = Math.sin(a) < -0.3 ? y - extra : Math.sin(a) > 0.3 ? y + 14 : y + 6 - extra / 2;
+          const empty = !topics.some((x) => radarSectorForTag(x.topicTag) === key);
           return (
             <g
               key={key}
@@ -151,16 +143,13 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
                 y={yy.toFixed(1)}
                 textAnchor={anchor}
                 className="radar-sector-name"
-                fill={sector === key ? "var(--accent)" : "var(--text)"}
+                fill={sector === key ? "var(--accent)" : empty ? "var(--text-muted)" : "var(--text)"}
               >
                 {lines.map((line, li) => (
                   <tspan key={li} x={x.toFixed(1)} dy={li === 0 ? 0 : 21}>
                     {line}
                   </tspan>
                 ))}
-              </text>
-              <text x={x.toFixed(1)} y={(yy + 21 + extra).toFixed(1)} textAnchor={anchor} className="radar-sector-count" fill="var(--text-muted)">
-                {t.radar.topicsInSector(n)}
               </text>
             </g>
           );
@@ -203,7 +192,6 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
           const pos = positions[topic.id];
           if (!pos) return null;
           const dim = isDimmed(topic);
-          const gap = topic.coverage?.status === "gap";
           const selected = topic.id === selectedId;
           const rank = rankOf(topic.id);
           return (
@@ -227,8 +215,7 @@ export function RadarChart({ topics, positions, rankOf, selectedId, isDimmed, se
               onFocus={(e) => showTip(topic.id, e.currentTarget)}
               onBlur={() => setHover(null)}
             >
-              {gap ? <circle r={BLIP_RADIUS + 4} fill="none" stroke="var(--amber)" strokeWidth={1.6} strokeDasharray="3 2.4" /> : null}
-              {selected ? <circle r={BLIP_RADIUS + (gap ? 8 : 5)} fill="none" stroke="var(--text)" strokeWidth={1.6} /> : null}
+              {selected ? <circle r={BLIP_RADIUS + 5} fill="none" stroke="var(--text)" strokeWidth={1.6} /> : null}
               <circle r={BLIP_RADIUS} fill={MOMENTUM_FILL[topic.momentum]} stroke="var(--bg)" strokeWidth={2} className="radar-dot" />
               <text dy="0.36em" textAnchor="middle" className="radar-blip-num" fill="var(--bg)">
                 {rank}

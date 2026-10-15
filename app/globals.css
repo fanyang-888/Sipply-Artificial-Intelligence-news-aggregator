@@ -17,7 +17,6 @@
   --red:          #e05470;
   --green:        #34d399;
   --amber:        #f0b429;
-  --radar-new:    #a78bfa;
   --radar-cool:   #61758d;
   --masthead-bg:  rgba(8,12,18,.94);
   --ticker-text:  #080c12;
@@ -55,7 +54,6 @@
   --red:          #e02d55;
   --green:        #0d9e6a;
   --amber:        #c27803;
-  --radar-new:    #7c3aed;
   --radar-cool:   #6b7f96;
   --masthead-bg:  rgba(245,248,255,.92);
   --ticker-text:  #f5f8ff;
@@ -133,12 +131,10 @@ body {
 
 /* ── Trend Radar chart (SVG text sizes are in chart units; the chart scales with its column) ── */
 .radar-chart .radar-sector-name { font-family: 'DM Sans', 'PingFang SC', sans-serif; font-weight: 600; font-size: 19px; }
-.radar-chart .radar-sector-count { font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
 .radar-chart .radar-ring-label { font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: .08em; }
 .radar-chart .radar-blip-num { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 500; pointer-events: none; }
 @media (max-width: 640px) {
   .radar-chart .radar-sector-name { font-size: 24px; }
-  .radar-chart .radar-sector-count { display: none; }
   .radar-chart .radar-ring-label { font-size: 19px; }
   .radar-chart .radar-blip-num { display: none; }
 }
