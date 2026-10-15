@@ -58,30 +58,30 @@ export function SourcesClient() {
   return (
     <div className="px-8 py-8 max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-light" style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}>
+        <h1 className="font-display text-[2rem] font-light leading-tight text-foreground">
           {zh ? "信源监控" : "Source Health"}
         </h1>
-        <p className="mt-0.5 text-sm text-zinc-400">
+        <p className="mt-0.5 text-sm [color:var(--text-muted)]">
           {zh ? "各信源抓取状态及文章量" : "Fetch status and article counts per source"}
         </p>
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-md bg-zinc-100" />)}</div>
+        <div className="space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />)}</div>
       ) : error ? (
-        <p className="text-sm text-red-600">{zh ? "加载失败：" : "Failed: "}{error}</p>
+        <p className="text-sm [color:var(--red)]">{zh ? "加载失败：" : "Failed: "}{error}</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="sp-glass overflow-hidden">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50">
-                <th className="py-2.5 pl-4 pr-2 text-xs font-medium text-zinc-500">{zh ? "信源" : "Source"}</th>
-                <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "类型" : "Type"}</th>
-                <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "状态" : "Status"}</th>
-                <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "最后抓取" : "Last polled"}</th>
-                <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "频率" : "Frequency"}</th>
-                <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "近 7 天" : "7-day"}</th>
-                <th className="px-2 py-2.5 pr-4 text-xs font-medium text-zinc-500">{zh ? "总计" : "Total"}</th>
+              <tr className="border-b [border-color:var(--panel-divider)] [background:var(--panel-fill-2)]">
+                <th className="py-2.5 pl-4 pr-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "信源" : "Source"}</th>
+                <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "类型" : "Type"}</th>
+                <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "状态" : "Status"}</th>
+                <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "最后抓取" : "Last polled"}</th>
+                <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "频率" : "Frequency"}</th>
+                <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "近 7 天" : "7-day"}</th>
+                <th className="px-2 py-2.5 pr-4 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "总计" : "Total"}</th>
               </tr>
             </thead>
             <tbody>
@@ -94,34 +94,34 @@ export function SourcesClient() {
                   ? zh ? `每 ${src.fetch_frequency_minutes / 1440} 天` : `every ${src.fetch_frequency_minutes / 1440}d`
                   : zh ? `每 ${src.fetch_frequency_minutes} 分钟` : `every ${src.fetch_frequency_minutes}m`;
                 return (
-                  <tr key={src.id} className="border-t border-zinc-100 hover:bg-zinc-50">
+                  <tr key={src.id} className="border-t [border-color:var(--panel-divider)] hover:[background:var(--panel-hover)]">
                     <td className="py-3 pl-4 pr-2">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-zinc-800">{src.name}</span>
+                        <span className="text-sm font-medium text-foreground">{src.name}</span>
                         {src.slug && (
-                          <Link href={`/admin/articles?source_id=${src.id}`} className="text-xs text-zinc-400 hover:underline">
+                          <Link href={`/admin/articles?source_id=${src.id}`} className="text-xs [color:var(--text-muted)] hover:underline">
                             {src.slug}
                           </Link>
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-xs text-zinc-500">
+                    <td className="px-2 py-3 text-xs [color:var(--text-muted)]">
                       {typeLabel ? (zh ? typeLabel.zh : typeLabel.en) : src.type}
                     </td>
                     <td className="px-2 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${src.is_active ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${src.is_active ? "bg-emerald-500" : "bg-zinc-400"}`} />
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${src.is_active ? "[background:color-mix(in_srgb,var(--green)_16%,transparent)] [color:var(--green)]" : "[background:var(--panel-fill-2)] [color:var(--text-muted)]"}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${src.is_active ? "[background:var(--green)]" : "[background:var(--text-muted)]"}`} />
                         {src.is_active ? (zh ? "活跃" : "Active") : (zh ? "停用" : "Inactive")}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-xs" style={{ color: stale && src.is_active ? "#dc2626" : "#71717a" }}>
+                    <td className="px-2 py-3 text-xs" style={{ color: stale && src.is_active ? "var(--red)" : "var(--text-muted)" }}>
                       {fmtAgo(src.last_polled_at, zh)}
                     </td>
-                    <td className="px-2 py-3 text-xs text-zinc-500">{freq}</td>
+                    <td className="px-2 py-3 text-xs [color:var(--text-muted)]">{freq}</td>
                     <td className="px-2 py-3 text-sm font-medium" style={{ color: "var(--sp-accent-mid)" }}>
                       {src.articles_last_7d}
                     </td>
-                    <td className="px-2 py-3 pr-4 text-sm text-zinc-600 tabular-nums">
+                    <td className="px-2 py-3 pr-4 text-sm [color:var(--text-soft)] tabular-nums">
                       {src.article_count.toLocaleString()}
                     </td>
                   </tr>

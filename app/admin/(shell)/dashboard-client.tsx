@@ -101,17 +101,16 @@ type CardProps = {
 function StatCard({ title, value, sub, href, accent }: CardProps) {
   const inner = (
     <div
-      className="rounded-xl border bg-white p-5 transition-shadow hover:shadow-sm"
-      style={{ borderColor: "var(--sp-border)" }}
+      className="sp-glass p-5 transition-opacity hover:opacity-90"
     >
-      <p className="text-xs text-zinc-500">{title}</p>
+      <p className="text-xs [color:var(--text-muted)]">{title}</p>
       <p
         className="mt-1.5 text-3xl font-light tabular-nums"
-        style={{ color: accent ? "var(--sp-accent-mid)" : "var(--sp-navy)" }}
+        style={{ color: accent ? "var(--accent)" : "var(--text)" }}
       >
         {value}
       </p>
-      {sub && <p className="mt-1 text-xs text-zinc-400">{sub}</p>}
+      {sub && <p className="mt-1 text-xs [color:var(--text-muted)]">{sub}</p>}
     </div>
   );
   return href ? <Link href={href}>{inner}</Link> : <>{inner}</>;
@@ -134,8 +133,8 @@ export function DashboardClient() {
 
   const run = stats?.last_pipeline_run;
   const runStatusColor =
-    run?.status === "success" ? "#16a34a" :
-    run?.status === "failed"  ? "#dc2626" : "#d97706";
+    run?.status === "success" ? "var(--green)" :
+    run?.status === "failed"  ? "var(--red)" : "var(--amber)";
   const runStatusLabel =
     run?.status === "success" ? t.success :
     run?.status === "failed"  ? t.failed  : t.running;
@@ -143,8 +142,7 @@ export function DashboardClient() {
   return (
     <div className="px-8 py-8 max-w-4xl">
       <h1
-        className="mb-6 text-2xl font-light"
-        style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}
+        className="mb-6 font-display text-[2rem] font-light leading-tight text-foreground"
       >
         {t.title}
       </h1>
@@ -152,11 +150,11 @@ export function DashboardClient() {
       {loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-zinc-100" />
+            <div key={i} className="h-24 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-600">{t.loadFailed}{error}</p>
+        <p className="text-sm [color:var(--red)]">{t.loadFailed}{error}</p>
       ) : stats ? (
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -182,11 +180,10 @@ export function DashboardClient() {
 
           {/* Pipeline status */}
           <div
-            className="mt-6 rounded-xl border bg-white p-5"
-            style={{ borderColor: "var(--sp-border)" }}
+            className="sp-glass mt-6 p-5"
           >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-zinc-700">{t.lastPipeline}</p>
+              <p className="text-sm font-medium text-foreground">{t.lastPipeline}</p>
               <Link href="/admin/pipeline-runs" className="text-xs" style={{ color: "var(--sp-accent-mid)" }}>
                 {t.viewAll}
               </Link>
@@ -200,23 +197,23 @@ export function DashboardClient() {
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: runStatusColor }} />
                   {runStatusLabel}
                 </span>
-                <span className="text-sm text-zinc-600">
+                <span className="text-sm [color:var(--text-soft)]">
                   {fmtDate(run.started_at)}（{t.beijingTime}）
                 </span>
                 {run.total_elapsed_sec != null && (
-                  <span className="text-sm text-zinc-500">
+                  <span className="text-sm [color:var(--text-muted)]">
                     {t.elapsed} {fmt(run.total_elapsed_sec)}
                   </span>
                 )}
               </div>
             ) : (
-              <p className="mt-2 text-sm text-zinc-400">{t.noRuns}</p>
+              <p className="mt-2 text-sm [color:var(--text-muted)]">{t.noRuns}</p>
             )}
           </div>
 
           {/* Quick links */}
           <div className="mt-6">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wider [color:var(--text-muted)]">
               {t.quickLinks}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -224,8 +221,7 @@ export function DashboardClient() {
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-zinc-50"
-                  style={{ borderColor: "var(--sp-border)", color: "#3f3f46" }}
+                  className="sp-chip"
                 >
                   {label}
                 </Link>

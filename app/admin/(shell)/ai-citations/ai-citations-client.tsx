@@ -60,55 +60,55 @@ export function AiCitationsClient() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <h1 className="text-xl font-semibold text-zinc-900">{t.title}</h1>
-      <p className="mt-1 text-sm text-zinc-500">{t.subtitle}</p>
+      <h1 className="font-display text-[2rem] font-light leading-tight text-foreground">{t.title}</h1>
+      <p className="mt-1 text-sm [color:var(--text-muted)]">{t.subtitle}</p>
       {error ? (
-        <p className="mt-6 text-sm text-red-600">
+        <p className="mt-6 text-sm [color:var(--red)]">
           {t.loadFailed} {error}
         </p>
       ) : !data ? (
-        <p className="mt-6 text-sm text-zinc-400">{t.loading}</p>
+        <p className="mt-6 text-sm [color:var(--text-muted)]">{t.loading}</p>
       ) : data.checks === 0 ? (
-        <p className="mt-6 text-sm text-zinc-500">{t.none}</p>
+        <p className="mt-6 text-sm [color:var(--text-muted)]">{t.none}</p>
       ) : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
           <div className="space-y-4">
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
-              <p className="text-2xl font-semibold text-zinc-900">{t.cited(data.sipplyCited, data.checks)}</p>
-              <p className="mt-1 text-sm text-zinc-500">{t.read(data.sipplyInSources)}</p>
+            <div className="sp-glass p-5">
+              <p className="text-2xl font-semibold text-foreground">{t.cited(data.sipplyCited, data.checks)}</p>
+              <p className="mt-1 text-sm [color:var(--text-muted)]">{t.read(data.sipplyInSources)}</p>
               {data.sipplyCovered > 0 ? (
-                <p className="mt-2 text-sm text-zinc-700">{t.covered(data.sipplyCitedWhenCovered, data.sipplyCovered)}</p>
+                <p className="mt-2 text-sm text-foreground">{t.covered(data.sipplyCitedWhenCovered, data.sipplyCovered)}</p>
               ) : null}
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-zinc-800">{t.topDomains}</h2>
+            <div className="sp-glass p-5">
+              <h2 className="text-sm font-semibold text-foreground">{t.topDomains}</h2>
               <ul className="mt-2 space-y-1.5">
                 {data.topDomains.map((d) => (
                   <li key={d.domain} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-2 text-xs">
-                    <span className="truncate font-mono text-zinc-700" title={d.domain}>
+                    <span className="truncate font-mono text-foreground" title={d.domain}>
                       {d.domain}
                     </span>
-                    <span className="h-1.5 overflow-hidden rounded-full bg-zinc-200">
+                    <span className="h-1.5 overflow-hidden rounded-full [background:var(--panel-divider)]">
                       <span
-                        className={`block h-full rounded-full ${d.domain === "sipply.dev" ? "bg-emerald-500" : "bg-blue-500"}`}
+                        className={`block h-full rounded-full ${d.domain === "sipply.dev" ? "[background:var(--green)]" : "[background:var(--accent)]"}`}
                         style={{ width: `${Math.round(d.share * 100)}%` }}
                       />
                     </span>
-                    <span className="text-right text-zinc-400">{t.share(Math.round(d.share * 100))}</span>
+                    <span className="text-right [color:var(--text-muted)]">{t.share(Math.round(d.share * 100))}</span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-zinc-800">{t.recent}</h2>
-            <ul className="mt-2 divide-y divide-zinc-100">
+          <div className="sp-glass p-5">
+            <h2 className="text-sm font-semibold text-foreground">{t.recent}</h2>
+            <ul className="mt-2 sp-rows">
               {data.recent.map((r) => (
                 <li key={`${r.checkedAt}-${r.question}`} className="py-2.5">
-                  <p className="text-sm text-zinc-900">“{r.question}”</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                  <p className="text-sm text-foreground">“{r.question}”</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs [color:var(--text-muted)]">
                     <span
-                      className={`rounded-full border px-2 py-0.5 ${r.sipplyCited ? "border-emerald-500 text-emerald-600" : "border-zinc-300"}`}
+                      className={`rounded-full border px-2 py-0.5 ${r.sipplyCited ? "[border-color:var(--green)] [color:var(--green)]" : "[border-color:var(--panel-edge-a)]"}`}
                     >
                       {r.sipplyCited ? t.pillCited : r.sipplyInSources ? t.pillRead : t.pillNot}
                     </span>

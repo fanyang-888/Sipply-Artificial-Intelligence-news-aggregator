@@ -68,17 +68,16 @@ function ArticlesList({ sourceId }: { sourceId: string | null }) {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1
-            className="text-2xl font-light"
-            style={{ fontFamily: "'Fraunces', serif", color: "var(--sp-navy)" }}
+            className="font-display text-[2rem] font-light leading-tight text-foreground"
           >
             {zh ? "文章" : "Articles"}
             {sourceId && (
-              <span className="ml-2 text-base text-zinc-400">
+              <span className="ml-2 text-base [color:var(--text-muted)]">
                 {zh ? "（已过滤信源）" : "(filtered by source)"}
               </span>
             )}
           </h1>
-          <p className="mt-0.5 text-sm text-zinc-400">
+          <p className="mt-0.5 text-sm [color:var(--text-muted)]">
             {zh ? `显示最新 ${filtered.length} 篇` : `Showing latest ${filtered.length} articles`}
           </p>
         </div>
@@ -90,9 +89,9 @@ function ArticlesList({ sourceId }: { sourceId: string | null }) {
               onClick={() => { setFilterMode(m); setPage(0); }}
               className="rounded-md border px-3 py-1.5 text-xs transition-colors"
               style={{
-                borderColor: filterMode === m ? "var(--sp-accent-mid)" : "#e4e4e7",
-                color: filterMode === m ? "var(--sp-accent-mid)" : "#71717a",
-                background: filterMode === m ? "var(--sp-chip)" : "white",
+                borderColor: filterMode === m ? "var(--sp-accent-mid)" : "var(--panel-divider)",
+                color: filterMode === m ? "var(--sp-accent-mid)" : "var(--text-muted)",
+                background: filterMode === m ? "var(--panel-fill-2)" : "transparent",
               }}
             >
               {zh
@@ -106,61 +105,61 @@ function ArticlesList({ sourceId }: { sourceId: string | null }) {
       {loading ? (
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-10 animate-pulse rounded-md bg-zinc-100" />
+            <div key={i} className="h-10 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-600">{zh ? "加载失败：" : "Failed: "}{error}</p>
+        <p className="text-sm [color:var(--red)]">{zh ? "加载失败：" : "Failed: "}{error}</p>
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div className="sp-glass overflow-hidden">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50">
-                  <th className="py-2.5 pl-4 pr-2 text-xs font-medium text-zinc-500">{zh ? "标题" : "Title"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "信源" : "Source"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "过滤" : "Filter"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "评分" : "Score"}</th>
-                  <th className="px-2 py-2.5 text-xs font-medium text-zinc-500">{zh ? "字数" : "Words"}</th>
-                  <th className="px-2 py-2.5 pr-4 text-xs font-medium text-zinc-500">{zh ? "抓取时间" : "Fetched"}</th>
+                <tr className="border-b [border-color:var(--panel-divider)] [background:var(--panel-fill-2)]">
+                  <th className="py-2.5 pl-4 pr-2 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "标题" : "Title"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "信源" : "Source"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "过滤" : "Filter"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "评分" : "Score"}</th>
+                  <th className="px-2 py-2.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "字数" : "Words"}</th>
+                  <th className="px-2 py-2.5 pr-4 font-mono text-[10.5px] font-normal uppercase tracking-[0.12em] [color:var(--text-muted)]">{zh ? "抓取时间" : "Fetched"}</th>
                 </tr>
               </thead>
               <tbody>
                 {paged.map((a) => (
-                  <tr key={a.id} className="border-t border-zinc-100 hover:bg-zinc-50">
+                  <tr key={a.id} className="border-t [border-color:var(--panel-divider)] hover:[background:var(--panel-hover)]">
                     <td className="py-2.5 pl-4 pr-2 max-w-xs">
                       <a
                         href={a.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sm text-zinc-800 hover:underline line-clamp-1"
+                        className="text-sm text-foreground hover:underline line-clamp-1"
                       >
                         {a.title || a.url}
                       </a>
                     </td>
-                    <td className="px-2 py-2.5 text-xs text-zinc-500 whitespace-nowrap">
+                    <td className="px-2 py-2.5 text-xs [color:var(--text-muted)] whitespace-nowrap">
                       {a.source_name ?? "—"}
                     </td>
                     <td className="px-2 py-2.5">
                       {a.is_filtered_out === null ? (
-                        <span className="text-xs text-zinc-300">{zh ? "待处理" : "Pending"}</span>
+                        <span className="text-xs [color:var(--text-muted)]">{zh ? "待处理" : "Pending"}</span>
                       ) : a.is_filtered_out ? (
-                        <span className="inline-block rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-600">
+                        <span className="inline-block rounded-full px-2 py-0.5 text-xs [background:color-mix(in_srgb,var(--red)_16%,transparent)] [color:var(--red)]">
                           {a.filter_reason ?? (zh ? "过滤" : "filtered")}
                         </span>
                       ) : (
-                        <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                        <span className="inline-block rounded-full px-2 py-0.5 text-xs [background:color-mix(in_srgb,var(--green)_16%,transparent)] [color:var(--green)]">
                           {zh ? "通过" : "OK"}
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2.5 text-sm tabular-nums text-zinc-600">
+                    <td className="px-2 py-2.5 text-sm tabular-nums [color:var(--text-soft)]">
                       {a.signal_score != null ? Math.round(a.signal_score) : "—"}
                     </td>
-                    <td className="px-2 py-2.5 text-xs text-zinc-400 tabular-nums">
+                    <td className="px-2 py-2.5 text-xs [color:var(--text-muted)] tabular-nums">
                       {a.word_count != null ? a.word_count.toLocaleString() : "—"}
                     </td>
-                    <td className="px-2 py-2.5 pr-4 text-xs text-zinc-400 whitespace-nowrap">
+                    <td className="px-2 py-2.5 pr-4 text-xs [color:var(--text-muted)] whitespace-nowrap">
                       {fmtDate(a.fetched_at)}
                     </td>
                   </tr>
@@ -170,11 +169,11 @@ function ArticlesList({ sourceId }: { sourceId: string | null }) {
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-zinc-500">
+            <div className="mt-4 flex items-center gap-2 text-sm [color:var(--text-muted)]">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="rounded border px-3 py-1 disabled:opacity-40"
+                className="rounded-full px-3 py-1 text-foreground ring-1 ring-inset [--tw-ring-color:var(--panel-divider)] hover:[--tw-ring-color:var(--accent)] disabled:opacity-40"
               >
                 {zh ? "← 上一页" : "← Prev"}
               </button>
@@ -182,7 +181,7 @@ function ArticlesList({ sourceId }: { sourceId: string | null }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="rounded border px-3 py-1 disabled:opacity-40"
+                className="rounded-full px-3 py-1 text-foreground ring-1 ring-inset [--tw-ring-color:var(--panel-divider)] hover:[--tw-ring-color:var(--accent)] disabled:opacity-40"
               >
                 {zh ? "下一页 →" : "Next →"}
               </button>
@@ -200,7 +199,7 @@ export function ArticlesClient() {
       <div className="px-8 py-8">
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-10 animate-pulse rounded-md bg-zinc-100" />
+            <div key={i} className="h-10 animate-pulse rounded-xl [background:var(--panel-fill-2)]" />
           ))}
         </div>
       </div>

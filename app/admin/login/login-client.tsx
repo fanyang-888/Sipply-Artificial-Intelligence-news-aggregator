@@ -1,5 +1,7 @@
 "use client";
 
+import { uiButtonPrimary, uiInput } from "@/lib/ui/classes";
+
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -44,8 +46,8 @@ export function AdminLoginClient() {
         className="w-full max-w-xs space-y-4"
       >
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Admin</h1>
-          <p className="mt-1 text-sm text-zinc-500">Enter the admin password to continue.</p>
+          <h1 className="font-display text-[2rem] font-light leading-tight text-foreground">Admin</h1>
+          <p className="mt-1 text-sm [color:var(--text-muted)]">Enter the admin password to continue.</p>
         </div>
 
         <input
@@ -55,17 +57,17 @@ export function AdminLoginClient() {
           placeholder="Password"
           autoFocus
           autoComplete="current-password"
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-foreground placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+          className={`${uiInput} w-full`}
         />
 
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm [color:var(--red)]">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full rounded-md bg-zinc-900 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+          className={`${uiButtonPrimary} w-full justify-center disabled:opacity-40`}
         >
           {loading ? "Checking…" : "Enter"}
         </button>
