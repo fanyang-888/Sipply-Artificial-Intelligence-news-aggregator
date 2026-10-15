@@ -250,6 +250,11 @@ export const zh: Translations = {
     moreToday: "今日要闻",
     caughtUpViewArchive: "查看资料库",
   },
+  footer: {
+    tagline: "每日 AI 情报：当天的 AI 新闻，归成故事、排好顺序、讲清为什么重要。",
+    sectionsAria: "站内板块",
+    machine: "给 AI 助手和爬虫",
+  },
   notFound: {
     pageTitle: "页面不存在",
     pageMessage: "这个地址下没有内容。",

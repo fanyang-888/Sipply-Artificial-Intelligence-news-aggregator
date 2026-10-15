@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/shared/json-ld";
 import { getWeek, getWeeks, isBuildPhase, isMissing } from "@/lib/api/server";
 import type { ApiWeekDetail, ApiWeekSummary } from "@/lib/api/types";
-import { collectionPageJsonLd } from "@/lib/seo/json-ld";
+import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { formatWeekRange, neighbourWeeks } from "@/lib/utils/weeks";
 import { WeekPage } from "@/components/hubs/hub-pages";
 
@@ -57,6 +57,15 @@ export default async function WeekRoute({ params }: Props) {
   const { newer, older } = loaded ? neighbourWeeks(loaded.weeks, week) : { newer: null, older: null };
   return (
     <>
+      {loaded ? (
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Sipply", path: "/" },
+            { name: "Weekly recaps", path: "/weekly" },
+            { name: title(loaded.data), path: `/weekly/${week}` },
+          ])}
+        />
+      ) : null}
       {loaded ? (
         <JsonLd
           data={collectionPageJsonLd({

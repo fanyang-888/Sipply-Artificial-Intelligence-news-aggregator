@@ -9,7 +9,7 @@
 import { cache } from "react";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { ApiError } from "./client";
-import type { ApiCluster, ApiDigest, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "./types";
+import type { ApiCluster, ApiDigest, ApiSearchResponse, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
@@ -62,6 +62,16 @@ export function getWeeks(): Promise<ApiWeekSummary[]> {
 export const getWeek = cache((week: string) =>
   getJson<ApiWeekDetail>(`/api/weeks/${encodeURIComponent(week)}`, 300),
 );
+
+/**
+ * The newest stories, as the archive's first page shows them (server-rendered
+ * so the page has content without JS), with the time they were fetched: the
+ * client reuses it for the freshness labels, so both sides of hydration agree.
+ */
+export async function getLatestStories(limit: number): Promise<{ result: ApiSearchResponse; renderedAt: number }> {
+  const result = await getJson<ApiSearchResponse>(`/api/search?limit=${limit}&sort_by=date`, 300);
+  return { result, renderedAt: Date.now() };
+}
 
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
   return getJson<ApiClusterIndexEntry[]>("/api/clusters/index", 3600);

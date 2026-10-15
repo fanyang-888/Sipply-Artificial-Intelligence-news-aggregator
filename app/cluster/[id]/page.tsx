@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/shared/json-ld";
 import { getCluster, getDigest, isBuildPhase, isMissing } from "@/lib/api/server";
 import type { ApiCluster } from "@/lib/api/types";
-import { newsArticleJsonLd } from "@/lib/seo/json-ld";
+import { breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo/json-ld";
 import { storyPath } from "@/lib/seo/site";
 import { positionInDigest, type TodayPosition } from "@/lib/utils/today-position";
 import { ClusterPageClient } from "./cluster-page-client";
@@ -25,7 +25,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       alternates: { canonical: storyPath(id) },
-      openGraph: { type: "article", siteName: "Sipply", title, description, url: storyPath(id) },
+      openGraph: {
+        type: "article",
+        siteName: "Sipply",
+        title,
+        description,
+        url: storyPath(id),
+        publishedTime: data.firstSeenAt ?? undefined,
+        modifiedTime: data.lastSeenAt ?? undefined,
+        section: data.topicTag ?? undefined,
+        tags: data.tags?.length ? data.tags : undefined,
+      },
       twitter: { card: "summary_large_image", title, description },
     };
   } catch {
@@ -71,6 +81,15 @@ export default async function ClusterPage({ params }: Props) {
   return (
     <>
       {story ? <JsonLd data={newsArticleJsonLd(story.cluster)} /> : null}
+      {story ? (
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Sipply", path: "/" },
+            { name: "Archive", path: "/archive" },
+            { name: story.cluster.title.en, path: storyPath(id) },
+          ])}
+        />
+      ) : null}
       <ClusterPageClient key={id} initial={story} />
     </>
   );

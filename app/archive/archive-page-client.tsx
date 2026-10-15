@@ -11,7 +11,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchSearch } from "@/lib/api";
 import { apiRowToArchiveRow, type ArchiveResultRow } from "@/lib/mappers/archive";
-import { archiveHref, parseArchiveQuery } from "@/lib/utils/archive-url";
+import { ARCHIVE_PAGE_SIZE, archiveHref, parseArchiveQuery } from "@/lib/utils/archive-url";
+import type { ApiSearchResponse } from "@/lib/api/types";
 import { topicTagsForGroup } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
 import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
@@ -75,7 +76,6 @@ function TimelineList({
 
 const KEYWORD_URL_DEBOUNCE_MS = 350;
 const SEARCH_DEBOUNCE_MS = 400;
-const PAGE_SIZE = 20;
 
 type SortBy = "score" | "date";
 
@@ -99,7 +99,16 @@ function formatDayMarker(dateKey: string, lang: string): DayMarker {
   };
 }
 
-export function ArchivePageClient() {
+type ArchivePageClientProps = {
+  /**
+   * The newest stories, fetched on the server so the page has content before
+   * any request from the browser; null when the API was unreachable. Used only
+   * when the URL carries no filters (a search or a category starts its own fetch).
+   */
+  initial: { result: ApiSearchResponse; renderedAt: number } | null;
+};
+
+export function ArchivePageClient({ initial }: ArchivePageClientProps) {
   const { t, lang } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -109,11 +118,18 @@ export function ArchivePageClient() {
   // Timeline layout browses chronologically by default; "Best match" is for keyword search
   const [sortBy, setSortBy] = useState<SortBy>("date");
 
-  const [rows, setRows] = useState<ArchiveResultRow[]>([]);
-  const [total, setTotal] = useState(0);
+  const urlFilters = parseArchiveQuery(new URLSearchParams(searchParams.toString()));
+  const usesInitial = initial !== null && !urlFilters.q && !urlFilters.topic;
+  // The server's "now" keeps the freshness labels identical on both sides of hydration
+  const [rows, setRows] = useState<ArchiveResultRow[]>(() =>
+    usesInitial ? initial.result.clusters.map((c) => apiRowToArchiveRow(c, t, lang, initial.renderedAt)) : [],
+  );
+  const [total, setTotal] = useState(usesInitial ? initial.result.total : 0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(usesInitial);
+  // The first search would only repeat what the server already rendered
+  const skipFirstSearch = useRef(usesInitial);
 
   const spKey = searchParams.toString();
   useEffect(() => {
@@ -150,7 +166,7 @@ export function ArchivePageClient() {
       const result = await fetchSearch({
         q: q || undefined,
         topicTags: tags.length ? tags : undefined,
-        limit: PAGE_SIZE,
+        limit: ARCHIVE_PAGE_SIZE,
         offset,
         sortBy: sort,
       });
@@ -169,6 +185,10 @@ export function ArchivePageClient() {
 
   // Re-search when filters change (reset to page 1)
   useEffect(() => {
+    if (skipFirstSearch.current) {
+      skipFirstSearch.current = false;
+      return;
+    }
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
       doSearch(keyword, topic, sortBy, 0, false);

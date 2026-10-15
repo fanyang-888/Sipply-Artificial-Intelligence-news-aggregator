@@ -238,6 +238,11 @@ export type Translations = {
     moreToday: string;
     caughtUpViewArchive: string;
   };
+  footer: {
+    tagline: string;
+    sectionsAria: string;
+    machine: string;
+  };
   notFound: {
     pageTitle: string;
     pageMessage: string;

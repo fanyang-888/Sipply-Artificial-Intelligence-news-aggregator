@@ -29,6 +29,9 @@ export function serializeArchiveQuery(params: ArchiveQuery): string {
   return u.toString();
 }
 
+/** Stories per page in the archive list (server-rendered first page and "load more"). */
+export const ARCHIVE_PAGE_SIZE = 20;
+
 export function archiveHref(params: ArchiveQuery): string {
   const qs = serializeArchiveQuery(params);
   return qs ? `/archive?${qs}` : "/archive";

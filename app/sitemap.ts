@@ -16,10 +16,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getTopics().catch(() => []),
     getWeeks().catch(() => []),
   ]);
+  // The home page, radar and archive change with every pipeline run (4× a day)
+  const now = new Date();
   return [
-    { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
-    { url: `${SITE_URL}/radar`, changeFrequency: "hourly", priority: 0.8 },
-    { url: `${SITE_URL}/archive`, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE_URL}/`, lastModified: now, changeFrequency: "hourly", priority: 1 },
+    { url: `${SITE_URL}/radar`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${SITE_URL}/archive`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/topics`, changeFrequency: "daily", priority: 0.6 },
     ...topics.map((t) => ({
       url: `${SITE_URL}/topics/${t.slug}`,
@@ -30,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/weekly`, changeFrequency: "weekly", priority: 0.6 },
     ...weeks.map((w) => ({
       url: `${SITE_URL}/weekly/${w.week}`,
+      lastModified: w.end,
       changeFrequency: "weekly" as const,
       priority: 0.5,
     })),
