@@ -25,7 +25,7 @@ export function SubscribeBar() {
   }
 
   return (
-    <section className="rounded-2xl border px-6 py-8 text-center [border-color:var(--border)] [background:var(--surface)]">
+    <section className="sp-glass px-6 py-8 text-center sm:px-8">
       {state === "success" || state === "already" ? (
         <div className="space-y-1">
           <p className="text-base font-semibold text-foreground">
@@ -37,10 +37,13 @@ export function SubscribeBar() {
         </div>
       ) : (
         <>
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2
+            className="text-[22px] leading-tight text-foreground"
+            style={{ fontFamily: "'Fraunces', 'Playfair Display', serif", fontWeight: 400 }}
+          >
             {s.heading}
           </h2>
-          <p className="mt-1 text-sm [color:var(--text-muted)]">{s.subheading}</p>
+          <p className="mt-2 text-sm [color:var(--text-soft)]">{s.subheading}</p>
 
           <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <input
@@ -50,12 +53,12 @@ export function SubscribeBar() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={s.placeholder}
               disabled={state === "loading"}
-              className="w-full rounded-lg border px-4 py-2 text-sm focus:outline-none focus:ring-2 disabled:opacity-50 sm:w-72 [border-color:var(--border)] [background:var(--surface2)] [color:var(--text)] placeholder:[color:var(--text-muted)] focus:ring-[var(--accent)]"
+              className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 disabled:opacity-50 sm:w-64 [border-color:var(--border)] [background:var(--panel-fill-2)] [color:var(--text)] placeholder:[color:var(--text-muted)] focus:ring-[var(--accent)]"
             />
             <button
               type="submit"
               disabled={state === "loading"}
-              className="rounded-lg px-5 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 [background:var(--accent)] hover:opacity-90 focus:ring-[var(--accent)]"
+              className="rounded-full px-5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 hover:opacity-90 [background:var(--cta-bg)] [color:var(--cta-text)] focus:ring-[var(--accent)]"
             >
               {state === "loading" ? "…" : s.cta}
             </button>
