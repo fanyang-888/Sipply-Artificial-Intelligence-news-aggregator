@@ -161,10 +161,10 @@ def test_radar_rings_momentum_and_descriptions(client, radar_data, db, make_clus
     }
     assert by_label["Gemini 4 Argon launches"]["coverage"] is None
 
-    t.covered_cluster_id = None  # checked, no Sipply story
+    t.covered_cluster_id = None  # checked, no Sipply story: the public radar doesn't say so
     db.flush()
     openai = next(x for x in client.get("/api/radar").json()["topics"] if x["label"] == t.label)
-    assert openai["coverage"] == {"status": "gap", "clusterId": None, "title": None, "titleZh": None}
+    assert openai["coverage"] is None
 
 
 def test_radar_returns_chinese_titles(client, radar_data, db):
@@ -178,3 +178,47 @@ def test_radar_returns_chinese_titles(client, radar_data, db):
     assert top["label"] == "OpenAI fires three safety researchers"
     assert top["labelZh"] == "OpenAI 解雇三名安全研究员"
     assert top["signals"][0]["titleZh"] == "OpenAI 解雇三名安全研究员"
+
+
+def test_gaps_and_briefs_are_for_the_editor_only(client, db, radar_data, make_cluster):
+    from sqlalchemy import select
+
+    from app.auth import get_current_user
+
+    brief = {
+        "headlineEn": "OpenAI fires three safety researchers",
+        "headlineZh": "OpenAI 解雇三名安全研究员",
+        "angleEn": None,
+        "angleZh": None,
+        "questions": [{"en": "Why did OpenAI fire them?", "zh": "为什么？"}],
+        "facts": [
+            {"en": "Three were fired.", "zh": "三人被解雇。", "source": {"title": "t", "url": "https://example.test/a1", "platform": "hn"}},
+        ],
+        "sources": [{"title": "t", "url": "https://example.test/a1", "platform": "hn"}],
+        "model": "gpt-4o-mini",
+        "writtenAt": "2026-10-15T14:00:00+00:00",
+    }
+    top = db.execute(select(SignalTopic).order_by(SignalTopic.score.desc())).scalars().first()
+    top.described_at = datetime.now(timezone.utc)
+    top.brief = brief
+    db.flush()
+
+    # The public radar says nothing about what Sipply hasn't covered
+    entry = next(t for t in client.get("/api/radar").json()["topics"] if t["id"] == str(top.id))
+    assert entry["coverage"] is None and "brief" not in entry
+
+    # The editor sees the gap and its brief, behind the admin login
+    assert client.get("/api/admin/radar/gaps").status_code == 401
+    app.dependency_overrides[get_current_user] = lambda: "editor"
+    gaps = client.get("/api/admin/radar/gaps").json()
+    assert gaps["checked"] == 1 and [t["id"] for t in gaps["topics"]] == [str(top.id)]
+    assert gaps["topics"][0]["brief"]["headlineEn"] == "OpenAI fires three safety researchers"
+    assert gaps["topics"][0]["signals"][0]["title"] == "OpenAI fires three safety researchers"
+
+    # Once Sipply has a story: a positive link on the public radar, no longer a gap
+    story = make_cluster(title="OpenAI fires three safety researchers")
+    top.covered_cluster_id = story.id
+    db.flush()
+    entry = next(t for t in client.get("/api/radar").json()["topics"] if t["id"] == str(top.id))
+    assert entry["coverage"]["status"] == "covered" and entry["coverage"]["clusterId"] == str(story.id)
+    assert client.get("/api/admin/radar/gaps").json()["topics"] == []

@@ -14,6 +14,9 @@ from sqlalchemy.orm import Session
 from app.api.schemas import (
     RadarAnswerCheck,
     RadarAnswersResponse,
+    RadarBrief,
+    RadarGapTopic,
+    RadarGapsResponse,
     RadarCitation,
     RadarCoverage,
     RadarDomainShare,
@@ -51,6 +54,7 @@ TOP_DOMAINS = 10
 RECENT_CHECKS = 20
 SIGNALS_PER_TOPIC = 5
 QUESTIONS_PER_TOPIC = 3
+GAP_SIGNALS = 3
 TOP_QUESTIONS = 12
 # Question-flagged signals read per page build; the stricter is_asked_question check runs on these
 QUESTION_CANDIDATES = 200
@@ -101,11 +105,24 @@ def _answer_check_out(check: AnswerCheck | None) -> RadarAnswerCheck | None:
     )
 
 
-def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
-    if ring > 2 or topic.described_at is None:
+def _brief_out(brief: dict[str, Any] | None) -> RadarBrief | None:
+    """The stored brief, or None if it is missing or no longer matches the schema."""
+    if not brief:
         return None
-    if topic.covered_cluster_id is None:
-        return RadarCoverage(status="gap")
+    try:
+        return RadarBrief.model_validate(brief)
+    except ValueError:
+        return None
+
+
+def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> RadarCoverage | None:
+    """Sipply's story on the topic, when it has one.
+
+    Topics Sipply hasn't covered are an editorial matter, shown to the editor
+    (build_gaps, GET /api/admin/radar/gaps) and never on the public radar.
+    """
+    if ring > 2 or topic.covered_cluster_id is None:
+        return None
     story = stories.get(topic.covered_cluster_id)
     if story is None:  # deleted since the check; the next run checks again
         return None
@@ -330,3 +347,39 @@ def get_radar_answers(
         data = build_answers(db, days=days)
         cache_set(key, data)
     return JSONResponse(content=data)
+
+
+def build_gaps(db: Session) -> dict[str, Any]:
+    """Mainstream and picking-up topics Sipply has no story on, best first, with content briefs (admin only)."""
+    generated = db.execute(select(func.max(SignalTopic.created_at))).scalar_one_or_none()
+    topics = db.execute(
+        select(SignalTopic).order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
+    ).scalars().all()
+    checked = [
+        t for t in topics if t.described_at is not None and evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2
+    ]
+    gaps = [t for t in checked if t.covered_cluster_id is None]
+    members: dict[Any, list[Signal]] = defaultdict(list)
+    if gaps:
+        for s in db.execute(select(Signal).where(Signal.topic_id.in_([t.id for t in gaps]))).scalars():
+            members[s.topic_id].append(s)
+    return RadarGapsResponse(
+        generatedAt=format_dt(generated),
+        checked=len(checked),
+        topics=[
+            RadarGapTopic(
+                id=str(t.id),
+                label=t.label,
+                labelZh=next((s.title_zh for s in members[t.id] if s.title == t.label and s.title_zh), None),
+                ring=evidence_ring(t.signal_count, len(t.source_counts or {})),
+                signalCount=t.signal_count,
+                score=t.score,
+                summaryEn=t.summary_en,
+                summaryZh=t.summary_zh,
+                question=t.question_en,
+                brief=_brief_out(t.brief),
+                signals=[_signal_out(s) for s in _by_engagement(members[t.id])[:GAP_SIGNALS]],
+            )
+            for t in gaps
+        ],
+    ).model_dump(mode="json")

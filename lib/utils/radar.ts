@@ -5,6 +5,7 @@
 import {
   RADAR_SOURCE_ORDER,
   type ApiRadar,
+  type ApiRadarBrief,
   type ApiRadarSignal,
   type ApiRadarTopic,
   type RadarMomentum,
@@ -137,9 +138,6 @@ export type RadarBrief = {
   rings: [number, number, number];
   /** The rising topic with the steepest velocity, if any. */
   fastest: ApiRadarTopic | null;
-  /** Inner-ring topics Sipply has checked, and how many of them it has no story on. */
-  checked: number;
-  gaps: number;
   newCount: number;
   /** Topics that reached an inner ring in the last MOVE_LOOKBACK_DAYS days; biggest jump first. */
   moved: { topic: ApiRadarTopic; from: RadarRing }[];
@@ -149,12 +147,9 @@ export function radarBrief(topics: ApiRadarTopic[]): RadarBrief {
   const rings: [number, number, number] = [0, 0, 0];
   for (const t of topics) rings[t.ring - 1] += 1;
   const fastest = topics.filter((t) => t.momentum === "rising").sort((a, b) => b.velocity - a.velocity)[0] ?? null;
-  const checked = topics.filter((t) => t.coverage);
   return {
     rings,
     fastest,
-    checked: checked.length,
-    gaps: checked.filter((t) => t.coverage?.status === "gap").length,
     newCount: topics.filter((t) => t.isNew).length,
     moved: topics
       .flatMap((t) => {
@@ -163,6 +158,29 @@ export function radarBrief(topics: ApiRadarTopic[]): RadarBrief {
       })
       .sort((a, b) => b.from - b.topic.ring - (a.from - a.topic.ring) || b.topic.score - a.topic.score),
   };
+}
+
+/**
+ * A content brief as Markdown, for pasting into a doc or CMS: headline, angle,
+ * reader questions, then the facts, each followed by a link to its post.
+ */
+export function briefMarkdown(brief: ApiRadarBrief, lang: Lang, r: Translations["radar"]): string {
+  const zh = lang === "zh";
+  const lines = [`# ${zh ? brief.headlineZh : brief.headlineEn}`];
+  const angle = zh ? brief.angleZh : brief.angleEn;
+  if (angle) lines.push("", angle);
+  if (brief.questions.length > 0) {
+    lines.push("", `## ${r.briefQuestions}`, ...brief.questions.map((q) => `- ${zh ? q.zh : q.en}`));
+  }
+  lines.push(
+    "",
+    `## ${r.briefFacts}`,
+    ...brief.facts.map((f, i) => `${i + 1}. ${zh ? f.zh : f.en} ([${r.sourceShort[f.source.platform] ?? f.source.platform}](${f.source.url}))`),
+    "",
+    `## ${r.briefSources}`,
+    ...brief.sources.map((s) => `- [${s.title}](${s.url}) · ${r.sourceShort[s.platform] ?? s.platform}`),
+  );
+  return lines.join("\n") + "\n";
 }
 
 /** The Chinese title in 中文 mode when one exists, else the original. */

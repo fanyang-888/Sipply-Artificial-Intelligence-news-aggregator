@@ -52,6 +52,7 @@ _BEST_EFFORT_STAGES = frozenset(
         "merge_signal_topics",
         "translate_signals",
         "describe_signal_topics",
+        "brief_signal_topics",
         "check_ai_answers",
     }
 )
@@ -212,6 +213,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         merge_signal_topics,
         translate_signals,
         describe_signal_topics,
+        brief_signal_topics,
         check_ai_answers,
         send_digest_email,
     )
@@ -229,6 +231,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         ("merge_signal_topics",   lambda: merge_signal_topics.main([])),
         ("translate_signals",     lambda: translate_signals.main([])),
         ("describe_signal_topics", lambda: describe_signal_topics.main([])),
+        ("brief_signal_topics",   lambda: brief_signal_topics.main([])),
     ]
     if check_answers:
         stages.append(("check_ai_answers", lambda: check_ai_answers.main([])))

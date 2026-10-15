@@ -179,6 +179,45 @@ export type ApiRadarScoreComponents = {
 
 export type ApiRadarCitation = { url: string; title: string; domain: string };
 
+/** A post a content brief cites. ``platform`` is a source family ("hn", "news", …). */
+export type ApiRadarBriefSource = { title: string; url: string; platform: RadarSourceKey };
+
+/**
+ * What an editor needs to cover a topic Sipply hasn't (backend app/signals/briefs.py; admin only):
+ * AI-drafted from the topic's posts; every fact names the post it comes from.
+ */
+export type ApiRadarBrief = {
+  headlineEn: string;
+  headlineZh: string;
+  angleEn: string | null;
+  angleZh: string | null;
+  questions: { en: string; zh: string }[];
+  facts: { en: string; zh: string; source: ApiRadarBriefSource }[];
+  sources: ApiRadarBriefSource[];
+  model: string;
+  writtenAt: string | null;
+};
+
+/** GET /api/admin/radar/gaps: inner-ring topics Sipply has no story on, with their briefs. */
+export type ApiRadarGaps = {
+  generatedAt: string | null;
+  /** Inner-ring topics whose coverage has been checked, gaps included. */
+  checked: number;
+  topics: {
+    id: string;
+    label: string;
+    labelZh: string | null;
+    ring: RadarRing;
+    signalCount: number;
+    score: number;
+    summaryEn: string | null;
+    summaryZh: string | null;
+    question: string | null;
+    brief: ApiRadarBrief | null;
+    signals: ApiRadarSignal[];
+  }[];
+};
+
 /** What an AI assistant with web search answered to the topic's question. */
 export type ApiRadarAnswerCheck = {
   checkedAt: string | null;
@@ -211,9 +250,9 @@ export type ApiRadarAnswers = {
   }[];
 };
 
+/** Sipply's story on the topic. The public radar only lists covered topics; gaps are admin-only. */
 export type ApiRadarCoverage = {
-  /** "covered": Sipply has a story on this topic; "gap": checked, no story yet. */
-  status: "covered" | "gap";
+  status: "covered";
   clusterId: string | null;
   title: string | null;
   titleZh: string | null;

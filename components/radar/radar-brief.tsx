@@ -14,7 +14,7 @@ type RadarBriefProps = {
 
 /**
  * This run in one paragraph: how many topics and how they split across the
- * rings, the fastest riser, the biggest move inward, and Sipply's gaps.
+ * rings, the fastest riser and the biggest move inward.
  * Topic names are buttons that open the topic.
  */
 export function RadarBrief({ topics, totalSignals, windowDays, onSelect }: RadarBriefProps) {
@@ -47,7 +47,6 @@ export function RadarBrief({ topics, totalSignals, windowDays, onSelect }: Radar
           {t.radar.ledeMovedRings(t.radar.rings[moved.from].name, t.radar.rings[moved.topic.ring].name)}{" "}
         </>
       ) : null}
-      {brief.checked > 0 ? t.radar.briefGapsBody(brief.gaps, brief.checked) : null}
     </p>
   );
 }

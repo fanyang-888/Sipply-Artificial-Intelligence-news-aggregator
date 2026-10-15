@@ -5,6 +5,7 @@ import {
   DEFAULT_RADAR_FILTERS,
   ageParts,
   filterRadarTopics,
+  briefMarkdown,
   hasActiveFilter,
   platformBreakdown,
   radarBrief,
@@ -99,18 +100,17 @@ describe("radarSectorForTag / topicPlatforms", () => {
 });
 
 describe("radarBrief", () => {
-  it("counts rings, finds the fastest riser and Sipply's gaps", () => {
-    const gap = { status: "gap", clusterId: null, title: null, titleZh: null } as const;
+  it("counts rings and finds the fastest riser", () => {
     const covered = { status: "covered", clusterId: "c1", title: "Story", titleZh: null } as const;
     const brief = radarBrief([
       topic({ id: "a", ring: 1, momentum: "rising", velocity: 4.9, coverage: covered, isNew: true }),
-      topic({ id: "b", ring: 1, momentum: "rising", velocity: 49, coverage: gap }),
-      topic({ id: "c", ring: 2, momentum: "steady", velocity: 60, coverage: gap }),
+      topic({ id: "b", ring: 1, momentum: "rising", velocity: 49 }),
+      topic({ id: "c", ring: 2, momentum: "steady", velocity: 60 }),
       topic({ id: "d", ring: 3, momentum: "cooling" }),
     ]);
     expect(brief.rings).toEqual([2, 1, 1]);
     expect(brief.fastest?.id).toBe("b"); // c is faster but not rising
-    expect([brief.checked, brief.gaps, brief.newCount]).toEqual([3, 2, 1]);
+    expect(brief.newCount).toBe(1);
     expect(radarBrief([]).fastest).toBeNull();
   });
 });
@@ -260,5 +260,47 @@ describe("platformBreakdown", () => {
   it("lists platforms busiest first with their counts", () => {
     const t = topic({ sourceCounts: { hn: 3, news: 24, youtube: 6 } });
     expect(platformBreakdown(t, en.radar.sourceShort, ", ")).toBe("News 24, YouTube 6, HN 3");
+  });
+});
+
+describe("briefMarkdown", () => {
+  const brief = {
+    headlineEn: "Anthropic lets Claude end abusive chats",
+    headlineZh: "Anthropic 允许 Claude 结束辱骂性对话",
+    angleEn: "What changes for apps built on Claude.",
+    angleZh: null,
+    questions: [{ en: "Can Claude end a chat?", zh: "Claude 能结束对话吗？" }],
+    facts: [
+      { en: "Claude can end abusive chats.", zh: "Claude 可以结束辱骂性对话。", source: { title: "HN post", url: "https://x.test/1", platform: "hn" as const } },
+    ],
+    sources: [{ title: "HN post", url: "https://x.test/1", platform: "hn" as const }],
+    model: "gpt-4o-mini",
+    writtenAt: null,
+  };
+
+  it("lays out headline, angle, questions, facts with links, and sources", () => {
+    expect(briefMarkdown(brief, "en", en.radar)).toBe(
+      [
+        "# Anthropic lets Claude end abusive chats",
+        "",
+        "What changes for apps built on Claude.",
+        "",
+        "## Questions readers ask",
+        "- Can Claude end a chat?",
+        "",
+        "## Key facts",
+        "1. Claude can end abusive chats. ([HN](https://x.test/1))",
+        "",
+        "## Sources",
+        "- [HN post](https://x.test/1) · HN",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("uses the Chinese text in 中文 mode and skips a missing angle", () => {
+    const md = briefMarkdown(brief, "zh", en.radar);
+    expect(md.startsWith("# Anthropic 允许 Claude 结束辱骂性对话\n\n## ")).toBe(true);
+    expect(md).toContain("1. Claude 可以结束辱骂性对话。");
   });
 });

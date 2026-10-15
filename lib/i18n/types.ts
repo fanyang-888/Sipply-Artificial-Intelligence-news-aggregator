@@ -152,7 +152,6 @@ export type Translations = {
     chartAria: string;
     sectorFilterAria: (name: string) => string;
     briefAria: string;
-    briefGapsBody: (gaps: number, checked: number) => string;
     trailMoved: (from: string, fromSignals: number, to: string, toSignals: number) => string;
     trailStayed: (ring: string) => string;
     trailAppeared: string;
@@ -165,7 +164,13 @@ export type Translations = {
       last: string;
     }) => string;
     coverageCovered: string;
-    coverageGap: string;
+    briefTitle: string;
+    briefNote: string;
+    briefQuestions: string;
+    briefFacts: string;
+    briefSources: string;
+    briefCopy: string;
+    briefCopied: string;
     answerLabel: string;
     answerQuestion: string;
     answerCited: string;
@@ -185,7 +190,6 @@ export type Translations = {
     trendPeak: (n: number) => string;
     trendRecent: string;
     evidenceLabel: (n: number) => string;
-    noStoryShort: string;
     componentVolume: string;
     componentEngagement: string;
     componentVelocity: string;

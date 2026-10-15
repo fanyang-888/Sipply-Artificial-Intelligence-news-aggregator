@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/clusters",      en: "Clusters",   zh: "Clusters", icon: "◉" },
   { href: "/admin/articles",      en: "Articles",   zh: "文章",     icon: "≡" },
   { href: "/admin/events",        en: "Events",     zh: "事件统计", icon: "◷" },
+  { href: "/admin/gaps",          en: "Content gaps", zh: "内容缺口", icon: "◌" },
 ];
 
 export default function AdminShellLayout({ children }: { children: ReactNode }) {

@@ -162,6 +162,14 @@ class SourceRow(BaseModel):
     articles_last_7d: int
 
 
+@router.get("/radar/gaps")
+def radar_gaps(db: Session = Depends(get_db), _user: str = Depends(get_current_user)):
+    """Trend Radar topics Sipply has no story on yet, with their content briefs (see app.signals.briefs)."""
+    from app.api.routes.radar import build_gaps
+
+    return build_gaps(db)
+
+
 @router.get("/sources", response_model=list[SourceRow])
 def list_sources(
     db: Session = Depends(get_db),
