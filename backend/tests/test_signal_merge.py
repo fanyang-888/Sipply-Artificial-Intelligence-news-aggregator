@@ -69,6 +69,14 @@ def test_candidate_pairs_most_similar_first_and_capped():
     assert len(pairs) == 2 and pairs[0][2] >= pairs[1][2]
 
 
+def test_candidate_pairs_keeps_pairs_that_cover_the_same_story():
+    # Ecosia and the bugging story share no words; a forced pair is kept beyond the threshold and the cap
+    pairs = M.candidate_pairs([BUGGING_A, BUGGING_B, OTHER], limit=1, must_include={(2, 0)})
+    assert [(i, j) for i, j, _ in pairs] == [(0, 1), (0, 2)]
+    assert pairs[1][2] < M.MIN_PAIR_SIMILARITY
+    assert M.candidate_pairs([["the of and"], ["is a"]], must_include={(0, 1)}) == [(0, 1, 0.0)]
+
+
 def test_merge_sets_joins_chains():
     assert M.merge_sets([(0, 3, True), (3, 4, True)]) == [[0, 3, 4]]
     assert M.merge_sets([(2, 1, True), (0, 3, True), (1, 3, None)]) == [[0, 3], [1, 2]]
@@ -154,6 +162,30 @@ def test_run_merge_joins_the_same_story_and_rescores(db):
     assert (merged.summary_en, merged.covered_cluster_id) == ("Bugging.", story)
     members = db.execute(select(func.count()).select_from(Signal).where(Signal.topic_id == keep_id)).scalar_one()
     assert members == 6
+
+
+def test_run_merge_judges_topics_matched_to_the_same_sipply_story(db):
+    from sqlalchemy import func, select
+
+    from app.models.signal import Signal, SignalTopic
+
+    seed(db)
+    a = db.execute(select(SignalTopic).where(SignalTopic.label.like("OpenAI engineer%"))).scalar_one()
+    other = db.execute(select(SignalTopic).where(SignalTopic.label.like("Ecosia%"))).scalar_one()
+    # The describe stage matched both to one Sipply story, though their titles share nothing
+    story = uuid.uuid4()
+    a.covered_cluster_id = other.covered_cluster_id = story
+    db.flush()
+    keep_id, other_id = a.id, other.id
+
+    fake = FakeOpenAI(same=lambda x, y: any("Ecosia" in t for t in x + y))
+    summary = M.run_merge(db, fake, now=NOW, window_days=14, active_families=2, relevance_fn=lambda t: 50.0)
+    assert summary["covered_pairs"] == 1
+    assert summary["pairs"] == 2  # the similar bugging pair, plus the forced one
+    assert (summary["same"], summary["merged_away"]) == (1, 1)
+    assert db.get(SignalTopic, other_id) is None
+    assert db.get(SignalTopic, keep_id).signal_count == 5
+    assert db.execute(select(func.count()).select_from(Signal).where(Signal.topic_id == keep_id)).scalar_one() == 5
 
 
 def test_run_merge_leaves_topics_alone_when_gpt_says_different_or_fails(db):
