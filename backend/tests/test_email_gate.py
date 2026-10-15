@@ -134,3 +134,18 @@ def test_ai_answer_check_failure_does_not_fail_the_pipeline(monkeypatch):
     monkeypatch.setattr(rp, "_install_timeout", lambda sec: None)
     assert rp.main(triggered_by="manual", check_answers=True) == 0
     assert recorded["check_ai_answers"]["status"] == "failed" and recorded["_status"] == "success"
+
+
+def test_successful_run_warms_the_site_pages(run, monkeypatch):
+    warmed: list[bool] = []
+    monkeypatch.setattr("app.services.page_warm.warm_pages", lambda *a, **k: warmed.append(True) or {})
+    code, _, _ = run(8)
+    assert code == 0 and warmed == [True]
+
+
+def test_failed_run_leaves_the_pages_alone(run, monkeypatch):
+    warmed: list[bool] = []
+    monkeypatch.setattr("app.services.page_warm.warm_pages", lambda *a, **k: warmed.append(True) or {})
+    monkeypatch.setattr(rp, "_run_stage", lambda name, fn: (name != "cluster_articles", 0.01))
+    code, _, _ = run(8)
+    assert code == 1 and warmed == []

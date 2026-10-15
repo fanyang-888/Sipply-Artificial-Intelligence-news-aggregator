@@ -216,6 +216,8 @@ export type Translations = {
     audiencePm: string;
     audienceDeveloper: string;
     audienceStudent: string;
+    forYou: (role: string) => string;
+    otherReaders: (roles: string) => string;
     coveredSources: string;
     relatedStories: string;
     relatedTopics: string;

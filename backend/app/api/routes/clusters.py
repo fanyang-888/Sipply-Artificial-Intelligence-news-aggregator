@@ -13,6 +13,7 @@ from app.api.schemas import ClusterResponse, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
 from app.models.cluster import Cluster
+from app.services.related import related_cluster_ids
 
 router = APIRouter(prefix="/api/clusters", tags=["clusters"])
 
@@ -98,17 +99,5 @@ def get_cluster(cluster_id: str, db: Session = Depends(get_db)) -> ClusterRespon
 
     cluster = _load_cluster(db, cid)
 
-    # Find up to 4 related clusters with the same type/theme, ranked by score
-    related = db.execute(
-        select(Cluster.id)
-        .where(
-            Cluster.type == cluster.type,
-            Cluster.id != cluster.id,
-            Cluster.representative_title_zh.isnot(None),
-        )
-        .order_by(Cluster.cluster_score.desc().nullslast(), Cluster.last_seen_at.desc().nullslast())
-        .limit(4)
-    ).scalars().all()
-    related_ids = [str(r) for r in related]
-
-    return cluster_to_response(cluster, related_cluster_ids=related_ids)
+    # Stories about the same thing (similar text, same company, same tag), not just the same type
+    return cluster_to_response(cluster, related_cluster_ids=related_cluster_ids(db, cluster))

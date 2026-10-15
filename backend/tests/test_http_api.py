@@ -69,3 +69,11 @@ def test_cluster_index_route_is_not_shadowed_by_id_route(client, monkeypatch):
     monkeypatch.setattr("app.api.routes.clusters.cache_set", lambda key, value: None)
     assert client.get("/api/clusters/index").status_code == 200
     assert client.get("/api/clusters/not-a-uuid").status_code == 422
+
+
+def test_cluster_related_stories_share_a_subject(client, make_cluster):
+    story = make_cluster(title="Anthropic launches Claude Haiku 5.5", summary="Anthropic's new small model.", score=40)
+    near = make_cluster(title="Claude Haiku 5.5 benchmarks: faster and cheaper", score=30)
+    make_cluster(title="Import AI 476: Creativity and RSI; AI goes to space", score=99)
+    body = client.get(f"/api/clusters/{story.id}").json()
+    assert body["relatedClusterIds"] == [str(near.id)]
