@@ -7,6 +7,7 @@ import { fetchRadar } from "@/lib/api";
 import { getDigest, getLastPipelineRunAt, getWeeks } from "@/lib/api/server";
 import type { ApiDigest, ApiRadar } from "@/lib/api/types";
 import { digestItemListJsonLd } from "@/lib/seo/json-ld";
+import { SITE_DESCRIPTION } from "@/lib/seo/site";
 import { radarOrder, withRadarDefaults } from "@/lib/utils/radar";
 import { HomePageClient } from "@/app/home-page-client";
 
@@ -14,6 +15,7 @@ import { HomePageClient } from "@/app/home-page-client";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
+  description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
 };
 

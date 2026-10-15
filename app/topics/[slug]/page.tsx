@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/shared/json-ld";
 import { getTopic, isBuildPhase, isMissing } from "@/lib/api/server";
 import type { ApiTopicDetail } from "@/lib/api/types";
-import { collectionPageJsonLd } from "@/lib/seo/json-ld";
+import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { TopicPage } from "@/components/hubs/hub-pages";
 
 export const revalidate = 300;
@@ -49,6 +49,15 @@ export default async function TopicRoute({ params }: Props) {
   const topic = await load(slug);
   return (
     <>
+      {topic ? (
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Sipply", path: "/" },
+            { name: "Companies & models", path: "/topics" },
+            { name: topic.name, path: `/topics/${slug}` },
+          ])}
+        />
+      ) : null}
       {topic ? (
         <JsonLd
           data={collectionPageJsonLd({

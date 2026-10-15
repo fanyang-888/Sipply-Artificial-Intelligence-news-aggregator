@@ -256,6 +256,11 @@ export const en: Translations = {
     moreToday: "Today's stories",
     caughtUpViewArchive: "View Archive",
   },
+  footer: {
+    tagline: "Daily AI intelligence: the day's AI news, grouped into stories, ranked, and explained.",
+    sectionsAria: "Sections",
+    machine: "For AI assistants and crawlers",
+  },
   notFound: {
     pageTitle: "Page not found",
     pageMessage: "There is nothing at this address.",

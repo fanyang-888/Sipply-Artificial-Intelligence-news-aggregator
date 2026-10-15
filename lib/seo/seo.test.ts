@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ApiCluster, ApiDigest } from "@/lib/api/types";
-import { digestItemListJsonLd, newsArticleJsonLd, serializeJsonLd } from "@/lib/seo/json-ld";
+import { breadcrumbJsonLd, digestItemListJsonLd, newsArticleJsonLd, serializeJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { buildLlmsTxt } from "@/lib/seo/llms-txt";
 import { SITE_URL, storyUrl } from "@/lib/seo/site";
 
@@ -99,5 +99,34 @@ describe("buildLlmsTxt", () => {
     const txt = buildLlmsTxt(null);
     expect(txt).toContain("## Main pages");
     expect(txt).not.toContain("## Today's top stories");
+  });
+});
+
+describe("websiteJsonLd", () => {
+  it("names the site, its publisher and how to search it", () => {
+    const ld = websiteJsonLd();
+    const graph = ld["@graph"] as Record<string, unknown>[];
+    expect(graph.map((n) => n["@type"])).toEqual(["Organization", "WebSite"]);
+    const site = graph[1];
+    expect(site.url).toBe("https://www.sipply.dev");
+    expect((site.potentialAction as { target: { urlTemplate: string } }).target.urlTemplate).toBe(
+      "https://www.sipply.dev/archive?q={search_term_string}",
+    );
+  });
+});
+
+describe("breadcrumbJsonLd", () => {
+  it("numbers the trail from the home page and makes every item an absolute URL", () => {
+    const ld = breadcrumbJsonLd([
+      { name: "Sipply", path: "/" },
+      { name: "Weekly recaps", path: "/weekly" },
+      { name: "AI news, Oct 12 – 18, 2026", path: "/weekly/2026-W42" },
+    ]);
+    expect(ld["@type"]).toBe("BreadcrumbList");
+    expect(ld.itemListElement).toEqual([
+      { "@type": "ListItem", position: 1, name: "Sipply", item: "https://www.sipply.dev/" },
+      { "@type": "ListItem", position: 2, name: "Weekly recaps", item: "https://www.sipply.dev/weekly" },
+      { "@type": "ListItem", position: 3, name: "AI news, Oct 12 – 18, 2026", item: "https://www.sipply.dev/weekly/2026-W42" },
+    ]);
   });
 });
