@@ -29,6 +29,25 @@ def test_entities_in_titles(title, slugs):
     assert [e.slug for e in entities_in(title)] == slugs
 
 
+def test_week_headlines_prefer_stories_from_news_sources():
+    from types import SimpleNamespace as S
+
+    def story(title, score, source):
+        return S(title=title, cluster_score=score, articles=[S(source_id=source)])
+
+    stories = [
+        story("Import AI 476", 66, "newsletter"),
+        story("A paper", 65, "arxiv"),
+        story("Gemini 4 Argon", 60, "deepmind-blog"),
+        story("OpenAI engineer arrested", 55, "techcrunch"),
+        story("Another paper", 59, "arxiv"),
+    ]
+    news = {"deepmind-blog", "techcrunch"}
+    assert [c.title for c in H.week_headlines(stories, news)] == ["Gemini 4 Argon", "OpenAI engineer arrested", "Import AI 476"]
+    # No news stories at all: plain score order
+    assert [c.title for c in H.week_headlines(stories, set())] == ["Import AI 476", "A paper", "Gemini 4 Argon"]
+
+
 def test_iso_weeks():
     assert H.week_key(date(2026, 10, 14)) == "2026-W42"
     assert H.week_bounds("2026-W42") == (date(2026, 10, 12), date(2026, 10, 18))
@@ -117,6 +136,12 @@ def test_weeks_list_and_recap(client, stories):
     assert keys == sorted(keys, reverse=True)
     this_week = H.week_key((NOW - timedelta(days=2)).date())
     assert this_week in keys
+    listed = next(w for w in weeks if w["week"] == this_week)
+    # Per-day counts add up to the week; headlines say what happened, best first
+    assert len(listed["dailyCounts"]) == 7 and sum(listed["dailyCounts"]) == listed["storyCount"]
+    assert listed["headlines"][0]["title"] == "Anthropic releases Claude Haiku 5.5"
+    assert listed["headlines"][0]["titleZh"] == "Anthropic releases Claude Haiku 5.5（中文）"
+    assert len(listed["headlines"]) <= H.WEEK_HEADLINES
 
     recap = client.get(f"/api/weeks/{this_week}").json()
     assert recap["stories"][0]["title"] == "Anthropic releases Claude Haiku 5.5"  # best score first

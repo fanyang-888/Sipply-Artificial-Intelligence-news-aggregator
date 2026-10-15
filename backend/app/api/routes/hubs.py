@@ -26,6 +26,7 @@ from app.api.schemas import ArchiveClusterRow, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
 from app.models.cluster import Cluster
+from app.models.source import Source
 from app.models.signal import SignalTopic
 from app.services.entities import BY_SLUG, ENTITIES, entities_in
 from app.signals.topics import evidence_ring
@@ -36,6 +37,9 @@ weeks_router = APIRouter(prefix="/api/weeks", tags=["weeks"])
 RECENT_DAYS = 30
 TOPIC_STORIES = 40
 WEEK_STORIES = 20
+WEEK_HEADLINES = 3
+# Source types (app/source_catalog/trusted_sources.yaml) that report news, as opposed to research / newsletter
+NEWS_SOURCE_TYPES = ("company_news", "tech_press")
 WEEKS_LISTED = 26
 _WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
 
@@ -61,11 +65,21 @@ class TopicDetail(TopicSummary):
     radar: list[TopicRadarItem]
 
 
+class WeekHeadline(BaseModel):
+    id: str
+    title: str
+    titleZh: str | None
+
+
 class WeekSummary(BaseModel):
     week: str
     start: str  # Monday, YYYY-MM-DD (UTC)
     end: str  # Sunday
     storyCount: int
+    # New stories per day, Monday first (by the day a story first appeared)
+    dailyCounts: list[int]
+    # The week's highest-scoring stories, so the list says what happened that week
+    headlines: list[WeekHeadline]
 
 
 class WeekCount(BaseModel):
@@ -206,6 +220,23 @@ def get_topic(slug: str, db: Session = Depends(get_db)):
 # Weeks
 # ---------------------------------------------------------------------------
 
+def week_headlines(stories: list[Any], news_source_ids: set[Any], n: int = WEEK_HEADLINES) -> list[Any]:
+    """The week's best stories carried by a news source (company newsroom, tech press), best score first;
+    papers and newsletter issues only fill the remaining slots.
+
+    By score alone the list is the same every week: the Import AI issue and two
+    arXiv papers, which score high but say little about what happened.
+    """
+    def is_news(c: Any) -> bool:
+        return any(a.source_id in news_source_ids for a in c.articles)
+
+    return sorted(stories, key=lambda c: (is_news(c), c.cluster_score or 0), reverse=True)[:n]
+
+
+def _news_source_ids(db: Session) -> set[Any]:
+    return set(db.execute(select(Source.id).where(Source.type.in_(NEWS_SOURCE_TYPES))).scalars().all())
+
+
 def _by_week(db: Session) -> dict[str, list[Cluster]]:
     """Stories grouped by the ISO week they first appeared in."""
     weeks: dict[str, list[Cluster]] = defaultdict(list)
@@ -216,14 +247,30 @@ def _by_week(db: Session) -> dict[str, list[Cluster]]:
     return weeks
 
 
-def _summary(key: str, stories: list[Cluster]) -> WeekSummary:
+def _summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> WeekSummary:
     start, end = week_bounds(key)  # type: ignore[misc]
-    return WeekSummary(week=key, start=start.isoformat(), end=end.isoformat(), storyCount=len(stories))
+    daily = [0] * 7
+    for c in stories:
+        first = _aware(c.first_seen_at) or _aware(c.last_seen_at)
+        if first and 0 <= (offset := (first.date() - start).days) < 7:
+            daily[offset] += 1
+    return WeekSummary(
+        week=key,
+        start=start.isoformat(),
+        end=end.isoformat(),
+        storyCount=len(stories),
+        dailyCounts=daily,
+        headlines=[
+            WeekHeadline(id=str(c.id), title=c.representative_title, titleZh=c.representative_title_zh)
+            for c in week_headlines(stories, news_source_ids)
+        ],
+    )
 
 
 def build_weeks(db: Session, *, limit: int) -> list[dict[str, Any]]:
     weeks = _by_week(db)
-    return [_summary(k, weeks[k]).model_dump(mode="json") for k in sorted(weeks, reverse=True)[:limit]]
+    news = _news_source_ids(db)
+    return [_summary(k, weeks[k], news).model_dump(mode="json") for k in sorted(weeks, reverse=True)[:limit]]
 
 
 def build_week(db: Session, key: str) -> dict[str, Any] | None:
@@ -236,7 +283,7 @@ def build_week(db: Session, key: str) -> dict[str, Any] | None:
     for c in stories:
         for e in entities_in(c.representative_title):
             topics[e.slug] += 1
-    summary = _summary(key, stories)
+    summary = _summary(key, stories, _news_source_ids(db))
     return WeekDetail(
         **summary.model_dump(),
         stories=[cluster_to_archive_row(c) for c in top[:WEEK_STORIES]],
