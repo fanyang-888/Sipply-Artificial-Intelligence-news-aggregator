@@ -111,7 +111,10 @@ def topic_affinity(history: Counter[str], role: str | None) -> dict[str, float]:
 
 
 def _base_score(cluster: dict[str, Any], now: datetime) -> float:
-    """Same formula as get_top_clusters: cluster_score × exp(-decay × age_days)."""
+    """cluster_score × exp(-decay × age_days): the homepage rank without radar attention.
+
+    Only a fallback: digests carry each story's full rank value in ``rankScores``.
+    """
     score = cluster.get("clusterScore") or 0.0
     last_seen = cluster.get("lastSeenAt")
     if not last_seen:
@@ -124,11 +127,21 @@ def rerank(
     clusters: list[dict[str, Any]],
     affinity: dict[str, float],
     now: datetime | None = None,
+    base_scores: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Order serialized clusters by base score × (1 + MAX_BOOST × topic affinity)."""
+    """Order serialized clusters by base score × (1 + MAX_BOOST × topic affinity).
+
+    ``base_scores`` (story id → homepage rank value) wins over recomputing from clusterScore.
+    """
     now = now or datetime.now(timezone.utc)
+    base_scores = base_scores or {}
+
+    def base(c: dict[str, Any]) -> float:
+        value = base_scores.get(c.get("id") or "")
+        return value if value is not None else _base_score(c, now)
+
     scored = [
-        (_base_score(c, now) * (1 + MAX_BOOST * affinity.get(c.get("topicTag") or "", 0.0)), i, c)
+        (base(c) * (1 + MAX_BOOST * affinity.get(c.get("topicTag") or "", 0.0)), i, c)
         for i, c in enumerate(clusters)
     ]
     scored.sort(key=lambda item: (-item[0], item[1]))
@@ -152,6 +165,6 @@ def personalize_digest(
     if not affinity or len(top) < 2:
         return {**digest, "personalized": False}
 
-    reranked = rerank(top, affinity)
+    reranked = rerank(top, affinity, base_scores=digest.get("rankScores"))
     changed = [c.get("id") for c in reranked] != [c.get("id") for c in top]
     return {**digest, "topClusters": reranked, "personalized": changed}

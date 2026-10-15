@@ -118,6 +118,8 @@ class DigestResponse(BaseModel):
     topClusters: list[ClusterResponse]
     # True when topClusters were re-ordered for this reader (history and/or role)
     personalized: bool = False
+    # Story id → homepage rank value (app.services.home_ranking); personalization re-ranks on it
+    rankScores: dict[str, float] = {}
 
 
 # ---------------------------------------------------------------------------

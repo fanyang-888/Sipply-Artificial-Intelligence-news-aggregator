@@ -76,44 +76,11 @@ def get_top_clusters(
     window_days: int = 14,
     decay_rate: float = RANKING_DECAY_RATE,
 ) -> list[Cluster]:
-    """Return translated top clusters ranked by recency-weighted score.
+    """The homepage / digest email stories, best first (translated, last ``window_days`` days).
 
-    Ranking formula: cluster_score × exp(-decay_rate × age_in_days)
-
-    decay_rate = 0.15 means:
-      - today (0 d):  100 % of score
-      - 3 days ago:    64 %
-      - 7 days ago:    35 %
-      - 14 days ago:   12 %
-
-    This ensures fresh clusters surface above stale high-scoring ones while
-    still respecting quality signal. Tune decay_rate to taste (higher = more
-    aggressive recency preference).
-
-    Only clusters with a Chinese title are returned so untranslated content
-    never surfaces on the frontend.
+    Ranking: (cluster_score + radar attention) × exp(-decay_rate × age_days), with
+    caps on papers and newsletter issues; see app.services.home_ranking.
     """
-    from datetime import timezone, timedelta
-    from sqlalchemy import select, text
+    from app.services.home_ranking import home_ranking
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
-
-    # Recency-weighted score: cluster_score × exp(-decay_rate × age_days)
-    # Raw SQL avoids SQLAlchemy expression compilation edge-cases with EXTRACT/EXP.
-    order_expr = text(
-        "cluster_score * EXP(:dr * GREATEST("
-        "  EXTRACT(EPOCH FROM NOW() - last_seen_at) / 86400.0, 0.0"
-        ")) DESC NULLS LAST, last_seen_at DESC NULLS LAST"
-    ).bindparams(dr=-decay_rate)
-
-    return list(
-        db.execute(
-            select(Cluster)
-            .where(
-                Cluster.representative_title_zh.isnot(None),
-                Cluster.last_seen_at >= cutoff,
-            )
-            .order_by(order_expr)
-            .limit(limit)
-        ).scalars().all()
-    )
+    return [c for c, _ in home_ranking(db, limit=limit, window_days=window_days, decay_rate=decay_rate)]

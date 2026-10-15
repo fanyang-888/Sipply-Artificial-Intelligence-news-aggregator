@@ -1,6 +1,6 @@
 """Homepage ranking: get_top_clusters (needs TEST_DATABASE_URL).
 
-Ranking is cluster_score × exp(-0.15 × age_days) over the last 14 days,
+Ranking is (cluster_score + radar attention) × exp(-0.15 × age_days) over the last 14 days,
 translated clusters only.
 """
 
@@ -28,3 +28,24 @@ def test_respects_limit(db, make_cluster):
     for i in range(5):
         make_cluster(title=f"c{i}", score=50 + i)
     assert len(get_top_clusters(db, limit=3)) == 3
+
+
+def test_radar_attention_and_paper_cap(db, make_cluster, make_source, make_article, days_ago):
+    from app.models.signal import SignalTopic
+
+    arxiv = make_source(name="arXiv cs.AI", type="research")
+    press = make_source(name="TechCrunch AI", type="tech_press")
+    papers = [make_cluster(title=f"paper {i}", score=70 - i, last_seen_at=days_ago(0)) for i in range(3)]
+    for p in papers:
+        make_article(source=arxiv, cluster_id=p.id)
+    quiet = make_cluster(title="quiet news", score=60, last_seen_at=days_ago(0))
+    big = make_cluster(title="big news", score=55, last_seen_at=days_ago(0))
+    for c in (quiet, big):
+        make_article(source=press, cluster_id=c.id)
+    db.add(SignalTopic(label="big news on HN", signal_count=40, source_counts={"hn": 40}, score=90, covered_cluster_id=big.id))
+    db.flush()
+
+    # 5 stories for 4 slots: the third paper is capped out, the quiet news story gets in
+    ranked = [c.representative_title for c in get_top_clusters(db, limit=4)]
+    assert ranked[0] == "big news"  # 55 + 0.25 × 90 = 77.5, and news leads
+    assert sorted(ranked[1:]) == ["paper 0", "paper 1", "quiet news"]
