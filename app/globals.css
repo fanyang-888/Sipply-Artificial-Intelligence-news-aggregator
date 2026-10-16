@@ -130,7 +130,10 @@ body {
   to   { transform: translateX(-50%); }
 }
 
-/* ── Trend Radar chart (SVG text sizes are in chart units; the chart scales with its column) ── */
+/* ── Trend Radar chart (SVG text sizes are in chart units; the chart scales with its column) ──
+   Visible overflow: on a phone the larger sector names reach a few pixels past the
+   chart's edge ("Open Source &"), into the page gutter instead of being cut off. */
+.radar-chart { overflow: visible; }
 .radar-chart .radar-sector-name { font-family: var(--font-dm-sans), 'PingFang SC', sans-serif; font-weight: 600; font-size: 19px; }
 .radar-chart .radar-ring-label { font-family: var(--font-plex-mono), monospace; font-size: 14px; letter-spacing: .08em; }
 .radar-chart .radar-blip-num { font-family: var(--font-plex-mono), monospace; font-size: 12.5px; font-weight: 500; pointer-events: none; }
