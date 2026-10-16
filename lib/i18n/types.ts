@@ -238,6 +238,10 @@ export type Translations = {
     moreToday: string;
     caughtUpViewArchive: string;
   };
+  brand: {
+    /** A second line under "Sip AI News Simply" in the reader's language; empty when the brand line stands alone. */
+    subline: string;
+  };
   footer: {
     tagline: string;
     sectionsAria: string;

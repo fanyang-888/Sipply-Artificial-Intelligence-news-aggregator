@@ -33,6 +33,7 @@ export function SiteFooter() {
             Sip<span className="[color:var(--accent)]">ply</span>
           </p>
           <p className="mt-1 font-display text-[17px] font-light text-foreground">{SITE_TAGLINE}</p>
+          {t.brand.subline ? <p className="mt-0.5 text-[15px] [color:var(--text-soft)]">{t.brand.subline}</p> : null}
           <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed [color:var(--text-muted)]">{t.footer.tagline}</p>
         </div>
         <nav aria-label={t.footer.sectionsAria} className="flex flex-wrap gap-x-5 gap-y-2 sm:justify-end">

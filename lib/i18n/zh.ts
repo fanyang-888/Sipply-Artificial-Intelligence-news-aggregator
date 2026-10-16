@@ -250,6 +250,9 @@ export const zh: Translations = {
     moreToday: "今日要闻",
     caughtUpViewArchive: "查看资料库",
   },
+  brand: {
+    subline: "AI 新闻，轻松一口",
+  },
   footer: {
     tagline: "每日 AI 情报：当天的 AI 新闻，归成故事、排好顺序、讲清为什么重要。",
     sectionsAria: "站内板块",

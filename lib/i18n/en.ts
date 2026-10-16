@@ -256,6 +256,9 @@ export const en: Translations = {
     moreToday: "Today's stories",
     caughtUpViewArchive: "View Archive",
   },
+  brand: {
+    subline: "",
+  },
   footer: {
     tagline: "Daily AI intelligence: the day's AI news, grouped into stories, ranked, and explained.",
     sectionsAria: "Sections",

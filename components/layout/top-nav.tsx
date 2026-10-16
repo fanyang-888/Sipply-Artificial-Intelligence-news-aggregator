@@ -93,6 +93,11 @@ export function TopNav() {
           <span className="ml-2 hidden font-mono text-[10px] font-normal uppercase tracking-[0.16em] [color:var(--text-muted)] lg:inline">
             {SITE_TAGLINE}
           </span>
+          {t.brand.subline ? (
+            <span className="ml-2 hidden text-[11px] font-normal tracking-[0.08em] [color:var(--text-muted)] xl:inline">
+              · {t.brand.subline}
+            </span>
+          ) : null}
         </Link>
 
         {/* Nav links */}

@@ -22,7 +22,7 @@ export function DocumentTitle() {
     if (!i18nReady) return;
     // The home page carries the brand line itself; section pages are "Section | Sipply"
     if (pathname === "/") {
-      const wanted = `${t.meta.titleBrand} — ${SITE_TAGLINE}`;
+      const wanted = `${t.meta.titleBrand} — ${t.brand.subline || SITE_TAGLINE}`;
       const apply = () => {
         if (document.title !== wanted) document.title = wanted;
       };
