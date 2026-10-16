@@ -36,7 +36,7 @@ export function RadarToolbar({ filters, onChange, topics }: RadarToolbarProps) {
       className={uiTab(on)}
     >
       {name}
-      <span className="ml-1.5 [color:var(--text-dim)]">{n}</span>
+      <span className="ml-1.5 opacity-70">{n}</span>
     </button>
   );
   const select = `${uiInput} h-8 appearance-none pr-8 text-[12.5px] [background-image:linear-gradient(45deg,transparent_50%,var(--text-muted)_50%),linear-gradient(135deg,var(--text-muted)_50%,transparent_50%)] [background-position:calc(100%-1.1rem)_55%,calc(100%-0.8rem)_55%] [background-repeat:no-repeat] [background-size:5px_5px,5px_5px]`;

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Playfair+Display:wght@900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 /* ── Dark theme (default) ── */
@@ -12,7 +11,7 @@
   --accent-dim:   #1f4d7a;
   --accent-faint: rgba(74,158,255,.06);
   --text:         #d4e4f7;
-  --text-muted:   #5a7a9a;
+  --text-muted:   #6a8aab; /* 5.4:1 on the stage, 5.1:1 on a glass panel */
   --text-dim:     #2a4060;
   --red:          #e05470;
   --green:        #34d399;
@@ -79,11 +78,11 @@
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text);
-  --font-sans: 'DM Sans', sans-serif;
-  --font-serif: 'Playfair Display', serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: var(--font-dm-sans), sans-serif;
+  --font-serif: var(--font-playfair), serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   /* Headlines and section titles on every page */
-  --font-display: 'Fraunces', 'Playfair Display', serif;
+  --font-display: var(--font-fraunces), serif;
 }
 
 * { transition: background-color .3s, border-color .3s, color .3s; }
@@ -93,7 +92,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   transition: background .3s;
 }
 
@@ -132,9 +131,9 @@ body {
 }
 
 /* ── Trend Radar chart (SVG text sizes are in chart units; the chart scales with its column) ── */
-.radar-chart .radar-sector-name { font-family: 'DM Sans', 'PingFang SC', sans-serif; font-weight: 600; font-size: 19px; }
-.radar-chart .radar-ring-label { font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: .08em; }
-.radar-chart .radar-blip-num { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 500; pointer-events: none; }
+.radar-chart .radar-sector-name { font-family: var(--font-dm-sans), 'PingFang SC', sans-serif; font-weight: 600; font-size: 19px; }
+.radar-chart .radar-ring-label { font-family: var(--font-plex-mono), monospace; font-size: 14px; letter-spacing: .08em; }
+.radar-chart .radar-blip-num { font-family: var(--font-plex-mono), monospace; font-size: 12.5px; font-weight: 500; pointer-events: none; }
 @media (max-width: 640px) {
   .radar-chart .radar-sector-name { font-size: 24px; }
   .radar-chart .radar-ring-label { font-size: 19px; }
@@ -155,7 +154,7 @@ body {
   --beam:         rgba(74,158,255,.22);
   --cta-bg:       #e8f1fc;
   --cta-text:     #080c12;
-  /* Reading text on dark glass: brighter than --text-muted (#5a7a9a is too dim for paragraphs) */
+  /* Reading text on dark glass: brighter than --text-muted, which is for labels */
   --text-soft:    #a9bdd3;
   --panel-divider: rgba(255,255,255,.06);
   --panel-hover:   rgba(255,255,255,.028);
