@@ -96,6 +96,13 @@ body {
   transition: background .3s;
 }
 
+/* A reader with Chinese saved waits for the client's Chinese render instead of seeing English
+   first; the gate is set and lifted by script, so without JavaScript nothing is hidden. */
+.sp-lang-gate { transition: opacity .2s ease; }
+html[data-lang-gate] .sp-lang-gate { opacity: 0; pointer-events: none; animation: sp-lang-gate-open 0s linear 4s forwards; }
+/* If the scripts never arrive, show the page (in English) after 4 s rather than nothing */
+@keyframes sp-lang-gate-open { to { opacity: 1; pointer-events: auto; } }
+
 /* Sipply animations */
 @keyframes sp-pulse {
   0%, 100% { opacity: 0.4; }
