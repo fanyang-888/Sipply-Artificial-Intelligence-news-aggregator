@@ -68,6 +68,8 @@ async function main() {
   console.log(`smoke: ${BASE}\n`);
 
   const home = await page("/", { minLinks: 5, ld: ["ItemList"], label: "home" });
+  // Rendered on the server, not added after load: a line that appears late pushes the headline down
+  check("home has the date line in the HTML", /(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, [A-Z][a-z]+ \d{1,2}, \d{4}/.test(home));
 
   const story = links(home, "/cluster/")[0];
   if (story) {

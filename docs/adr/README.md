@@ -14,3 +14,4 @@ Short records of decisions that shaped Sipply: the context, what was decided, an
 | [8](0008-test-what-crawlers-see.md) | What crawlers see is tested on a production build, in CI |
 | [9](0009-tell-search-engines.md) | Tell search engines about new pages on every run |
 | [10](0010-radar-page-weight-accepted.md) | Keep the radar page's weight for now |
+| [11](0011-visible-without-javascript.md) | A page is visible as soon as its HTML arrives; only readers who chose Chinese wait for the scripts |

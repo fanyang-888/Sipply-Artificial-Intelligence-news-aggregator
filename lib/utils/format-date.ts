@@ -5,15 +5,18 @@ const localeForLang: Record<Lang, string> = {
   zh: "zh-CN",
 };
 
+/** Pass a timeZone (e.g. "UTC") for output that must match between server and browser. */
 export function formatDigestDate(
   date: Date = new Date(),
   lang: Lang = "en",
+  timeZone?: string,
 ): string {
   return new Intl.DateTimeFormat(localeForLang[lang], {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone,
   }).format(date);
 }
 

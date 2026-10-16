@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -34,15 +35,21 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    let saved: Lang | null = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      /* eslint-disable react-hooks/set-state-in-effect -- hydrate preferred language from localStorage after mount (avoid SSR mismatch) */
-      if (isLang(raw)) setLangState(raw);
-      /* eslint-enable react-hooks/set-state-in-effect */
+      if (isLang(raw)) saved = raw;
     } catch {
       /* ignore */
     }
-    setHydrated(true);
+    // A transition, so React finishes hydrating the page first. An ordinary update here
+    // reaches every page through this context while the page's Suspense boundary may still be
+    // hydrating; React then drops the server HTML, shows the loading skeleton and renders the
+    // page again on the client (a ~300 ms flash, layout shift up to 0.75).
+    startTransition(() => {
+      if (saved) setLangState(saved);
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {

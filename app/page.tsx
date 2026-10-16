@@ -66,6 +66,7 @@ export default async function HomePage() {
         radarSourceLabels={radarSourceLabels}
         radarWindowDays={radar?.windowDays ?? 14}
         week={weeks?.[0] ?? null}
+        renderedAt={new Date().toISOString()}
       />
     </>
   );
