@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="398" viewBox="0 0 720 398" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="t">Where a pipeline run spends its time</title>
+  <desc id="d">Median seconds per stage · 4 runs, 2026-10-15 to 2026-10-16 · a run takes about 5 min. Summarize stories: 83 s; Translate stories: 59 s; Fetch community signals: 48 s; Brief radar topics: 23 s; Describe radar topics: 22 s; Translate signals: 21 s; Fetch full articles: 7 s; Merge radar topics: 6 s; Build radar topics: 6 s; Everything else: 2 s</desc>
+  <text x="0" y="20" fill="#0b0b0b" font-size="15" font-weight="600">Where a pipeline run spends its time</text>
+  <text x="0" y="42" fill="#6e6d68" font-size="12">Median seconds per stage · 4 runs, 2026-10-15 to 2026-10-16 · a run takes about 5 min</text>
+  <line x1="182" y1="60" x2="182" y2="368" stroke="#c3c2b7" stroke-width="1"/>
+  <text x="170" y="83.5" text-anchor="end" fill="#52514e" font-size="13">Summarize stories</text>
+  <path d="M182,70 h414 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-414 z" fill="#2a78d6"><title>Summarize stories: 83 s</title></path>
+  <text x="608" y="83.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">83 s</text>
+  <text x="170" y="113.5" text-anchor="end" fill="#52514e" font-size="13">Translate stories</text>
+  <path d="M182,100 h294 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-294 z" fill="#2a78d6"><title>Translate stories: 59 s</title></path>
+  <text x="488" y="113.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">59 s</text>
+  <text x="170" y="143.5" text-anchor="end" fill="#52514e" font-size="13">Fetch community signals</text>
+  <path d="M182,130 h238.5 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-238.5 z" fill="#2a78d6"><title>Fetch community signals: 48 s</title></path>
+  <text x="432.5" y="143.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">48 s</text>
+  <text x="170" y="173.5" text-anchor="end" fill="#52514e" font-size="13">Brief radar topics</text>
+  <path d="M182,160 h109.8 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-109.8 z" fill="#2a78d6"><title>Brief radar topics: 23 s</title></path>
+  <text x="303.8" y="173.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">23 s</text>
+  <text x="170" y="203.5" text-anchor="end" fill="#52514e" font-size="13">Describe radar topics</text>
+  <path d="M182,190 h107.8 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-107.8 z" fill="#2a78d6"><title>Describe radar topics: 22 s</title></path>
+  <text x="301.8" y="203.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">22 s</text>
+  <text x="170" y="233.5" text-anchor="end" fill="#52514e" font-size="13">Translate signals</text>
+  <path d="M182,220 h103.4 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-103.4 z" fill="#2a78d6"><title>Translate signals: 21 s</title></path>
+  <text x="297.4" y="233.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">21 s</text>
+  <text x="170" y="263.5" text-anchor="end" fill="#52514e" font-size="13">Fetch full articles</text>
+  <path d="M182,250 h29.4 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-29.4 z" fill="#2a78d6"><title>Fetch full articles: 7 s</title></path>
+  <text x="223.4" y="263.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">7 s</text>
+  <text x="170" y="293.5" text-anchor="end" fill="#52514e" font-size="13">Merge radar topics</text>
+  <path d="M182,280 h27.8 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-27.8 z" fill="#2a78d6"><title>Merge radar topics: 6 s</title></path>
+  <text x="221.8" y="293.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">6 s</text>
+  <text x="170" y="323.5" text-anchor="end" fill="#52514e" font-size="13">Build radar topics</text>
+  <path d="M182,310 h26.2 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-26.2 z" fill="#2a78d6"><title>Build radar topics: 6 s</title></path>
+  <text x="220.2" y="323.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">6 s</text>
+  <text x="170" y="353.5" text-anchor="end" fill="#52514e" font-size="13">Everything else</text>
+  <path d="M182,340 h6 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-6 z" fill="#2a78d6"><title>Everything else: 2 s</title></path>
+  <text x="200" y="353.5" fill="#0b0b0b" font-size="13" font-variant-numeric="tabular-nums">2 s</text>
+  <text x="0" y="390" fill="#6e6d68" font-size="12">Summaries, translations and topic write-ups are LLM calls; the fetch stages wait on outside APIs.</text>
+</svg>

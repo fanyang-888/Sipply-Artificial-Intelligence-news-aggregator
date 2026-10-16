@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="288" viewBox="0 0 720 288" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="t">Trend Radar signals by platform</title>
+  <desc id="d">7,852 signals in the last 14 days · snapshot of 2026-10-16. News (Google News): 5,443 · 69%; Hacker News: 865 · 11%; Bluesky: 687 · 9%; YouTube: 613 · 8%; DEV: 90 · 1%; Lobsters: 85 · 1%; GitHub: 69 · 1%</desc>
+  <text x="0" y="20" fill="#f0efec" font-size="15" font-weight="600">Trend Radar signals by platform</text>
+  <text x="0" y="42" fill="#9a9993" font-size="12">7,852 signals in the last 14 days · snapshot of 2026-10-16</text>
+  <line x1="152" y1="60" x2="152" y2="278" stroke="#383835" stroke-width="1"/>
+  <text x="140" y="83.5" text-anchor="end" fill="#c3c2b7" font-size="13">News (Google News)</text>
+  <path d="M152,70 h444 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-444 z" fill="#3987e5"><title>News (Google News): 5,443 · 69%</title></path>
+  <text x="608" y="83.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">5,443 · 69%</text>
+  <text x="140" y="113.5" text-anchor="end" fill="#c3c2b7" font-size="13">Hacker News</text>
+  <path d="M152,100 h67.2 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-67.2 z" fill="#3987e5"><title>Hacker News: 865 · 11%</title></path>
+  <text x="231.2" y="113.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">865 · 11%</text>
+  <text x="140" y="143.5" text-anchor="end" fill="#c3c2b7" font-size="13">Bluesky</text>
+  <path d="M152,130 h52.5 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-52.5 z" fill="#3987e5"><title>Bluesky: 687 · 9%</title></path>
+  <text x="216.5" y="143.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">687 · 9%</text>
+  <text x="140" y="173.5" text-anchor="end" fill="#c3c2b7" font-size="13">YouTube</text>
+  <path d="M152,160 h46.5 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-46.5 z" fill="#3987e5"><title>YouTube: 613 · 8%</title></path>
+  <text x="210.5" y="173.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">613 · 8%</text>
+  <text x="140" y="203.5" text-anchor="end" fill="#c3c2b7" font-size="13">DEV</text>
+  <path d="M152,190 h3.4 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-3.4 z" fill="#3987e5"><title>DEV: 90 · 1%</title></path>
+  <text x="167.4" y="203.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">90 · 1%</text>
+  <text x="140" y="233.5" text-anchor="end" fill="#c3c2b7" font-size="13">Lobsters</text>
+  <path d="M152,220 h3 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-3 z" fill="#3987e5"><title>Lobsters: 85 · 1%</title></path>
+  <text x="167" y="233.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">85 · 1%</text>
+  <text x="140" y="263.5" text-anchor="end" fill="#c3c2b7" font-size="13">GitHub</text>
+  <path d="M152,250 h1.7 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-1.7 z" fill="#3987e5"><title>GitHub: 69 · 1%</title></path>
+  <text x="165.7" y="263.5" fill="#f0efec" font-size="13" font-variant-numeric="tabular-nums">69 · 1%</text>
+</svg>
