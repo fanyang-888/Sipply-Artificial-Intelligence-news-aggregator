@@ -157,3 +157,39 @@ def test_failed_run_leaves_the_pages_alone(run, monkeypatch):
     monkeypatch.setattr(rp, "_run_stage", lambda name, fn: (name != "cluster_articles", 0.01))
     code, _, _ = run(8)
     assert code == 1 and warmed == []
+
+
+@pytest.fixture
+def indexnow_calls(monkeypatch):
+    """Search-engine submissions the pipeline makes (network and DB stubbed)."""
+    calls: list[list[str]] = []
+    urls = ["https://www.sipply.dev/", "https://www.sipply.dev/cluster/x"]
+    monkeypatch.setattr("app.services.indexnow.changed_urls", lambda db, *, since, now: urls)
+    monkeypatch.setattr(
+        "app.services.indexnow.submit",
+        lambda u: calls.append(u) or {"status": "ok", "submitted": len(u), "http_status": 200},
+    )
+    return calls
+
+
+def test_successful_production_run_tells_search_engines_what_changed(run, monkeypatch, indexnow_calls):
+    monkeypatch.setenv("APP_ENV", "production")
+    code, _, recorded = run(8)
+    assert code == 0
+    assert indexnow_calls == [["https://www.sipply.dev/", "https://www.sipply.dev/cluster/x"]]
+    assert recorded["notify_indexnow"] == {"status": "ok", "submitted": 2, "http_status": 200}
+
+
+def test_runs_outside_production_never_submit(run, monkeypatch, indexnow_calls):
+    monkeypatch.setenv("APP_ENV", "development")
+    _, _, recorded = run(8)
+    assert indexnow_calls == []
+    assert recorded["notify_indexnow"]["status"] == "skipped"
+
+
+def test_a_failed_news_run_submits_nothing(run_with_failure, monkeypatch, indexnow_calls):
+    monkeypatch.setenv("APP_ENV", "production")
+    code, recorded = run_with_failure("summarize")
+    assert code == 1
+    assert indexnow_calls == []
+    assert recorded["notify_indexnow"]["status"] == "skipped"

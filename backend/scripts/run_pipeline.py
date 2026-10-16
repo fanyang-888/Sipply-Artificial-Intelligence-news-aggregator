@@ -30,7 +30,7 @@ import sys
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 # Hard wall-clock timeout for the entire pipeline run.
@@ -86,6 +86,8 @@ def _install_timeout(timeout_sec: int) -> None:
     t.start()
 
 
+from sqlalchemy import select  # noqa: E402
+
 from app.db import session_scope  # noqa: E402
 from app.logging_config import configure_logging  # noqa: E402
 from app.models.pipeline_run import PipelineRun  # noqa: E402
@@ -125,6 +127,34 @@ def _finish_run(
         run.stage_results = stage_results
         run.total_elapsed_sec = round(total_elapsed_sec, 2)
         db.commit()
+
+
+# Local and test runs never tell search engines about pages; set INDEXNOW_ENABLED=0 to stop it anywhere
+_LOCAL_ENVS = frozenset({"development", "dev", "local", "test"})
+# How far back to look for changed pages when no earlier successful run is on record
+_INDEXNOW_FALLBACK_HOURS = 7
+
+
+def _notify_search_engines(started_at: datetime) -> dict[str, Any]:
+    """Submit this run's new and changed pages to IndexNow. Never raises."""
+    if os.getenv("APP_ENV", "").strip().lower() in _LOCAL_ENVS or os.getenv("INDEXNOW_ENABLED", "1") == "0":
+        return {"status": "skipped", "reason": "local run or disabled"}
+    try:
+        from app.services import indexnow
+
+        with session_scope() as db:
+            previous = db.execute(
+                select(PipelineRun.started_at)
+                .where(PipelineRun.status == "success", PipelineRun.started_at < started_at)
+                .order_by(PipelineRun.started_at.desc())
+                .limit(1)
+            ).scalar_one_or_none()
+            since = previous or started_at - timedelta(hours=_INDEXNOW_FALLBACK_HOURS)
+            urls = indexnow.changed_urls(db, since=since, now=started_at)
+        return indexnow.submit(urls)
+    except Exception as exc:
+        logger.warning("pipeline indexnow notify failed", exc_info=True)
+        return {"status": "failed", "error": type(exc).__name__}
 
 
 def _run_stage(name: str, fn: Callable[[], int]) -> tuple[bool, float]:
@@ -266,9 +296,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         )
         stage_results["send_digest_email"] = {"status": "skipped", "elapsed_sec": 0}
 
-    elapsed_total = time.monotonic() - t_total
     final_status = "failed" if failures else "success"
-    _finish_run(run_id, status=final_status, stage_results=stage_results, total_elapsed_sec=elapsed_total)
 
     # Bust API cache so next request reflects fresh data
     if not failures:
@@ -284,6 +312,13 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
             warm_pages()
         except Exception:
             logger.warning("pipeline page warm-up failed", exc_info=True)
+        # Last, with the pages rebuilt: tell search engines (Bing feeds ChatGPT search) what changed
+        stage_results["notify_indexnow"] = _notify_search_engines(started_at)
+    else:
+        stage_results["notify_indexnow"] = {"status": "skipped", "reason": "pipeline failed"}
+
+    elapsed_total = time.monotonic() - t_total
+    _finish_run(run_id, status=final_status, stage_results=stage_results, total_elapsed_sec=elapsed_total)
 
     if failures:
         logger.error(
