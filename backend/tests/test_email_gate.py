@@ -115,7 +115,15 @@ def test_news_stage_failure_still_fails_the_pipeline(run_with_failure):
     assert recorded["_status"] == "failed"
 
 
-def test_ai_answer_check_runs_once_a_day(run):
+def test_ai_answer_check_is_off_unless_enabled(run, monkeypatch):
+    monkeypatch.delenv("ANSWER_CHECKS_ENABLED", raising=False)
+    _, executed, recorded = run(14)
+    assert "check_ai_answers" not in executed  # paid web searches, switched off by default
+    assert recorded["check_ai_answers"]["status"] == "skipped"
+
+
+def test_ai_answer_check_runs_once_a_day_when_enabled(run, monkeypatch):
+    monkeypatch.setenv("ANSWER_CHECKS_ENABLED", "1")
     _, executed, recorded = run(14)
     assert "check_ai_answers" in executed  # the 14:00 UTC cron run only
     for hour in (2, 8, 20):
