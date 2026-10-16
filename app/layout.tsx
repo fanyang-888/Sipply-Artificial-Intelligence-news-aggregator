@@ -7,14 +7,14 @@ import { TopNav } from "@/components/layout/top-nav";
 import { PageShell } from "@/components/layout/page-shell";
 import { Ticker } from "@/components/layout/ticker";
 import { websiteJsonLd } from "@/lib/seo/json-ld";
-import { SITE_DESCRIPTION, SITE_URL } from "@/lib/seo/site";
+import { SITE_DESCRIPTION, SITE_TAGLINE, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
   // Resolves relative canonical / Open Graph URLs to the canonical origin
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Sipply — Daily AI Intelligence",
+    default: `Sipply — ${SITE_TAGLINE}`,
     template: "%s | Sipply",
   },
   description: SITE_DESCRIPTION,

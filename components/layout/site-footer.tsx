@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
+import { SITE_TAGLINE } from "@/lib/seo/site";
 import { uiMicroLabel } from "@/lib/ui/classes";
 
 /**
@@ -31,6 +32,7 @@ export function SiteFooter() {
           <p className="font-display text-[20px] font-light text-foreground">
             Sip<span className="[color:var(--accent)]">ply</span>
           </p>
+          <p className="mt-1 font-display text-[17px] font-light text-foreground">{SITE_TAGLINE}</p>
           <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed [color:var(--text-muted)]">{t.footer.tagline}</p>
         </div>
         <nav aria-label={t.footer.sectionsAria} className="flex flex-wrap gap-x-5 gap-y-2 sm:justify-end">

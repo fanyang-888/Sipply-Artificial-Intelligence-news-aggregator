@@ -5,7 +5,7 @@
  */
 
 import { ImageResponse } from "next/og";
-import { SITE_NAME } from "@/lib/seo/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo/site";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
@@ -190,8 +190,8 @@ export async function ogCard({ eyebrow, title, subtitle }: OgCardProps): Promise
 /** The site's own card, also the fallback when a page's data can't be read. */
 export function siteCard(): Promise<ImageResponse> {
   return ogCard({
-    eyebrow: ["Daily AI intelligence"],
-    title: `${SITE_NAME} — the day's AI news, grouped into stories and ranked`,
-    subtitle: "Reporting from AI labs, tech press and research feeds, with key takeaways and why each story matters.",
+    eyebrow: [SITE_NAME, "Daily AI intelligence"],
+    title: SITE_TAGLINE,
+    subtitle: SITE_DESCRIPTION,
   });
 }

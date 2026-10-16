@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Python backend (its virtualenv ships third-party JS)
     "backend/**",
+    // Other sessions' git worktrees (each with its own .next and node_modules)
+    ".claude/**",
   ]),
   {
     rules: {

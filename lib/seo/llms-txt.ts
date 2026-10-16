@@ -3,7 +3,7 @@
  */
 
 import type { ApiDigest } from "@/lib/api/types";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, storyUrl } from "@/lib/seo/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, storyUrl } from "@/lib/seo/site";
 
 function oneLine(text: string, max = 220): string {
   const flat = text.replace(/\s+/g, " ").trim();
@@ -12,7 +12,7 @@ function oneLine(text: string, max = 220): string {
 
 export function buildLlmsTxt(digest: ApiDigest | null): string {
   const lines = [
-    `# ${SITE_NAME}`,
+    `# ${SITE_NAME} — ${SITE_TAGLINE}`,
     "",
     `> ${SITE_DESCRIPTION}`,
     "",

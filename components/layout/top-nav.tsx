@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { TopNavSearch } from "@/components/layout/top-nav-search";
 import { LanguageToggle } from "@/components/layout/language-toggle";
+import { SITE_TAGLINE } from "@/lib/seo/site";
 
 // The theme lives on <html data-theme> (set before paint by app/layout.tsx); this reads it there
 function subscribeTheme(onChange: () => void) {
@@ -88,6 +89,10 @@ export function TopNav() {
         >
           <Image src="/logo.png" alt="Sipply" width={26} height={26} className="shrink-0" />
           Sip<span style={{ color: "var(--accent)" }}>ply</span>
+          {/* The tagline rides with the wordmark where there is room for it */}
+          <span className="ml-2 hidden font-mono text-[10px] font-normal uppercase tracking-[0.16em] [color:var(--text-muted)] lg:inline">
+            {SITE_TAGLINE}
+          </span>
         </Link>
 
         {/* Nav links */}
