@@ -13,8 +13,8 @@ Railway Cron service (see railway.cron.toml) but also works locally:
 The pipeline runs several times a day, but the digest email goes out only
 once: on the cron run that starts at DIGEST_EMAIL_HOUR_UTC (default 20, the
 last run of the day). Other runs record send_digest_email as "skipped".
-Likewise check_ai_answers (paid web searches) runs only on the
-ANSWER_CHECK_HOUR_UTC cron run.
+check_ai_answers (paid web searches, about $0.18 a day) is off unless
+ANSWER_CHECKS_ENABLED=1; then it runs on the ANSWER_CHECK_HOUR_UTC cron run.
 
 Exit code 0 = all stages succeeded.
 Exit code 1 = one or more stages failed (details in logs).
@@ -41,6 +41,11 @@ _PIPELINE_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_TIMEOUT_MINUTES", "90")) * 6
 _DIGEST_EMAIL_HOUR_UTC = int(os.getenv("DIGEST_EMAIL_HOUR_UTC", "20"))
 # Once a day, on this cron run, ask an AI assistant the radar questions (paid web search)
 _ANSWER_CHECK_HOUR_UTC = int(os.getenv("ANSWER_CHECK_HOUR_UTC", "14"))
+
+
+def _answer_checks_enabled() -> bool:
+    """The scheduled AI-answer check costs ~$0.18 a run and is off unless ANSWER_CHECKS_ENABLED=1."""
+    return os.getenv("ANSWER_CHECKS_ENABLED", "").strip().lower() in {"1", "true", "yes"}
 
 
 # Trend Radar stages depend on third-party APIs; their failure is recorded in
@@ -158,7 +163,9 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
     # Decide on the email from the start time, not the (much later) email-stage time
     started_at = datetime.now(timezone.utc)
     send_email = force_email or _is_digest_email_run(started_at, triggered_by)
-    check_answers = check_answers or (triggered_by == "cron" and started_at.hour == _ANSWER_CHECK_HOUR_UTC)
+    check_answers = check_answers or (
+        _answer_checks_enabled() and triggered_by == "cron" and started_at.hour == _ANSWER_CHECK_HOUR_UTC
+    )
     logger.info(
         "========== daily pipeline starting  timeout=%dm  send_email=%s ==========",
         _PIPELINE_TIMEOUT_SECONDS // 60,
@@ -308,7 +315,7 @@ def _cli_main() -> None:
     parser.add_argument(
         "--check-answers",
         action="store_true",
-        help="Ask the AI-answer questions on this run too (paid web search; the cron does it at ANSWER_CHECK_HOUR_UTC)",
+        help="Ask the AI-answer questions on this run (paid web search; the cron does it at ANSWER_CHECK_HOUR_UTC only when ANSWER_CHECKS_ENABLED=1)",
     )
     args = parser.parse_args()
     sys.exit(main(triggered_by=args.triggered_by, force_email=args.force_email, check_answers=args.check_answers))
