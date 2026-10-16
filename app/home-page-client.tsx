@@ -138,6 +138,14 @@ export function HomePageClient({
 
         if (cancelled) return;
 
+        // Not re-ordered for this reader (a first visit, no role): keep what the server
+        // rendered. Its copy can be a few minutes older, and swapping in a lead story of a
+        // different length shifts the whole page (Lighthouse measured CLS 0.38).
+        if (hasInitial && !digest.personalized) {
+          rankedForRoleRef.current = role;
+          return;
+        }
+
         setFeatured(digest.featured ? apiClusterToCluster(digest.featured) : null);
         setTopClusters(digest.topClusters.map(apiClusterToCluster));
         setPersonalized(Boolean(digest.personalized));
