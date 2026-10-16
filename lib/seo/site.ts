@@ -3,6 +3,9 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.sipply
 
 export const SITE_NAME = "Sipply";
 
+/** The brand line, kept in English everywhere (it is the name's own pun: sip · supply · simply). */
+export const SITE_TAGLINE = "Sip AI News Simply";
+
 export const SITE_DESCRIPTION =
   "A daily AI-industry digest: reporting from AI labs, tech press and research feeds, grouped into stories, ranked, and summarized with key takeaways and why each one matters.";
 

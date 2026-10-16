@@ -1,4 +1,4 @@
-# Sipply — Your Daily AI Intelligence Briefing
+# Sipply — Sip AI News Simply
 
 > **Sip** your morning news. **Supply** yourself with signal, not noise.
 
