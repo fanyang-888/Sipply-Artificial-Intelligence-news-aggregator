@@ -202,7 +202,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 293 pytest tests; typecheck, lint with zero warnings, 63 vitest tests; a production build read by the 84-check smoke test |
+| CI on every pull request | Migrations on an empty Postgres + 293 pytest tests; typecheck, lint with zero warnings, 63 vitest tests; a production build read by the 84-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Eleven [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
@@ -350,7 +350,7 @@ One visual language on every page, public and admin, set in `app/globals.css` (t
 │   ├── seo/                Site URL, JSON-LD, llms.txt, share-image card
 │   ├── ui/                 Shared class strings: titles, labels, tabs, inputs, buttons
 │   └── utils/              Pure helpers (radar layout and filters, archive URLs...)
-├── scripts/                smoke.mjs (crawler-view checks), readme-charts.mjs (the charts above)
+├── scripts/                smoke.mjs (crawler-view checks), stability.mjs (paint and layout shift in Chrome), readme-charts.mjs (the charts above)
 ├── docs/                   adr/ decision records, images/ for this README
 └── backend/
     ├── app/
@@ -413,6 +413,8 @@ TEST_DATABASE_URL=postgresql+psycopg://pait:pait@localhost:5432/pait_test pytest
 npm run build && npx next start -p 3000 &
 npm run smoke -- http://localhost:3000
 npm run smoke -- https://www.sipply.dev
+# Paint timing and layout shift in Google Chrome on a throttled phone (needs Chrome installed)
+npm run stability -- http://localhost:3000
 
 # Redraw the README charts from the live API
 node scripts/readme-charts.mjs

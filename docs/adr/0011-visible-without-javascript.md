@@ -12,6 +12,7 @@ The cause was a language gate from the first i18n work. It rendered the whole pa
 - **Gate only the readers it concerns.** When something has to wait for the client, here a saved language, the inline head script sets a flag before first paint, and CSS hides the page only while the flag is there. Today that flag is `data-lang-gate`, set when `pai-lang` is `zh`.
 - **A fallback that doesn't need the scripts.** The same CSS opens the gate after 4 s, so a reader whose scripts fail still gets a page.
 - **A test that guards it.** A unit test renders the page shell on the server and fails if anything above `<main>` hides it.
+- **A browser check in CI that guards all of it** (`scripts/stability.mjs`, #119). The smoke job loads every kind of page in Chrome on a throttled phone (Lighthouse's slow 4G, 4× CPU), twice. A page fails if its largest paint comes more than 1 s after its first, if a loading skeleton (`aria-busy`) appears in `<main>` after the first paint, or if layout shift reaches 0.05. With JavaScript off, `<main>` and everything around it must be fully opaque. Reintroducing #116's `opacity-0` or removing #117's `startTransition` fails it.
 
 ## Consequences
 - On slow 4G with a 4× slower CPU, home LCP went from 4.0 s to 1.6 s and radar from 4.0 s to 1.6–1.9 s; LCP now equals the first paint.
