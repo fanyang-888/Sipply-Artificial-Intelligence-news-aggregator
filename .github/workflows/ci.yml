@@ -94,5 +94,8 @@ jobs:
           npx next start -p 3000 > next.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3000/robots.txt > /dev/null && break; sleep 1; done
           npm run smoke -- http://localhost:3000
+      - if: steps.api.outputs.up == 'true'
+        name: Load each page in Chrome on a throttled phone; it shows at once and doesn't move
+        run: npm run stability -- http://localhost:3000
       - if: failure()
         run: tail -50 next.log || true
