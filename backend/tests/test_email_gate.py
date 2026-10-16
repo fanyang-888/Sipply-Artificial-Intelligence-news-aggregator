@@ -193,3 +193,43 @@ def test_a_failed_news_run_submits_nothing(run_with_failure, monkeypatch, indexn
     assert code == 1
     assert indexnow_calls == []
     assert recorded["notify_indexnow"]["status"] == "skipped"
+
+
+@pytest.fixture
+def operator_emails(monkeypatch):
+    """Operator emails the pipeline asks for (sending stubbed)."""
+    asked: list[tuple] = []
+    monkeypatch.setattr(
+        "app.services.alerts.send_failure_alert",
+        lambda results, *, started_at, news_failed: asked.append(("failure", sorted(n for n, r in results.items() if r.get("status") == "failed"), news_failed)) or "sent",
+    )
+    monkeypatch.setattr("app.services.alerts.send_daily_summary", lambda db, *, now: asked.append(("daily",)) or "sent")
+    return asked
+
+
+def test_a_failed_radar_stage_alerts_but_the_site_still_updates(run_with_failure, operator_emails):
+    code, recorded = run_with_failure("ingest_signals")
+    assert code == 0
+    assert operator_emails == [("failure", ["ingest_signals"], False)]
+
+
+def test_a_failed_news_stage_alerts_that_the_site_was_not_updated(run_with_failure, operator_emails):
+    code, _ = run_with_failure("summarize")
+    assert code == 1
+    assert operator_emails == [("failure", ["summarize"], True)]
+
+
+def test_clean_runs_send_nothing_and_the_evening_run_sends_the_daily_summary(run, operator_emails):
+    run(8)
+    assert operator_emails == []
+    run(20)
+    assert operator_emails == [("daily",)]
+
+
+def test_an_email_problem_never_fails_the_pipeline(run_with_failure, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("resend down")
+
+    monkeypatch.setattr("app.services.alerts.send_failure_alert", boom)
+    code, recorded = run_with_failure("ingest_signals")
+    assert code == 0 and recorded["_status"] == "success"

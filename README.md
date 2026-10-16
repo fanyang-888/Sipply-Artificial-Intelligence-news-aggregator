@@ -394,6 +394,8 @@ Required environment variables:
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql+psycopg://...`) |
 | `OPENAI_API_KEY` | GPT-4o-mini — summarise, translate |
 | `RESEND_API_KEY` | Email delivery for daily digest |
+| `ALERT_EMAIL` | Operator emails: a failed pipeline stage, and a summary of the last 24 hours on the 20:00 UTC run (optional; none while unset) |
+| `ANSWER_CHECKS_ENABLED` | `1` turns the paid AI-answer check back on (off by default) |
 | `REDIS_URL` | Auto-set by Railway Redis plugin |
 | `JWT_SECRET` | Signs admin JWT tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SECRET` | Admin login |

@@ -16,6 +16,9 @@ last run of the day). Other runs record send_digest_email as "skipped".
 check_ai_answers (paid web searches, about $0.18 a day) is off unless
 ANSWER_CHECKS_ENABLED=1; then it runs on the ANSWER_CHECK_HOUR_UTC cron run.
 
+A failed stage emails ALERT_EMAIL; the evening run also emails a summary
+of the last 24 hours (app/services/alerts.py).
+
 Exit code 0 = all stages succeeded.
 Exit code 1 = one or more stages failed (details in logs).
 """
@@ -157,6 +160,23 @@ def _notify_search_engines(started_at: datetime) -> dict[str, Any]:
         return {"status": "failed", "error": type(exc).__name__}
 
 
+def _email_operator(stage_results: dict[str, Any], *, started_at: datetime, news_failed: bool, daily: bool) -> None:
+    """A failure alert if any stage failed; on the evening run, the daily summary. Never raises."""
+    from app.services import alerts
+
+    if any(isinstance(r, dict) and r.get("status") == "failed" for r in stage_results.values()):
+        try:
+            alerts.send_failure_alert(stage_results, started_at=started_at, news_failed=news_failed)
+        except Exception:
+            logger.warning("pipeline failure alert failed", exc_info=True)
+    if daily:
+        try:
+            with session_scope() as db:
+                alerts.send_daily_summary(db, now=datetime.now(timezone.utc))
+        except Exception:
+            logger.warning("pipeline daily summary failed", exc_info=True)
+
+
 def _run_stage(name: str, fn: Callable[[], int]) -> tuple[bool, float]:
     """Run fn(), log timing and result.  Returns (success, elapsed_sec)."""
     logger.info("pipeline  stage=%-22s  status=STARTING", name)
@@ -232,6 +252,9 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         elapsed_total = time.monotonic() - t_total
         logger.error("pipeline ABORTED after ingest failure — total=%.1fs", elapsed_total)
         _finish_run(run_id, status="failed", stage_results=stage_results, total_elapsed_sec=elapsed_total)
+        _email_operator(
+            stage_results, started_at=started_at, news_failed=True, daily=_is_digest_email_run(started_at, triggered_by)
+        )
         return 1
 
     # ------------------------------------------------------------------
@@ -319,6 +342,10 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
 
     elapsed_total = time.monotonic() - t_total
     _finish_run(run_id, status=final_status, stage_results=stage_results, total_elapsed_sec=elapsed_total)
+    # After the run row is final, so the evening summary includes this run
+    _email_operator(
+        stage_results, started_at=started_at, news_failed=bool(failures), daily=_is_digest_email_run(started_at, triggered_by)
+    )
 
     if failures:
         logger.error(
