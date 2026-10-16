@@ -79,14 +79,15 @@ export function TopNav() {
           href="/"
           className="shrink-0 flex items-center gap-2 tracking-tight"
           style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-playfair), serif",
             fontWeight: 900,
             fontSize: 22,
             color: "var(--text)",
             textDecoration: "none",
           }}
         >
-          <Image src="/logo.png" alt="Sipply" width={26} height={26} className="shrink-0" />
+          {/* The link already says "Sipply"; the mark is decorative. Above the fold, so not lazy. */}
+          <Image src="/logo.png" alt="" width={26} height={26} loading="eager" className="shrink-0" />
           Sip<span style={{ color: "var(--accent)" }}>ply</span>
         </Link>
 
@@ -103,7 +104,7 @@ export function TopNav() {
               key={href}
               href={href}
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: "var(--font-plex-mono), monospace",
                 fontSize: 11,
                 letterSpacing: ".1em",
                 textTransform: "uppercase",

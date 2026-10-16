@@ -97,7 +97,7 @@ export function RadarTrendChart({ counts, endIso, windowDays }: { counts: number
       <path d={area} fill="var(--accent-faint)" />
       <path d={line} fill="none" stroke="var(--accent)" strokeWidth={1.8} />
       <circle cx={endX} cy={endY} r={3} fill="var(--accent)" />
-      <g fontFamily="'IBM Plex Mono', monospace" fontSize={11} fill="var(--text-muted)">
+      <g fontFamily="var(--font-plex-mono), monospace" fontSize={11} fill="var(--text-muted)">
         <text x={P} y={11}>
           {t.radar.trendPeak(max)}
         </text>

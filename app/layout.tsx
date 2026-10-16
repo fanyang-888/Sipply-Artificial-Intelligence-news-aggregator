@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { DM_Sans, Fraunces, IBM_Plex_Mono, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AppProviders } from "@/components/app-providers";
 import { JsonLd } from "@/components/shared/json-ld";
@@ -33,6 +34,14 @@ export const metadata: Metadata = {
   },
 };
 
+// Self-hosted at build time: no request to Google from the reader's browser, preloaded,
+// and no CSS → font-CSS → font chain blocking the first paint. Fraunces is the LCP headline.
+const fraunces = Fraunces({ subsets: ["latin"], axes: ["opsz"], variable: "--font-fraunces", display: "swap" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono", display: "swap", preload: false });
+// Only the wordmark, at 900
+const playfair = Playfair_Display({ subsets: ["latin"], weight: "900", variable: "--font-playfair", display: "swap", preload: false });
+
 /** The browser chrome's colour on phones: the dark stage (the default theme). */
 export const viewport: Viewport = { themeColor: "#080c12" };
 
@@ -42,11 +51,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${dmSans.variable} ${plexMono.variable} ${playfair.variable}`}
+    >
       <head>
-        {/* The fonts come from Google; opening the connections early shortens the first paint */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('sipply-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,

@@ -44,13 +44,13 @@ export function SiteFooter() {
           ))}
         </nav>
       </div>
-      <p className="mt-7 font-mono text-[11px] tracking-[0.06em] [color:var(--text-dim)]">
+      <p className="mt-7 font-mono text-[11px] tracking-[0.06em] [color:var(--text-muted)]">
         {t.footer.machine}:{" "}
-        <a href="/llms.txt" className="no-underline hover:[color:var(--text-muted)]">llms.txt</a>
+        <a href="/llms.txt" className="no-underline hover:text-foreground">llms.txt</a>
         {" · "}
-        <a href="/sitemap.xml" className="no-underline hover:[color:var(--text-muted)]">sitemap</a>
+        <a href="/sitemap.xml" className="no-underline hover:text-foreground">sitemap</a>
         {" · "}
-        <a href="/robots.txt" className="no-underline hover:[color:var(--text-muted)]">robots</a>
+        <a href="/robots.txt" className="no-underline hover:text-foreground">robots</a>
       </p>
     </footer>
   );

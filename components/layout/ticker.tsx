@@ -33,7 +33,7 @@ export async function Ticker() {
       style={{
         background: "var(--accent)",
         color: "var(--ticker-text)",
-        fontFamily: "'IBM Plex Mono', monospace",
+        fontFamily: "var(--font-plex-mono), monospace",
         fontSize: "11px",
         fontWeight: 500,
         letterSpacing: ".06em",

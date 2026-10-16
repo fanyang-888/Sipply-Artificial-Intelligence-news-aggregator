@@ -12,7 +12,7 @@ export const OG_CONTENT_TYPE = "image/png";
 
 const INK = "#d4e4f7";
 const SOFT = "#a9bdd3";
-const MUTED = "#5a7a9a";
+const MUTED = "#6a8aab";
 const ACCENT = "#4a9eff";
 const BG = "#080c12";
 
