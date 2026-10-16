@@ -61,3 +61,38 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint -- --max-warnings=0
       - run: npm test
+
+  smoke:
+    name: Smoke — the built site as a crawler sees it
+    runs-on: ubuntu-latest
+    env:
+      # Read-only GETs against the live API, as Vercel's preview builds do
+      NEXT_PUBLIC_API_URL: https://personal-ai-intelligence-tool-production.up.railway.app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the production API up?
+        id: api
+        run: |
+          if curl -sf --max-time 20 "$NEXT_PUBLIC_API_URL/health" > /dev/null; then
+            echo "up=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Production API unreachable; smoke test skipped (an outage shouldn't fail a PR)"
+            echo "up=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.api.outputs.up == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - if: steps.api.outputs.up == 'true'
+        run: npm ci
+      - if: steps.api.outputs.up == 'true'
+        run: npm run build
+      - if: steps.api.outputs.up == 'true'
+        name: Serve the build and fetch every kind of page
+        run: |
+          npx next start -p 3000 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/robots.txt > /dev/null && break; sleep 1; done
+          npm run smoke -- http://localhost:3000
+      - if: failure()
+        run: tail -50 next.log || true
