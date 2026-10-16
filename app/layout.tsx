@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   openGraph: { siteName: "Sipply", type: "website", locale: "en_US" },
+  // Search Console / Bing Webmaster ownership tags: set the tokens in Vercel's env, no code change
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
   twitter: { card: "summary_large_image" },
   icons: {
     icon: [
