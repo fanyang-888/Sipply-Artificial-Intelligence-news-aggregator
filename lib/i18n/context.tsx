@@ -23,7 +23,7 @@ type I18nContextValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: Translations;
-  /** True after localStorage language has been read on the client (avoids hydration flicker when gating UI). */
+  /** True after the saved language has been read on the client. */
   i18nReady: boolean;
 };
 
@@ -53,6 +53,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    // The page now renders in the saved language: show it (see the root layout's inline script)
+    document.documentElement.removeAttribute("data-lang-gate");
   }, [lang, hydrated]);
 
   const setLang = useCallback((next: Lang) => {

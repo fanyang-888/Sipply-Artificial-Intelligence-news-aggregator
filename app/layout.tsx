@@ -59,7 +59,10 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('sipply-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+            // Theme before first paint. A reader who chose Chinese gets data-lang-gate, which hides
+            // the page until the client has switched it to Chinese (no English flash); everyone
+            // else, crawlers and readers without JavaScript see the server HTML at once.
+            __html: `try{var d=document.documentElement;d.setAttribute('data-theme',localStorage.getItem('sipply-theme')||'dark');if(localStorage.getItem('pai-lang')==='zh')d.setAttribute('data-lang-gate','');}catch(e){}`,
           }}
         />
       </head>

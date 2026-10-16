@@ -87,7 +87,8 @@ export function TopNav() {
           }}
         >
           {/* The link already says "Sipply"; the mark is decorative. Above the fold, so not lazy. */}
-          <Image src="/logo.png" alt="" width={26} height={26} loading="eager" className="shrink-0" />
+          {/* Images are served unoptimized (next.config), so the nav loads a 96px copy (5 KB), not the 1254px original */}
+          <Image src="/logo-96.png" alt="" width={26} height={26} loading="eager" className="shrink-0" />
           {/* One word: the flex gap above must not split "Sip" from "ply" */}
           <span>
             Sip<span style={{ color: "var(--accent)" }}>ply</span>
