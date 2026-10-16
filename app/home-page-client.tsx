@@ -48,6 +48,8 @@ type HomePageClientProps = {
   radarWindowDays: number;
   /** This ISO week's summary (headlines) for panel 04. */
   week: ApiWeekSummary | null;
+  /** When the server rendered the page: the date line's value until the reader's own clock takes over. */
+  renderedAt: string;
 };
 
 /**
@@ -63,12 +65,15 @@ export function HomePageClient({
   radarSourceLabels,
   radarWindowDays,
   week,
+  renderedAt,
 }: HomePageClientProps) {
   const { t, lang } = useI18n();
   const [role] = usePreferredRole();
-  // The reader's local date only after mount: the server's date/time zone may differ
+  // The server HTML carries the date in UTC so the line holds its place from the first paint
+  // (adding it after mount wrapped the line on phones and pushed the headline down); after
+  // mount it becomes the reader's local date. Same text on server and at hydration.
   const mounted = useMounted();
-  const dateLabel = mounted ? formatDigestDate(new Date(), lang) : "";
+  const dateLabel = mounted ? formatDigestDate(new Date(), lang) : formatDigestDate(new Date(renderedAt), lang, "UTC");
 
   const [featured, setFeatured] = useState<Cluster | null>(() =>
     initialDigest?.featured ? apiClusterToCluster(initialDigest.featured) : null,
