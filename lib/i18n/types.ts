@@ -117,6 +117,8 @@ export type Translations = {
     allDays: string;
     dayByDay: string;
     weekRecap: string;
+    dayStories: string;
+    dayCompanies: string;
     browse: string;
     unavailable: string;
   };

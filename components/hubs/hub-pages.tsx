@@ -393,13 +393,13 @@ export function DayPage({
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0" aria-labelledby="day-stories">
           <h2 id="day-stories" className={uiSectionTitle}>
-            {t.hubs.topStories}
+            {t.hubs.dayStories}
           </h2>
           <StoryList stories={day.stories} />
         </section>
         {day.topics.length > 0 ? (
           <aside className="sp-glass h-fit p-6 lg:mt-[3.1rem]">
-            <h2 className={`${label} mb-3`}>{t.hubs.companies}</h2>
+            <h2 className={`${label} mb-3`}>{t.hubs.dayCompanies}</h2>
             <ul className="flex flex-wrap gap-2">
               {day.topics.map((c) => (
                 <li key={c.key}>

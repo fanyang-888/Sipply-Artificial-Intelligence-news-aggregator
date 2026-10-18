@@ -115,6 +115,8 @@ export const en: Translations = {
     allDays: "All days",
     dayByDay: "Day by day",
     weekRecap: "The week's recap",
+    dayStories: "The day's stories",
+    dayCompanies: "Companies in the news that day",
     browse: "Browse",
     unavailable: "This page is unavailable right now. Please check back in a few minutes.",
   },

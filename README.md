@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 293 backend · 63 frontend · 84 smoke checks of the built site, all in CI |
+| **Tests** | 307 backend · 72 frontend · 107 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -186,9 +186,10 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 
 - **Content in the HTML.** The home page, story pages, archive, topics, weekly recaps and the radar ship their full text in the server HTML; a reader's personalization re-ranks on the client.
 - **Structured data.** `NewsArticle` JSON-LD on story pages with the original sources, `ItemList` on the home page, `CollectionPage` and `BreadcrumbList` on the hubs.
-- **Machine entry points.** `/sitemap.xml` (every story, rendered per request), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed) and `/llms.txt`.
+- **Machine entry points.** `/sitemap.xml` (every story, rendered per request), `/news-sitemap.xml` (a Google News sitemap of the last 48 hours), `/feed.xml` (RSS of the 50 newest stories, linked from every page), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed) and `/llms.txt`.
+- **A page per day.** `/daily/2026-10-18` lists every story that first appeared that day, news first; its title reads "AI news today, October 18, 2026" on the day and "AI news, …" after. AI search cites dated round-ups like this for "AI news today" questions (audit of 2026-10-18).
 - **Metadata for crawlers that don't run JavaScript.** `htmlLimitedBots` includes GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot, so they get the `<head>` metadata in the HTML.
-- **IndexNow** (`backend/app/services/indexnow.py`). After every successful run the new and updated story pages, the topic pages they appear on and the hub pages go to `api.indexnow.org` (Bing, Yandex, Seznam, Naver, Yep). Bing's index feeds ChatGPT search and Copilot, so a new story is findable within minutes. The key file is `public/<key>.txt`; local and test runs never submit. See [ADR 9](docs/adr/0009-tell-search-engines.md).
+- **IndexNow** (`backend/app/services/indexnow.py`). After every successful run the new and updated story pages, the topic pages they appear on, today's day page and the hub pages go to `api.indexnow.org` (Bing, Yandex, Seznam, Naver, Yep). Bing's index feeds ChatGPT search and Copilot, so a new story is findable within minutes. The key file is `public/<key>.txt`; local and test runs never submit. See [ADR 9](docs/adr/0009-tell-search-engines.md).
 - **Search Console and Bing Webmaster.** Set `GOOGLE_SITE_VERIFICATION` / `BING_SITE_VERIFICATION` in Vercel and the ownership `<meta>` tags appear on every page.
 - **Tested in CI.** The smoke job builds the site, starts it, and reads every kind of page as GPTBot would: titles, canonical URLs, JSON-LD, story links in the HTML, share images, sitemap, robots.txt, llms.txt, a real 404 and a noindex admin. See [ADR 8](docs/adr/0008-test-what-crawlers-see.md).
 - **Citation tracking** (`backend/app/signals/answers.py`, off by default). When `ANSWER_CHECKS_ENABLED=1`, the 14:00 run asks OpenAI's Responses API with web search the question a reader would ask about each top radar topic (gpt-4.1-mini, about $0.018 a question) and records the answer and the sources it cited. The results are for the operator; public pages describe the world, not Sipply's own standing ([ADR 6](docs/adr/0006-no-self-assessment-in-public.md)).
@@ -202,7 +203,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 293 pytest tests; typecheck, lint with zero warnings, 63 vitest tests; a production build read by the 84-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 307 pytest tests; typecheck, lint with zero warnings, 72 vitest tests; a production build read by the 107-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Eleven [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 

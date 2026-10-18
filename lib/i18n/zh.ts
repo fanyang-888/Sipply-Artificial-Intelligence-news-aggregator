@@ -113,6 +113,8 @@ export const zh: Translations = {
     allDays: "全部日期",
     dayByDay: "逐日",
     weekRecap: "本周回顾",
+    dayStories: "当天报道",
+    dayCompanies: "当天出现的公司",
     browse: "浏览",
     unavailable: "页面暂时打不开，请过几分钟再来看看。",
   },
