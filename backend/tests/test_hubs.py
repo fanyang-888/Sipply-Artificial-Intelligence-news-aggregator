@@ -158,3 +158,40 @@ def test_story_detail_links_its_topic_pages(client, stories):
     story = stories["haiku"]
     body = client.get(f"/api/clusters/{story.id}").json()
     assert body["topics"] == [{"slug": "anthropic", "name": "Anthropic"}]
+
+
+def test_days_list_newest_first(client, stories):
+    days = client.get("/api/days").json()
+    keys = [d["date"] for d in days]
+    assert keys == sorted(keys, reverse=True)
+    yesterday = (NOW - timedelta(days=1)).date().isoformat()
+    assert keys[0] == yesterday
+    assert days[0]["storyCount"] == 1  # the untranslated draft doesn't count
+    assert days[0]["headlines"][0]["title"] == "Prompt-Space Meta-Learning Does Not Transfer"
+    assert days[0]["headlines"][0]["titleZh"] == "Prompt-Space Meta-Learning Does Not Transfer（中文）"
+
+
+def test_day_page_lists_that_days_stories(client, stories):
+    day = (NOW - timedelta(days=2)).date().isoformat()
+    body = client.get(f"/api/days/{day}").json()
+    assert body["date"] == day
+    assert [s["title"] for s in body["stories"]] == ["Anthropic releases Claude Haiku 5.5"]
+    assert body["storyCount"] == 1
+    assert body["topics"] == [{"key": "anthropic", "name": "Anthropic", "count": 1}]
+    assert client.get("/api/days/2026-13-01").status_code == 422
+    assert client.get("/api/days/18-10-2026").status_code == 422
+    assert client.get("/api/days/2001-01-01").status_code == 404
+
+
+def test_feed_lists_the_newest_stories_with_their_dates(client, stories):
+    items = client.get("/api/feed", params={"limit": 3}).json()
+    assert [i["title"] for i in items] == [
+        "Prompt-Space Meta-Learning Does Not Transfer",
+        "Anthropic releases Claude Haiku 5.5",
+        "Google releases Gemini 4 Argon",
+    ]  # by first appearance, newest first; the untranslated draft is left out
+    first = items[0]
+    assert first["id"] == str(stories["paper"].id)
+    assert first["publishedAt"].startswith((NOW - timedelta(days=1)).date().isoformat())
+    assert {"summary", "whyItMatters", "topicTag", "sourceNames", "updatedAt", "titleZh"} <= set(first)
+    assert client.get("/api/feed", params={"limit": 500}).status_code == 422

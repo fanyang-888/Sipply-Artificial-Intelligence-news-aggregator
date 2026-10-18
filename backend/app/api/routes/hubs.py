@@ -2,10 +2,13 @@
 
 - GET /api/topics, /api/topics/{slug}: one page per company / model family
   (app/services/entities.py), its stories and the radar topics on it now;
-- GET /api/weeks, /api/weeks/{week}: a recap per ISO week ("2026-W42").
+- GET /api/weeks, /api/weeks/{week}: a recap per ISO week ("2026-W42");
+- GET /api/days, /api/days/{date}: the stories that appeared on one UTC day ("2026-10-18");
+- GET /api/feed: the newest stories with their dates, for the RSS feed and the news sitemap.
 
 They give AI assistants and search engines stable pages to cite for "what's
-new with Anthropic" or "AI news this week". Cached until the next pipeline run.
+new with Anthropic", "AI news this week" or "AI news today". Cached until the
+next pipeline run.
 """
 
 from __future__ import annotations
@@ -34,6 +37,8 @@ from app.services.text_clean import clean_title
 
 topics_router = APIRouter(prefix="/api/topics", tags=["topics"])
 weeks_router = APIRouter(prefix="/api/weeks", tags=["weeks"])
+days_router = APIRouter(prefix="/api/days", tags=["days"])
+feed_router = APIRouter(prefix="/api/feed", tags=["feed"])
 
 RECENT_DAYS = 30
 TOPIC_STORIES = 40
@@ -42,7 +47,11 @@ WEEK_HEADLINES = 3
 # Source types (app/source_catalog/trusted_sources.yaml) that report news, as opposed to research / newsletter
 NEWS_SOURCE_TYPES = ("company_news", "tech_press")
 WEEKS_LISTED = 26
+DAYS_LISTED = 60
+FEED_ITEMS = 50
+DAY_HEADLINES = 3
 _WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
+_DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class TopicSummary(BaseModel):
@@ -95,6 +104,30 @@ class WeekDetail(WeekSummary):
     topics: list[WeekCount]
 
 
+class DaySummary(BaseModel):
+    date: str  # YYYY-MM-DD (UTC)
+    storyCount: int
+    # The day's best stories, news first (the same rule as the week's headlines)
+    headlines: list[WeekHeadline]
+
+
+class DayDetail(DaySummary):
+    stories: list[ArchiveClusterRow]
+    topics: list[WeekCount]
+
+
+class FeedItem(BaseModel):
+    id: str
+    title: str
+    titleZh: str | None
+    summary: str | None
+    whyItMatters: str | None
+    topicTag: str | None
+    sourceNames: list[str]
+    publishedAt: str | None  # when the story first appeared on Sipply
+    updatedAt: str | None
+
+
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
@@ -114,6 +147,16 @@ def week_bounds(key: str) -> tuple[date, date] | None:
     except ValueError:
         return None
     return monday, monday + timedelta(days=6)
+
+
+def day_key(key: str) -> date | None:
+    """The date of a "YYYY-MM-DD" key, or None if it isn't one."""
+    if not _DAY_RE.match(key):
+        return None
+    try:
+        return date.fromisoformat(key)
+    except ValueError:
+        return None
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -308,3 +351,102 @@ def get_week(week: str, db: Session = Depends(get_db)):
     if data is None:
         raise HTTPException(status_code=404, detail="No stories that week")
     return JSONResponse(content=data)
+
+
+# ---------------------------------------------------------------------------
+# Days
+# ---------------------------------------------------------------------------
+
+def _by_day(db: Session) -> dict[str, list[Cluster]]:
+    """Stories grouped by the UTC day they first appeared."""
+    days: dict[str, list[Cluster]] = defaultdict(list)
+    for c in _stories(db):
+        first = _aware(c.first_seen_at) or _aware(c.last_seen_at)
+        if first:
+            days[first.date().isoformat()].append(c)
+    return days
+
+
+def _headline(c: Cluster) -> WeekHeadline:
+    return WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=clean_title(c.representative_title_zh) or None)
+
+
+def _day_summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> DaySummary:
+    return DaySummary(
+        date=key,
+        storyCount=len(stories),
+        headlines=[_headline(c) for c in week_headlines(stories, news_source_ids, DAY_HEADLINES)],
+    )
+
+
+def build_days(db: Session, *, limit: int) -> list[dict[str, Any]]:
+    days = _by_day(db)
+    news = _news_source_ids(db)
+    return [_day_summary(k, days[k], news).model_dump(mode="json") for k in sorted(days, reverse=True)[:limit]]
+
+
+@days_router.get("", response_model=list[DaySummary])
+def list_days(limit: int = Query(default=DAYS_LISTED, ge=1, le=366), db: Session = Depends(get_db)):
+    """Days that have stories, newest first."""
+    return JSONResponse(content=_cached(f"ai_tool:days:{limit}", lambda: build_days(db, limit=limit)))
+
+
+def build_day(db: Session, key: str) -> dict[str, Any] | None:
+    stories = _by_day(db).get(key)
+    if not stories:
+        return None
+    news = _news_source_ids(db)
+    # News first, then score: the page reads as what happened that day, papers after
+    ordered = week_headlines(stories, news, len(stories))
+    topics: Counter[str] = Counter()
+    for c in stories:
+        for e in entities_in(c.representative_title):
+            topics[e.slug] += 1
+    return DayDetail(
+        **_day_summary(key, stories, news).model_dump(),
+        stories=[cluster_to_archive_row(c) for c in ordered],
+        topics=[WeekCount(key=k, name=BY_SLUG[k].name, count=n) for k, n in topics.most_common()],
+    ).model_dump(mode="json")
+
+
+@days_router.get("/{day}", response_model=DayDetail)
+def get_day(day: str, db: Session = Depends(get_db)):
+    """One UTC day ("2026-10-18"): every story that first appeared that day, news first."""
+    if day_key(day) is None:
+        raise HTTPException(status_code=422, detail="Day must look like 2026-10-18")
+    data = _cached(f"ai_tool:days:detail:{day}", lambda: build_day(db, day))
+    if data is None:
+        raise HTTPException(status_code=404, detail="No stories that day")
+    return JSONResponse(content=data)
+
+
+# ---------------------------------------------------------------------------
+# Feed (RSS and the news sitemap)
+# ---------------------------------------------------------------------------
+
+def build_feed(db: Session, *, limit: int) -> list[dict[str, Any]]:
+    def first(c: Cluster) -> datetime:
+        return _aware(c.first_seen_at) or _aware(c.last_seen_at) or datetime.min.replace(tzinfo=timezone.utc)
+
+    newest = sorted(_stories(db), key=first, reverse=True)[:limit]
+    return [
+        FeedItem(
+            id=str(c.id),
+            title=clean_title(c.representative_title),
+            titleZh=clean_title(c.representative_title_zh) or None,
+            summary=c.summary,
+            whyItMatters=c.why_it_matters,
+            topicTag=c.topic_tag,
+            sourceNames=sorted({a.organization_name for a in (c.articles or []) if a.organization_name}),
+            publishedAt=format_dt(first(c)),
+            updatedAt=format_dt(c.last_seen_at),
+        ).model_dump(mode="json")
+        for c in newest
+    ]
+
+
+@feed_router.get("", response_model=list[FeedItem])
+def get_feed(limit: int = Query(default=FEED_ITEMS, ge=1, le=200), db: Session = Depends(get_db)):
+    """The newest stories by first appearance, with dates and summaries: the RSS feed and news sitemap."""
+    return JSONResponse(content=_cached(f"ai_tool:feed:{limit}", lambda: build_feed(db, limit=limit)))
+

@@ -70,5 +70,8 @@ def test_a_runs_urls_are_its_new_or_updated_stories_their_company_pages_and_the_
     urls = indexnow.changed_urls(db, since=since, now=now)
 
     site = "https://www.sipply.dev"
-    assert urls[:6] == [f"{site}/", f"{site}/radar", f"{site}/archive", f"{site}/topics", f"{site}/weekly", f"{site}/weekly/2026-W42"]
-    assert set(urls[6:]) == {f"{site}/cluster/{fresh.id}", f"{site}/cluster/{updated.id}", f"{site}/topics/openai"}
+    assert urls[:8] == [
+        f"{site}/", f"{site}/radar", f"{site}/archive", f"{site}/topics", f"{site}/weekly", f"{site}/daily",
+        f"{site}/weekly/2026-W42", f"{site}/daily/2026-10-16",
+    ]
+    assert set(urls[8:]) == {f"{site}/cluster/{fresh.id}", f"{site}/cluster/{updated.id}", f"{site}/topics/openai"}
