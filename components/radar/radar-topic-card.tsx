@@ -9,6 +9,7 @@ import { RadarSignalItem, RadarTrendChart, ScoreLine } from "@/components/radar/
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
 import { TopicAnswerCheck } from "@/components/radar/radar-answers";
 import { uiMicroLabel } from "@/lib/ui/classes";
+import { storyPath } from "@/lib/seo/site";
 
 const UTC_DAY = {
   en: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
@@ -92,7 +93,7 @@ export function RadarTopicCard({ topic, rank, total, windowDays, builtAt, now, h
         <p className="text-sm text-foreground">
           {t.radar.coverageCovered}
           {lang === "zh" ? "：" : ": "}
-          <Link href={`/cluster/${coverage.clusterId}`} className="[color:var(--accent)] hover:underline">
+          <Link href={storyPath({ id: coverage.clusterId, slug: coverage.slug })} className="[color:var(--accent)] hover:underline">
             {radarTitle(coverage.title ?? "", coverage.titleZh, lang)}
           </Link>
         </p>

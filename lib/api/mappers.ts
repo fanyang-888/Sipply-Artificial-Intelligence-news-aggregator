@@ -16,6 +16,7 @@ function ls(en: string, zh?: string | null): LocalizedString {
 export function apiClusterToCluster(c: ApiCluster): Cluster {
   return {
     id: c.id,
+    slug: c.slug,
     clusterType: c.clusterType,
     title: ls(c.title.en, c.title.zh),
     theme: c.theme,
@@ -68,6 +69,7 @@ export function archiveRowToCluster(
 ): Cluster {
   return {
     id: row.id,
+    slug: row.slug ?? undefined,
     clusterType: "event",
     title: ls(row.title, row.title_zh),
     theme: row.theme,

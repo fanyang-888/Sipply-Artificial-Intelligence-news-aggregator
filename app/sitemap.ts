@@ -46,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: i === 0 ? 0.8 : 0.5,
     })),
     ...stories.map((s) => ({
-      url: storyUrl(s.id),
+      url: storyUrl(s),
       lastModified: s.lastSeenAt ?? undefined,
       changeFrequency: "weekly" as const,
       priority: 0.5,

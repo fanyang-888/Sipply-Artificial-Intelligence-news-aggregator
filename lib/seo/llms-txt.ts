@@ -43,7 +43,7 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
       if (seen.has(c.id)) continue;
       seen.add(c.id);
       const summary = c.summary.en ? `: ${oneLine(c.summary.en)}` : "";
-      lines.push(`- [${oneLine(c.title.en, 160)}](${storyUrl(c.id)})${summary}`);
+      lines.push(`- [${oneLine(c.title.en, 160)}](${storyUrl(c)})${summary}`);
     }
   }
 

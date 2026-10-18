@@ -10,6 +10,8 @@ export type AudienceBlocks = {
 
 export type Cluster = {
   id: string;
+  /** Permanent URL key, /story/<slug> (absent from an older API). */
+  slug?: string;
   /** Display label for cluster detail header (often mirrors theme). */
   clusterType: string;
   title: LocalizedString;

@@ -13,6 +13,7 @@ import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { uiMicroLabel, uiSectionTitle } from "@/lib/ui/classes";
+import { storyPath } from "@/lib/seo/site";
 
 const label = uiMicroLabel;
 const UTC_DAY = {
@@ -184,7 +185,7 @@ export function WeeksIndex({ weeks, currentWeek }: { weeks: ApiWeekSummary[] | n
                 <ul className="mt-2.5 space-y-1">
                   {w.headlines.map((h) => (
                     <li key={h.id} className="truncate text-[14px] leading-snug">
-                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-soft)] no-underline hover:text-foreground">
+                      <Link href={storyPath(h)} className="[color:var(--text-soft)] no-underline hover:text-foreground">
                         {lang === "zh" && h.titleZh ? h.titleZh : h.title}
                       </Link>
                     </li>
@@ -334,7 +335,7 @@ export function DaysIndex({ days, today }: { days: ApiDaySummary[] | null; today
                 <ul className="mt-2.5 space-y-1">
                   {d.headlines.map((h) => (
                     <li key={h.id} className="truncate text-[14px] leading-snug">
-                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-soft)] no-underline hover:text-foreground">
+                      <Link href={storyPath(h)} className="[color:var(--text-soft)] no-underline hover:text-foreground">
                         {lang === "zh" && h.titleZh ? h.titleZh : h.title}
                       </Link>
                     </li>

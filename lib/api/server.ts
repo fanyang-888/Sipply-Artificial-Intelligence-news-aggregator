@@ -25,7 +25,7 @@ import type {
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-export type ApiClusterIndexEntry = { id: string; lastSeenAt: string | null };
+export type ApiClusterIndexEntry = { id: string; slug?: string; lastSeenAt: string | null };
 
 async function getJson<T>(path: string, revalidate: number): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { next: { revalidate } });
@@ -44,8 +44,15 @@ export function isBuildPhase(): boolean {
 }
 
 /** Cached per render, so generateMetadata and the page share one request. */
+// "?with=slug" is ignored by the API; it only gives these responses a new cache key, so
+// copies cached (for up to an hour, kept across deploys) before stories had slugs are not reused
 export const getCluster = cache((id: string) =>
-  getJson<ApiCluster>(`/api/clusters/${encodeURIComponent(id)}`, 3600),
+  getJson<ApiCluster>(`/api/clusters/${encodeURIComponent(id)}?with=slug`, 3600),
+);
+
+/** A story by its URL key; the response's ``slug`` is the canonical one (redirect when it differs). */
+export const getClusterBySlug = cache((slug: string) =>
+  getJson<ApiCluster>(`/api/clusters/by-slug/${encodeURIComponent(slug)}`, 3600),
 );
 
 /** The global (non-personalized) digest; readers get their own order client-side. */
@@ -85,7 +92,7 @@ export async function getLatestStories(limit: number): Promise<{ result: ApiSear
 }
 
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
-  return getJson<ApiClusterIndexEntry[]>("/api/clusters/index", 3600);
+  return getJson<ApiClusterIndexEntry[]>("/api/clusters/index?with=slug", 3600);
 }
 
 export function getDays(): Promise<ApiDaySummary[]> {

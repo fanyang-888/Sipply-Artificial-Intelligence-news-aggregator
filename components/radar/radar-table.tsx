@@ -9,6 +9,7 @@ import { radarSectorForTag, radarTitle, topicPlatforms } from "@/lib/utils/radar
 import { RadarSparkline } from "@/components/radar/radar-bits";
 import { MOMENTUM_FILL } from "@/components/radar/radar-chart";
 import { uiMicroLabel } from "@/lib/ui/classes";
+import { storyPath } from "@/lib/seo/site";
 
 type RadarTableProps = {
   /** Already in display order (radarOrder); row numbers match the chart's blips. */
@@ -115,7 +116,7 @@ export function RadarTable({ topics, rankOf, isShown, selectedId, windowDays, on
                     <span className="hidden text-[12.5px] md:block">
                       {coverage?.status === "covered" && coverage.clusterId ? (
                         <Link
-                          href={`/cluster/${coverage.clusterId}`}
+                          href={storyPath({ id: coverage.clusterId, slug: coverage.slug })}
                           onClick={(e) => e.stopPropagation()}
                           title={radarTitle(coverage.title ?? "", coverage.titleZh, lang)}
                           aria-label={`${t.radar.coverageCovered}: ${radarTitle(coverage.title ?? "", coverage.titleZh, lang)}`}

@@ -32,7 +32,7 @@ function describe(s: ApiFeedItem): string {
 
 export function buildRss(items: ApiFeedItem[], now: Date = new Date()): string {
   const entries = items.map((s) => {
-    const url = storyUrl(s.id);
+    const url = storyUrl(s);
     return [
       "    <item>",
       `      <title>${xml(flat(s.title))}</title>`,
@@ -69,7 +69,7 @@ export function buildNewsSitemap(items: ApiFeedItem[], now: Date = new Date()): 
   const urls = recent.map((s) =>
     [
       "  <url>",
-      `    <loc>${storyUrl(s.id)}</loc>`,
+      `    <loc>${storyUrl(s)}</loc>`,
       "    <news:news>",
       "      <news:publication>",
       `        <news:name>${xml(SITE_NAME)}</news:name>`,

@@ -9,10 +9,17 @@ export const SITE_TAGLINE = "Sip AI News Simply";
 export const SITE_DESCRIPTION =
   "A daily AI-industry digest: reporting from AI labs, tech press and research feeds, grouped into stories, ranked, and summarized with key takeaways and why each one matters.";
 
-export function storyPath(id: string): string {
-  return `/cluster/${id}`;
+/** Anything that names a story: its id, and its slug when the API sends one. */
+export type StoryRef = { id: string; slug?: string | null };
+
+/**
+ * A story's address: /story/<slug> (keyword URL, permanent). Without a slug (an API
+ * from before slugs) the old /cluster/<id>, which redirects to it.
+ */
+export function storyPath(story: StoryRef): string {
+  return story.slug ? `/story/${story.slug}` : `/cluster/${story.id}`;
 }
 
-export function storyUrl(id: string): string {
-  return `${SITE_URL}${storyPath(id)}`;
+export function storyUrl(story: StoryRef): string {
+  return `${SITE_URL}${storyPath(story)}`;
 }

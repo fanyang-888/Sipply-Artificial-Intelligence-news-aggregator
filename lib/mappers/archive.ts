@@ -6,6 +6,7 @@ import type { Translations } from "@/lib/i18n";
 export type ArchiveClusterRow = {
   kind: "cluster";
   id: string;
+  slug?: string | null;
   title: string;
   theme: string;
   themeLabel: string;
@@ -62,6 +63,7 @@ export function apiRowToArchiveRow(
   return {
     kind: "cluster",
     id: c.id,
+    slug: c.slug,
     title: isZh ? c.title_zh || c.title : c.title,
     theme: c.theme,
     themeLabel: c.topicTag ?? c.theme,
