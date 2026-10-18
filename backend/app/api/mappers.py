@@ -50,21 +50,26 @@ def cluster_to_response(
 
     article_ids = [str(a.id) for a in (cluster.articles or [])]
 
-    articles_in_cluster = [
-        ArticleInCluster(
-            id=str(a.id),
-            title=clean_title(a.title),
-            url=a.url or "",
-            sourceName=a.organization_name,
-            publishedAt=format_dt(a.published_at),
-            excerpt=a.excerpt or a.short_summary,
+    # One entry per piece: a source that republishes an article under a second URL (TechCrunch
+    # ran one story under /2026/10/16/ and /2026/10/17/) is listed and counted once
+    articles_in_cluster: list[ArticleInCluster] = []
+    seen_pieces: set[tuple[str, str]] = set()
+    for a in sorted(cluster.articles or [], key=lambda a: (a.signal_score or 0), reverse=True):
+        title = clean_title(a.title)
+        piece = ((a.organization_name or "").lower(), title.lower())
+        if title and piece in seen_pieces:
+            continue
+        seen_pieces.add(piece)
+        articles_in_cluster.append(
+            ArticleInCluster(
+                id=str(a.id),
+                title=title,
+                url=a.url or "",
+                sourceName=a.organization_name,
+                publishedAt=format_dt(a.published_at),
+                excerpt=a.excerpt or a.short_summary,
+            )
         )
-        for a in sorted(
-            cluster.articles or [],
-            key=lambda a: (a.signal_score or 0),
-            reverse=True,
-        )
-    ]
 
     return ClusterResponse(
         id=str(cluster.id),
@@ -88,7 +93,7 @@ def cluster_to_response(
         articles=articles_in_cluster,
         relatedClusterIds=related_cluster_ids or [],
         discussions=discussions or [],
-        articleCount=cluster.article_count or 0,
+        articleCount=len(articles_in_cluster) if articles_in_cluster else (cluster.article_count or 0),
         sourceCount=cluster.source_count or 0,
     )
 

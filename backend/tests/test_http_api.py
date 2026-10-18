@@ -126,3 +126,21 @@ def test_story_titles_come_out_decoded(client, make_cluster):
     story = make_cluster(title="Eight states sue OpenAI, saying ChatGPT isn&#8217;t safe for kids")
     body = client.get(f"/api/clusters/{story.id}").json()
     assert body["title"]["en"] == "Eight states sue OpenAI, saying ChatGPT isn’t safe for kids"
+
+
+def test_story_lists_a_republished_article_once(client, db, make_cluster, make_source, make_article):
+    # TechCrunch ran the same piece under /2026/10/16/ and /2026/10/17/ (seen 2026-10-18): the story
+    # page listed the source twice and counted two articles
+    story = make_cluster(title="Replit is no longer working with Anthropic, CEO says | TechCrunch", article_count=2)
+    tc = make_source(name="TechCrunch AI")
+    title = "Replit is no longer working with Anthropic, CEO says | TechCrunch"
+    make_article(source=tc, title=title, url="https://techcrunch.com/2026/10/16/replit", cluster_id=story.id)
+    make_article(source=tc, title=title, url="https://techcrunch.com/2026/10/17/replit", cluster_id=story.id)
+    make_article(title="Replit drops Anthropic", url="https://other.test/replit", cluster_id=story.id)
+    db.expire(story)
+
+    body = client.get(f"/api/clusters/{story.id}").json()
+    assert body["title"]["en"] == "Replit is no longer working with Anthropic, CEO says"
+    assert [a["title"] for a in body["articles"]].count("Replit is no longer working with Anthropic, CEO says") == 1
+    assert len(body["articles"]) == 2
+    assert body["articleCount"] == 2
