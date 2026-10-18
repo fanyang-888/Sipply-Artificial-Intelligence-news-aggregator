@@ -42,6 +42,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.article import Article
 from app.models.cluster import Cluster
+from app.services.headlines import assign_slug, valid_headline
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +215,7 @@ _CLUSTER_SYSTEM = """You are an AI intelligence analyst specializing in synthesi
 Given a cluster of related AI news articles (each as a short summary), return a JSON object with:
 {
   "topic_tag": "one of: Model Release | Research | Funding | Product Launch | Regulation | Safety | Open Source | Infrastructure | Benchmark | Other",
+  "headline": "Sipply's own headline: one line, at most 90 characters, sentence case, factual and specific (who did what, with the key number or detail), written fresh rather than copied from a source title, no publisher names, no clickbait, no trailing period",
   "summary": "2-3 paragraph narrative explaining what happened across all sources",
   "takeaways": ["cluster takeaway 1", "cluster takeaway 2", "cluster takeaway 3"],
   "why_it_matters": "1-2 sentences on the broader significance",
@@ -250,6 +252,8 @@ def summarize_cluster(client, cluster: Cluster, articles: list[Article]) -> tupl
 
 def _apply_cluster_summary(cluster: Cluster, data: dict[str, Any]) -> None:
     cluster.topic_tag = (data.get("topic_tag") or "Other").strip() or "Other"
+    # None (no usable headline) shows the cleaned source title instead
+    cluster.headline = valid_headline(data.get("headline"))
     cluster.summary = (data.get("summary") or "").strip() or None
     cluster.takeaways = data.get("takeaways") or []
     cluster.why_it_matters = (data.get("why_it_matters") or "").strip() or None
@@ -342,6 +346,8 @@ def summarize_unsummarized_clusters(db: Session, batch_size: int = 20) -> dict[s
 
             data, cost = summarize_cluster(client, cluster, articles)
             _apply_cluster_summary(cluster, data)
+            assign_slug(db, cluster)  # from the new headline: the story's permanent URL
+            db.flush()
             total_cost += cost
 
             # Propagate tags/entities from articles to cluster if not set

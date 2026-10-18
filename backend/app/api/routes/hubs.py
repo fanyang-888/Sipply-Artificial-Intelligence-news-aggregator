@@ -33,7 +33,7 @@ from app.models.source import Source
 from app.models.signal import SignalTopic
 from app.services.entities import BY_SLUG, ENTITIES, entities_in
 from app.signals.topics import evidence_ring
-from app.services.text_clean import clean_title
+from app.services.headlines import story_slug, story_title, story_title_zh
 
 topics_router = APIRouter(prefix="/api/topics", tags=["topics"])
 weeks_router = APIRouter(prefix="/api/weeks", tags=["weeks"])
@@ -77,6 +77,7 @@ class TopicDetail(TopicSummary):
 
 class WeekHeadline(BaseModel):
     id: str
+    slug: str
     title: str
     titleZh: str | None
 
@@ -118,6 +119,7 @@ class DayDetail(DaySummary):
 
 class FeedItem(BaseModel):
     id: str
+    slug: str
     title: str
     titleZh: str | None
     summary: str | None
@@ -147,6 +149,10 @@ def week_bounds(key: str) -> tuple[date, date] | None:
     except ValueError:
         return None
     return monday, monday + timedelta(days=6)
+
+
+def _headline(c: Cluster) -> WeekHeadline:
+    return WeekHeadline(id=str(c.id), slug=story_slug(c), title=story_title(c), titleZh=story_title_zh(c))
 
 
 def day_key(key: str) -> date | None:
@@ -305,7 +311,7 @@ def _summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> Wee
         storyCount=len(stories),
         dailyCounts=daily,
         headlines=[
-            WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=clean_title(c.representative_title_zh) or None)
+            _headline(c)
             for c in week_headlines(stories, news_source_ids)
         ],
     )
@@ -367,8 +373,6 @@ def _by_day(db: Session) -> dict[str, list[Cluster]]:
     return days
 
 
-def _headline(c: Cluster) -> WeekHeadline:
-    return WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=clean_title(c.representative_title_zh) or None)
 
 
 def _day_summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> DaySummary:
@@ -432,8 +436,9 @@ def build_feed(db: Session, *, limit: int) -> list[dict[str, Any]]:
     return [
         FeedItem(
             id=str(c.id),
-            title=clean_title(c.representative_title),
-            titleZh=clean_title(c.representative_title_zh) or None,
+            slug=story_slug(c),
+            title=story_title(c),
+            titleZh=story_title_zh(c),
             summary=c.summary,
             whyItMatters=c.why_it_matters,
             topicTag=c.topic_tag,

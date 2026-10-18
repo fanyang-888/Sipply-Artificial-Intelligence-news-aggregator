@@ -23,6 +23,7 @@ from app.config import settings
 from app.db import SessionLocal
 from app.logging_config import configure_logging
 from app.models.cluster import Cluster
+from app.services.headlines import valid_headline
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ Be concise and accurate — do not add opinions or extra content.
 Return JSON with exactly these keys:
 {
   "title_zh": "translated cluster title",
+  "headline_zh": "translated Sipply headline (an empty string when no headline is given)",
   "summary_zh": "translated summary",
   "takeaways_zh": ["takeaway 1", "takeaway 2", "takeaway 3"],
   "why_it_matters_zh": "translated general why it matters",
@@ -49,8 +51,10 @@ JSON only."""
 
 def _translate_cluster(client, cluster: Cluster) -> dict:
     takeaways = cluster.takeaways or []
+    headline = f"Headline: {cluster.headline}\n" if getattr(cluster, "headline", None) else ""
     user = (
-        f"Title: {cluster.representative_title}\n\n"
+        f"Title: {cluster.representative_title}\n"
+        f"{headline}\n"
         f"Summary:\n{cluster.summary or ''}\n\n"
         f"Takeaways:\n" + "\n".join(f"- {t}" for t in takeaways) + "\n\n"
         f"Why it matters (general): {cluster.why_it_matters or ''}\n"
@@ -70,6 +74,19 @@ def _translate_cluster(client, cluster: Cluster) -> dict:
     )
     raw = response.choices[0].message.content or "{}"
     return json.loads(raw)
+
+
+def apply_translation(cluster, data: dict) -> None:
+    """Store a translation; the headline's only when the story has a Sipply headline."""
+    cluster.representative_title_zh = (data.get("title_zh") or "").strip() or None
+    cluster.headline_zh = valid_headline(data.get("headline_zh")) if getattr(cluster, "headline", None) else None
+    cluster.summary_zh = (data.get("summary_zh") or "").strip() or None
+    cluster.takeaways_zh = data.get("takeaways_zh") or []
+    cluster.why_it_matters_zh = (data.get("why_it_matters_zh") or "").strip() or None
+    cluster.why_it_matters_pm_zh = (data.get("why_it_matters_pm_zh") or "").strip() or None
+    cluster.why_it_matters_dev_zh = (data.get("why_it_matters_dev_zh") or "").strip() or None
+    cluster.why_it_matters_students_zh = (data.get("why_it_matters_students_zh") or "").strip() or None
+    cluster.translated_at = datetime.now(timezone.utc)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -103,14 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         for cluster in clusters:
             try:
                 data = _translate_cluster(client, cluster)
-                cluster.representative_title_zh = (data.get("title_zh") or "").strip() or None
-                cluster.summary_zh = (data.get("summary_zh") or "").strip() or None
-                cluster.takeaways_zh = data.get("takeaways_zh") or []
-                cluster.why_it_matters_zh = (data.get("why_it_matters_zh") or "").strip() or None
-                cluster.why_it_matters_pm_zh = (data.get("why_it_matters_pm_zh") or "").strip() or None
-                cluster.why_it_matters_dev_zh = (data.get("why_it_matters_dev_zh") or "").strip() or None
-                cluster.why_it_matters_students_zh = (data.get("why_it_matters_students_zh") or "").strip() or None
-                cluster.translated_at = datetime.now(timezone.utc)
+                apply_translation(cluster, data)
                 processed += 1
                 logger.info("translated cluster id=%s title=%.60s", cluster.id, cluster.representative_title)
             except Exception:

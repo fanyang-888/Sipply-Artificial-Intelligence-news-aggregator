@@ -16,6 +16,7 @@ from app.api.schemas import (
 )
 from app.models.cluster import Cluster
 from app.services.entities import entities_in
+from app.services.headlines import story_slug, story_title, story_title_zh
 from app.services.text_clean import clean_title
 
 
@@ -75,7 +76,8 @@ def cluster_to_response(
         id=str(cluster.id),
         topics=[TopicRef(slug=e.slug, name=e.name) for e in entities_in(cluster.representative_title or "")],
         clusterType=cluster.type or "event",
-        title=localized_bilingual(clean_title(cluster.representative_title), clean_title(getattr(cluster, "representative_title_zh", None)) or None, "Untitled Story"),
+        slug=story_slug(cluster),
+        title=localized_bilingual(story_title(cluster), story_title_zh(cluster), "Untitled Story"),
         theme=cluster.type or "event",
         themes=themes,
         tags=tags,
@@ -85,7 +87,7 @@ def cluster_to_response(
         freshnessLabel=freshness_label(cluster.last_seen_at),
         firstSeenAt=format_dt(cluster.first_seen_at),
         lastSeenAt=format_dt(cluster.last_seen_at),
-        summary=localized_bilingual(cluster.summary, getattr(cluster, "summary_zh", None), clean_title(cluster.representative_title)),
+        summary=localized_bilingual(cluster.summary, getattr(cluster, "summary_zh", None), story_title(cluster)),
         takeaways=bilingual_takeaways,
         whyItMatters=localized_bilingual(cluster.why_it_matters, getattr(cluster, "why_it_matters_zh", None), ""),
         audience=audience,
@@ -105,8 +107,9 @@ def cluster_to_archive_row(cluster: Cluster) -> ArchiveClusterRow:
     return ArchiveClusterRow(
         id=str(cluster.id),
         type="cluster",
-        title=clean_title(cluster.representative_title),
-        title_zh=clean_title(getattr(cluster, "representative_title_zh", None)) or None,
+        slug=story_slug(cluster),
+        title=story_title(cluster),
+        title_zh=story_title_zh(cluster),
         summary=cluster.summary,
         summary_zh=getattr(cluster, "summary_zh", None),
         tags=cluster.tags or [],
