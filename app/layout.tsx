@@ -68,6 +68,9 @@ export default function RootLayout({
       className={`${fraunces.variable} ${dmSans.variable} ${plexMono.variable} ${playfair.variable}`}
     >
       <head>
+        {/* In the layout's <head>, not metadata.alternates: pages set their own alternates
+            (canonical), which would replace the layout's and drop the feed link */}
+        <link rel="alternate" type="application/rss+xml" title="Sipply: the newest AI stories" href="/feed.xml" />
         <script
           dangerouslySetInnerHTML={{
             // Theme before first paint. A reader who chose Chinese gets data-lang-gate, which hides

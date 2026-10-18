@@ -160,7 +160,7 @@ async function main() {
 
   const home = await (await fetch(BASE + "/")).text();
   const story = home.match(/href="(\/cluster\/[^"#?]+)"/)?.[1];
-  const paths = ["/", "/radar", "/archive", "/topics", "/weekly", ...(story ? [story] : [])];
+  const paths = ["/", "/radar", "/archive", "/topics", "/weekly", "/daily", ...(story ? [story] : [])];
 
   let browser;
   try {

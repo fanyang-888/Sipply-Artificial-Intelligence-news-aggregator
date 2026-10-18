@@ -24,6 +24,7 @@ export default function robots(): MetadataRoute.Robots {
       // A named group replaces "*" for that bot, so it repeats the disallows
       { userAgent: AI_CRAWLERS, allow: "/", disallow: PRIVATE },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    // Every story, and a Google News sitemap of the last 48 hours
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/news-sitemap.xml`],
   };
 }

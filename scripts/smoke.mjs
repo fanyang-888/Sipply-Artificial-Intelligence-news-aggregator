@@ -95,6 +95,23 @@ async function main() {
   const week = links(weekly, "/weekly/")[0];
   if (week) await page(week, { minLinks: 1, ld: ["BreadcrumbList", "CollectionPage"], label: "week page" });
 
+  const daily = await page("/daily", { minLinks: 1, linkPrefix: "/daily/", ld: ["CollectionPage"], label: "daily" });
+  const day = links(daily, "/daily/")[0];
+  if (day) await page(day, { minLinks: 1, ld: ["BreadcrumbList", "CollectionPage"], label: "day page" });
+  else check("daily lists a day", false);
+
+  const feed = await get("/feed.xml");
+  const feedItems = (feed.body.match(/<item>/g) || []).length;
+  check("RSS feed has ≥10 stories", feed.status === 200 && feed.type.includes("rss") && feedItems >= 10, `${feed.status} ${feed.type} ${feedItems} items`);
+  check("home links its RSS feed", /rel="alternate" type="application\/rss\+xml"[^>]*href="\/feed\.xml"/.test(home));
+
+  const news = await get("/news-sitemap.xml");
+  check(
+    "news sitemap lists recent stories",
+    news.status === 200 && news.body.includes("sitemap-news/0.9") && /<news:publication_date>/.test(news.body),
+    `${news.status}, ${(news.body.match(/<url>/g) || []).length} URLs`,
+  );
+
   const missing = await get("/no-such-page-smoke-test");
   check("unknown URL is a 404", missing.status === 404, `status ${missing.status}`);
 
@@ -110,6 +127,7 @@ async function main() {
 
   const robots = await get("/robots.txt");
   check("robots.txt points to the sitemap", robots.status === 200 && robots.body.includes("Sitemap:"));
+  check("robots.txt points to the news sitemap", robots.body.includes("/news-sitemap.xml"));
 
   const llms = await get("/llms.txt");
   check("llms.txt starts with the site name", llms.status === 200 && llms.body.startsWith("# Sipply"));

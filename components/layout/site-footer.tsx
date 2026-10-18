@@ -22,6 +22,7 @@ export function SiteFooter() {
     { href: "/radar", label: t.nav.radar },
     { href: "/topics", label: t.nav.topics },
     { href: "/weekly", label: t.nav.weekly },
+    { href: "/daily", label: t.nav.byDay },
   ];
   const link = `${uiMicroLabel} no-underline transition-colors hover:text-foreground`;
 
@@ -46,6 +47,8 @@ export function SiteFooter() {
       </div>
       <p className="mt-7 font-mono text-[11px] tracking-[0.06em] [color:var(--text-muted)]">
         {t.footer.machine}:{" "}
+        <a href="/feed.xml" className="no-underline hover:text-foreground">RSS</a>
+        {" · "}
         <a href="/llms.txt" className="no-underline hover:text-foreground">llms.txt</a>
         {" · "}
         <a href="/sitemap.xml" className="no-underline hover:text-foreground">sitemap</a>
