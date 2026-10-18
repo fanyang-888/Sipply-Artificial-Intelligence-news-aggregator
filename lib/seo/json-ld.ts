@@ -59,7 +59,7 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonL
 
 /** One story page: the Sipply summary, citing every source article it is based on. */
 export function newsArticleJsonLd(c: ApiCluster): JsonLd {
-  const url = storyUrl(c.id);
+  const url = storyUrl(c);
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -67,7 +67,7 @@ export function newsArticleJsonLd(c: ApiCluster): JsonLd {
     description: c.summary.en || undefined,
     url,
     mainEntityOfPage: url,
-    // The generated share card (app/cluster/[id]/opengraph-image.tsx)
+    // The generated share card (app/story/[slug]/opengraph-image.tsx)
     image: [`${url}/opengraph-image`],
     datePublished: c.firstSeenAt ?? c.lastSeenAt ?? undefined,
     dateModified: c.lastSeenAt ?? c.firstSeenAt ?? undefined,
@@ -105,7 +105,7 @@ export function digestItemListJsonLd(d: ApiDigest): JsonLd {
     itemListElement: stories.map((c, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: storyUrl(c.id),
+      url: storyUrl(c),
       name: c.title.en,
     })),
   };
@@ -136,7 +136,7 @@ export function collectionPageJsonLd(page: {
       itemListElement: page.stories.map((s, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        url: storyUrl(s.id),
+        url: storyUrl(s),
         name: s.title,
       })),
     },

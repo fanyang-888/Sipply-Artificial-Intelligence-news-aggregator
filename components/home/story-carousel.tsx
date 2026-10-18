@@ -11,6 +11,7 @@ import { useNowMinute } from "@/lib/use-now-minute";
 import { pickLocalized } from "@/lib/utils/localized-string";
 import { topicGroupForTag } from "@/lib/utils/radar";
 import type { Cluster } from "@/types/cluster";
+import { storyPath } from "@/lib/seo/site";
 
 function StoryCard({ story, now }: { story: Cluster; now: number | null }) {
   const { t, lang } = useI18n();
@@ -29,7 +30,7 @@ function StoryCard({ story, now }: { story: Cluster; now: number | null }) {
       <h3
         className="font-display font-light mt-5 text-[clamp(1.4rem,2.3vw,1.95rem)] leading-[1.14] tracking-[-0.015em] text-foreground line-clamp-3 [text-wrap:balance]"
       >
-        <Link href={`/cluster/${story.id}`} className="no-underline hover:opacity-90">
+        <Link href={storyPath(story)} className="no-underline hover:opacity-90">
           {pickLocalized(story.title, lang)}
         </Link>
       </h3>
@@ -40,7 +41,7 @@ function StoryCard({ story, now }: { story: Cluster; now: number | null }) {
         </p>
       ) : null}
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-7">
-        <Link href={`/cluster/${story.id}`} className="text-[14px] font-medium text-foreground no-underline hover:[color:var(--accent)]">
+        <Link href={storyPath(story)} className="text-[14px] font-medium text-foreground no-underline hover:[color:var(--accent)]">
           {t.home.readStory} <span aria-hidden>→</span>
         </Link>
         <SourceLink cluster={story} />

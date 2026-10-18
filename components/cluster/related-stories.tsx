@@ -5,6 +5,7 @@ import { SectionTitle } from "@/components/shared/section-title";
 import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/utils/localized-string";
 import type { Cluster } from "@/types/cluster";
+import { storyPath } from "@/lib/seo/site";
 
 type RelatedStoriesProps = {
   clusters: Cluster[];
@@ -23,7 +24,7 @@ export function RelatedStories({ clusters }: RelatedStoriesProps) {
         {clusters.map((c) => (
           <li key={c.id}>
             <Link
-              href={`/cluster/${c.id}`}
+              href={storyPath(c)}
               className="sp-row-link flex items-baseline justify-between gap-4 px-6 py-4 font-display text-[17px] leading-snug text-foreground no-underline hover:[color:var(--accent)]"
             >
               <span>{pickLocalized(c.title, lang)}</span>

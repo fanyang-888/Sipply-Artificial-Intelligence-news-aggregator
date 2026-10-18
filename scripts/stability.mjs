@@ -159,7 +159,7 @@ async function main() {
   console.log(`stability: ${BASE} (412×823, slow 4G, ${CPU_SLOWDOWN}× CPU, ${RUNS} runs per page)\n`);
 
   const home = await (await fetch(BASE + "/")).text();
-  const story = home.match(/href="(\/cluster\/[^"#?]+)"/)?.[1];
+  const story = home.match(/href="(\/story\/[^"#?]+)"/)?.[1];
   const paths = ["/", "/radar", "/archive", "/topics", "/weekly", "/daily", ...(story ? [story] : [])];
 
   let browser;
@@ -171,7 +171,7 @@ async function main() {
   }
 
   const failures = [];
-  if (!story) failures.push({ path: "/", check: "home links to a story", detail: "no /cluster/ link in the HTML" });
+  if (!story) failures.push({ path: "/", check: "home links to a story", detail: "no /story/ link in the HTML" });
 
   const rows = [];
   try {

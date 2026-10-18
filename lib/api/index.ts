@@ -47,6 +47,10 @@ export async function fetchCluster(id: string): Promise<ApiCluster> {
   return apiFetch<ApiCluster>(`/api/clusters/${id}`);
 }
 
+export async function fetchClusterBySlug(slug: string): Promise<ApiCluster> {
+  return apiFetch<ApiCluster>(`/api/clusters/by-slug/${encodeURIComponent(slug)}`);
+}
+
 // ---------------------------------------------------------------------------
 // Search
 // ---------------------------------------------------------------------------

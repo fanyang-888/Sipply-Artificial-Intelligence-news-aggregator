@@ -11,6 +11,7 @@ import { useNowMinute } from "@/lib/use-now-minute";
 import { pickLocalized } from "@/lib/utils/localized-string";
 import { topicGroupForTag } from "@/lib/utils/radar";
 import type { Cluster } from "@/types/cluster";
+import { storyPath } from "@/lib/seo/site";
 
 type LeadStoryProps = {
   story: Cluster;
@@ -60,7 +61,7 @@ export function LeadStory({ story, dateLabel, updatedAt, more }: LeadStoryProps)
             id="lead-story-title"
             className="font-display font-light text-[clamp(2.3rem,5.4vw,4.6rem)] leading-[1.03] tracking-[-0.025em] text-foreground [text-wrap:balance]"
           >
-            <Link href={`/cluster/${story.id}`} className="no-underline hover:opacity-90">
+            <Link href={storyPath(story)} className="no-underline hover:opacity-90">
               {pickLocalized(story.title, lang)}
             </Link>
           </h1>
@@ -74,7 +75,7 @@ export function LeadStory({ story, dateLabel, updatedAt, more }: LeadStoryProps)
           ) : null}
           <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link
-              href={`/cluster/${story.id}`}
+              href={storyPath(story)}
               className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-medium no-underline transition-opacity hover:opacity-90 [background:var(--cta-bg)] [color:var(--cta-text)]"
             >
               {t.home.readStory} <span aria-hidden>→</span>

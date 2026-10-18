@@ -46,7 +46,7 @@ const title = (html) => html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
 // A feed entity that survived decoding shows up escaped once more ("&amp;#8217;")
 const doubleEscaped = (html) => /&amp;#\d+;/.test(html);
 
-async function page(path, { minLinks = 0, linkPrefix = "/cluster/", ld = [], label = path } = {}) {
+async function page(path, { minLinks = 0, linkPrefix = "/story/", ld = [], label = path } = {}) {
   const { status, body } = await get(path);
   check(`${label} 200`, status === 200, `status ${status}`);
   if (status !== 200) return body;
@@ -71,9 +71,19 @@ async function main() {
   // Rendered on the server, not added after load: a line that appears late pushes the headline down
   check("home has the date line in the HTML", /(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, [A-Z][a-z]+ \d{1,2}, \d{4}/.test(home));
 
-  const story = links(home, "/cluster/")[0];
+  const story = links(home, "/story/")[0];
   if (story) {
     const html = await page(story, { ld: ["NewsArticle", "BreadcrumbList"], label: "story" });
+    check("story's canonical URL is its /story/ address", html.includes(`rel="canonical" href="https://www.sipply.dev${story}"`));
+    // The old address answers a real 308 to the new one (not a page that redirects after loading)
+    // The page's data (RSC payload) escapes its quotes: \"id\":\"…\"
+    const id = html.match(/\\?"id\\?":\\?"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/)?.[1];
+    const old = id ? await fetch(`${BASE}/cluster/${id}`, { redirect: "manual", headers: { "User-Agent": UA } }) : null;
+    check(
+      "old /cluster/<id> URL redirects 308 to the story",
+      old !== null && old.status === 308 && (old.headers.get("location") || "").endsWith(story),
+      old ? `${old.status} → ${old.headers.get("location")}` : "no story id in the page",
+    );
     check("story has a headline", /<h1[^>]*>\s*\S/.test(html));
     check("story og:image", Boolean(meta(html, "og:image")));
     check("story article:published_time", Boolean(meta(html, "article:published_time")));

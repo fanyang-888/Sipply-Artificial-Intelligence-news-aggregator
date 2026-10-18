@@ -38,7 +38,9 @@ function cluster(id: string, title: string, overrides: Partial<ApiCluster> = {})
 describe("site urls", () => {
   it("uses the canonical www origin by default", () => {
     expect(SITE_URL).toBe("https://www.sipply.dev");
-    expect(storyUrl("abc")).toBe("https://www.sipply.dev/cluster/abc");
+    expect(storyUrl({ id: "abc", slug: "gemini-4-argon-opens-abc12345" })).toBe("https://www.sipply.dev/story/gemini-4-argon-opens-abc12345");
+    // An API from before slugs (mid-deploy): the old address, which redirects
+    expect(storyUrl({ id: "abc" })).toBe("https://www.sipply.dev/cluster/abc");
   });
 });
 
@@ -70,7 +72,7 @@ describe("digestItemListJsonLd", () => {
     };
     const ld = digestItemListJsonLd(digest);
     const items = ld.itemListElement as { position: number; url: string }[];
-    expect(items.map((i) => i.url)).toEqual([storyUrl("f"), storyUrl("t1")]);
+    expect(items.map((i) => i.url)).toEqual([storyUrl({ id: "f" }), storyUrl({ id: "t1" })]);
     expect(items.map((i) => i.position)).toEqual([1, 2]);
     expect(ld.numberOfItems).toBe(2);
   });

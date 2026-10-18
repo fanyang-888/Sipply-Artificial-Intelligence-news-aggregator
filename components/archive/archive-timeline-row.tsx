@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ArchiveClusterRow } from "@/lib/mappers/archive";
 import { HighlightMatch } from "@/components/archive/highlight-match";
+import { storyPath } from "@/lib/seo/site";
 
 type ArchiveTimelineRowProps = {
   row: ArchiveClusterRow;
@@ -18,7 +19,7 @@ export function ArchiveTimelineRow({ row, highlightQuery }: ArchiveTimelineRowPr
 
   return (
     <Link
-      href={`/cluster/${row.id}`}
+      href={storyPath(row)}
       className="sp-row-link group flex flex-col gap-1.5 px-5 py-4 no-underline sm:flex-row sm:items-start sm:gap-5 sm:px-6"
     >
       <span className="shrink-0 font-mono text-[10.5px] uppercase tracking-[0.14em] [color:var(--accent)] sm:w-[96px] sm:pt-[5px]">

@@ -23,6 +23,8 @@ export type ApiArticleInCluster = {
 
 export type ApiCluster = {
   id: string;
+  /** Permanent URL key: /story/<slug>. Optional: an older API (mid-deploy) doesn't send it. */
+  slug?: string;
   clusterType: string;
   title: ApiLocalizedStr;
   theme: string;
@@ -76,7 +78,7 @@ export type ApiWeekSummary = {
   /** New stories per day, Monday first. Optional: an older API (mid-deploy) doesn't send it. */
   dailyCounts?: number[];
   /** The week's highest-scoring stories. Optional for the same reason. */
-  headlines?: { id: string; title: string; titleZh: string | null }[];
+  headlines?: { id: string; slug?: string; title: string; titleZh: string | null }[];
 };
 
 /** GET /api/weeks/{week} */
@@ -92,7 +94,7 @@ export type ApiDaySummary = {
   date: string;
   storyCount: number;
   /** The day's best stories, news first. */
-  headlines: { id: string; title: string; titleZh: string | null }[];
+  headlines: { id: string; slug?: string; title: string; titleZh: string | null }[];
 };
 
 /** /api/days/{date}: every story that first appeared that day, news first. */
@@ -104,6 +106,7 @@ export type ApiDayDetail = ApiDaySummary & {
 /** /api/feed: the newest stories by first appearance (RSS feed, news sitemap). */
 export type ApiFeedItem = {
   id: string;
+  slug?: string;
   title: string;
   titleZh: string | null;
   summary: string | null;
@@ -131,6 +134,7 @@ export type ApiSearchResponse = {
 
 export type ApiArchiveClusterRow = {
   id: string;
+  slug?: string | null;
   type: "cluster";
   title: string;
   title_zh: string | null;
@@ -286,6 +290,7 @@ export type ApiSipplyAnswers = Omit<ApiRadarAnswers, "recent"> & {
 export type ApiRadarCoverage = {
   status: "covered";
   clusterId: string | null;
+  slug?: string | null;
   title: string | null;
   titleZh: string | null;
 };
