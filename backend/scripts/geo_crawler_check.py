@@ -28,7 +28,8 @@ USER_AGENTS = {
 }
 DEFAULT_API = "https://personal-ai-intelligence-tool-production.up.railway.app"
 
-_STORY_HREF = re.compile(r'href="(?:https?://[^"/]+)?/cluster/([0-9a-f-]{36})"')
+# Story links: /story/<slug> now, /cluster/<id> on pages from before slugs (it redirects)
+_STORY_HREF = re.compile(r'href="(?:https?://[^"/]+)?/(?:story/([a-z0-9-]+)|cluster/([0-9a-f-]{36}))"')
 _SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.S | re.I)
 _TAG = re.compile(r"<[^>]+>")
 _JSONLD = re.compile(r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>', re.S | re.I)
@@ -81,7 +82,8 @@ def story_report(client: httpx.Client, site: str, api: str, story_id: str | None
     if not story_id:
         return {"error": "no story id"}
     cluster = client.get(f"{api}/api/clusters/{story_id}").json()
-    report = page_report(client, f"{site}/cluster/{story_id}")
+    path = f"/story/{cluster['slug']}" if cluster.get("slug") else f"/cluster/{story_id}"
+    report = page_report(client, f"{site}{path}")
     text = visible_text(report.pop("_html"))
 
     def present(s: str | None) -> bool:
