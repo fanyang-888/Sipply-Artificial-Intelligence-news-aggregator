@@ -19,6 +19,7 @@ import sys
 
 from app.db import session_scope
 from app.logging_config import configure_logging
+from app.services.headlines import assign_missing_slugs
 from app.services.summarization import (
     summarize_unsummarized_articles,
     summarize_unsummarized_clusters,
@@ -77,6 +78,11 @@ def main(argv: list[str] | None = None) -> int:
             cluster_batch = max(1, args.batch_size // 3)
             cr = summarize_unsummarized_clusters(db, batch_size=cluster_batch)
             print(f"Clusters — processed={cr['processed']} skipped={cr['skipped']}")
+            # Stories summarized before slugs existed get theirs now, from today's title,
+            # before any headline backfill could change the words (no API key needed)
+            slugs = assign_missing_slugs(db)
+            db.commit()
+            print(f"Slugs — assigned={slugs}")
 
     return 0
 

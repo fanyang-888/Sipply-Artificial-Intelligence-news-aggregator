@@ -18,7 +18,7 @@ import os
 from datetime import date
 from typing import TYPE_CHECKING
 
-from app.services.text_clean import clean_title
+from app.services.headlines import story_title
 
 if TYPE_CHECKING:
     from app.models.cluster import Cluster
@@ -63,7 +63,7 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
     featured_block = ""
     if featured:
         # Feed titles may carry leftover entities; decode, then escape for HTML
-        title = html.escape(clean_title(featured.representative_title) or "Today's top story")
+        title = html.escape(story_title(featured) or "Today's top story")
         summary = html.escape(featured.summary or "")
         summary_html = (
             f'<p style="margin:0 0 20px;font-family:{_SANS};font-size:15.5px;line-height:1.65;color:{_SOFT};">'
@@ -83,7 +83,7 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
         items = "".join(
             f'<tr><td style="padding:14px 0;border-top:1px solid {_RULE};">'
             f'<a href="{_story_url(c)}" style="font-family:{_SERIF};font-size:17px;line-height:1.3;color:{_INK};text-decoration:none;">'
-            f'{html.escape(clean_title(c.representative_title) or "Story")}</a>'
+            f'{html.escape(story_title(c) or "Story")}</a>'
             + (
                 f'<p style="margin:5px 0 0;font-family:{_SANS};font-size:13.5px;line-height:1.5;color:{_MUTED};">'
                 f'{html.escape((c.summary or "")[:140])}{"…" if len(c.summary or "") > 140 else ""}</p>'
@@ -139,7 +139,7 @@ def _build_text(clusters: list["Cluster"], today: date) -> str:
     lines = [f"SIPPLY — Daily digest · {date_str}", "=" * 50, ""]
     for i, c in enumerate(clusters[:4]):
         prefix = "FEATURED: " if i == 0 else f"{i}. "
-        lines.append(f"{prefix}{clean_title(c.representative_title) or 'Story'}")
+        lines.append(f"{prefix}{story_title(c) or 'Story'}")
         if c.summary:
             lines.append(c.summary[:200] + ("…" if len(c.summary) > 200 else ""))
         lines.append(_story_url(c))

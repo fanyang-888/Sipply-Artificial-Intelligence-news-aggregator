@@ -62,6 +62,7 @@ _BEST_EFFORT_STAGES = frozenset(
         "describe_signal_topics",
         "brief_signal_topics",
         "check_ai_answers",
+        "backfill_headlines",
     }
 )
 
@@ -268,6 +269,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         dedup_clusters,
         summarize,
         translate_clusters,
+        backfill_headlines,
         ingest_signals,
         build_signal_topics,
         merge_signal_topics,
@@ -286,6 +288,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         ("dedup_clusters",        lambda: dedup_clusters.main([])),
         ("summarize",             lambda: summarize.main([])),
         ("translate_clusters",    lambda: translate_clusters.main(["--batch-size", "50"])),
+        ("backfill_headlines",    lambda: backfill_headlines.main(["--limit", "40"])),
         ("ingest_signals",        lambda: ingest_signals.main([])),
         ("build_signal_topics",   lambda: build_signal_topics.main([])),
         ("merge_signal_topics",   lambda: merge_signal_topics.main([])),

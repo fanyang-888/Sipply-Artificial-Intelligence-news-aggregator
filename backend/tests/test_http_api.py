@@ -61,7 +61,7 @@ def test_cluster_index_lists_public_stories_newest_first(client, make_cluster, d
     ids = [row["id"] for row in body]
     assert str(hidden.id) not in ids
     assert ids.index(str(new.id)) < ids.index(str(old.id))
-    assert set(body[0]) == {"id", "lastSeenAt"}
+    assert set(body[0]) == {"id", "slug", "lastSeenAt"}
 
 
 def test_cluster_index_route_is_not_shadowed_by_id_route(client, monkeypatch):
@@ -154,3 +154,41 @@ def test_chinese_headline_drops_the_publisher_name_too(client, make_cluster):
     )
     body = client.get(f"/api/clusters/{story.id}").json()
     assert body["title"] == {"en": "Anthropic says its workforce has become less junior", "zh": "Anthropic表示其员工队伍变得不再初级"}
+
+
+def test_a_story_is_found_by_its_slug(client, make_cluster):
+    story = make_cluster(
+        title="Replit is no longer working with Anthropic, CEO says | TechCrunch",
+        headline="Replit drops Anthropic for OpenAI, citing cost",
+        headline_zh="Replit 以成本为由弃用 Anthropic",
+    )
+    story.slug = f"replit-is-no-longer-working-with-anthropic-ceo-says-{story.id.hex[:8]}"
+
+    body = client.get(f"/api/clusters/by-slug/{story.slug}").json()
+    assert body["id"] == str(story.id) and body["slug"] == story.slug
+    assert body["title"] == {"en": "Replit drops Anthropic for OpenAI, citing cost", "zh": "Replit 以成本为由弃用 Anthropic"}
+    # Wrong words, right id: the story still answers, with its real slug for a redirect
+    moved = client.get(f"/api/clusters/by-slug/old-words-{story.id.hex[:8]}").json()
+    assert moved["id"] == str(story.id) and moved["slug"] == story.slug
+    assert client.get("/api/clusters/by-slug/nothing-here-00000000").status_code == 404
+    assert client.get("/api/clusters/by-slug/no-id-at-all").status_code == 404
+
+
+def test_story_listings_carry_the_slug_and_sipplys_headline(client, make_cluster, monkeypatch):
+    from datetime import datetime, timezone
+
+    for route in ("digest", "clusters", "search"):
+        monkeypatch.setattr(f"app.api.routes.{route}.cache_get", lambda key: None, raising=False)
+        monkeypatch.setattr(f"app.api.routes.{route}.cache_set", lambda key, value: None, raising=False)
+    story = make_cluster(title="Some source title", headline="Gemini 4 Argon opens to all developers", summarized_at=datetime.now(timezone.utc))
+    unslugged = make_cluster(title="Older story without a stored slug")
+
+    detail = client.get(f"/api/clusters/{story.id}").json()
+    assert detail["title"]["en"] == "Gemini 4 Argon opens to all developers"
+    assert detail["slug"] == f"gemini-4-argon-opens-to-all-developers-{story.id.hex[:8]}"  # computed until stored
+    index = {row["id"]: row for row in client.get("/api/clusters/index").json()}
+    assert index[str(story.id)]["slug"] == detail["slug"]
+    assert index[str(unslugged.id)]["slug"] == f"older-story-without-a-stored-slug-{unslugged.id.hex[:8]}"
+    rows = client.get("/api/search", params={"q": "Argon opens"}).json()["clusters"]
+    assert [r["id"] for r in rows] == [str(story.id)]  # found by its headline
+    assert rows[0]["title"] == "Gemini 4 Argon opens to all developers" and rows[0]["slug"] == detail["slug"]

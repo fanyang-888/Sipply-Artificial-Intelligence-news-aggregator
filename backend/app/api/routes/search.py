@@ -36,6 +36,7 @@ def search(
         base_cluster_q = base_cluster_q.where(
             or_(
                 Cluster.representative_title.ilike(kw),
+                Cluster.headline.ilike(kw),
                 Cluster.summary.ilike(kw),
             )
         )

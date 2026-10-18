@@ -156,6 +156,7 @@ def test_radar_rings_momentum_and_descriptions(client, radar_data, db, make_clus
     assert openai["coverage"] == {
         "status": "covered",
         "clusterId": str(story.id),
+        "slug": f"fired-openai-safety-researchers-dispute-misconduct-claims-{story.id.hex[:8]}",
         "title": "Fired OpenAI safety researchers dispute misconduct claims",
         "titleZh": "被解雇的 OpenAI 安全研究员否认不当行为",
     }

@@ -28,6 +28,11 @@ class Cluster(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
 
     representative_title: Mapped[str] = mapped_column(Text, nullable=False)
+    # Sipply's own headline (written with the summary) and its translation; the source's title stays above
+    headline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    headline_zh: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Permanent URL key, /story/<slug> (app/services/headlines.py)
+    slug: Mapped[str | None] = mapped_column(String(96), nullable=True, unique=True, index=True)
 
     cluster_score: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
     article_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

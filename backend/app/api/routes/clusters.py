@@ -1,11 +1,12 @@
 """Cluster routes: GET /api/clusters, GET /api/clusters/index, GET /api/clusters/{id}."""
 
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import String, cast, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.mappers import cluster_to_response
@@ -14,6 +15,7 @@ from app.cache import cache_get, cache_set
 from app.db import get_db
 from app.models.cluster import Cluster
 from app.services.discussions import story_discussions
+from app.services.headlines import story_slug
 from app.services.related import related_cluster_ids
 
 router = APIRouter(prefix="/api/clusters", tags=["clusters"])
@@ -68,6 +70,7 @@ def list_clusters(
 
 class ClusterIndexEntry(BaseModel):
     id: str
+    slug: str
     lastSeenAt: str | None
 
 
@@ -82,13 +85,56 @@ def cluster_index(db: Session = Depends(get_db)):
     if cached is not None:
         return JSONResponse(content=cached)
     rows = db.execute(
-        select(Cluster.id, Cluster.last_seen_at)
+        select(Cluster.id, Cluster.last_seen_at, Cluster.slug, Cluster.headline, Cluster.representative_title)
         .where(Cluster.representative_title_zh.isnot(None))
         .order_by(Cluster.last_seen_at.desc().nullslast())
     ).all()
-    data = [{"id": str(cid), "lastSeenAt": format_dt(seen)} for cid, seen in rows]
+    data = [{"id": str(r.id), "slug": story_slug(r), "lastSeenAt": format_dt(r.last_seen_at)} for r in rows]
     cache_set(_INDEX_CACHE_KEY, data)
     return JSONResponse(content=data)
+
+
+_SLUG_ID = re.compile(r"-([0-9a-f]{8,12})$")
+
+
+def _by_slug(db: Session, slug: str) -> Cluster | None:
+    """The story with this slug; failing that, the one whose id starts with the slug's
+    trailing hex (old or mistyped words), preferring an exact slug among several."""
+    exact = db.execute(select(Cluster).options(selectinload(Cluster.articles)).where(Cluster.slug == slug)).scalar_one_or_none()
+    if exact is not None:
+        return exact
+    m = _SLUG_ID.search(slug)
+    if not m:
+        return None
+    hexid = m.group(1)
+    prefix = hexid[:8] + (f"-{hexid[8:]}" if len(hexid) > 8 else "")
+    found = db.execute(
+        select(Cluster).options(selectinload(Cluster.articles)).where(cast(Cluster.id, String).like(f"{prefix}%")).order_by(Cluster.first_seen_at)
+    ).scalars().all()
+    return next((c for c in found if story_slug(c) == slug), found[0] if found else None)
+
+
+def _story_response(db: Session, cluster: Cluster) -> ClusterResponse:
+    from app.api.routes.radar import _signal_out
+
+    return cluster_to_response(
+        cluster,
+        # Stories about the same thing (similar text, same company, same tag), not just the same type
+        related_cluster_ids=related_cluster_ids(db, cluster),
+        # What people said about it on HN, Bluesky and other communities (via the Trend Radar)
+        discussions=[_signal_out(s) for s in story_discussions(db, cluster.id)],
+    )
+
+
+# Declared before /{cluster_id}: a two-segment path, never an id
+@router.get("/by-slug/{slug}", response_model=ClusterResponse)
+def get_cluster_by_slug(slug: str, db: Session = Depends(get_db)) -> ClusterResponse:
+    """A story by its URL key. The response's ``slug`` is the canonical one: when it differs
+    from the request, the caller redirects there."""
+    cluster = _by_slug(db, slug.lower())
+    if cluster is None:
+        raise HTTPException(status_code=404, detail="Story not found")
+    return _story_response(db, cluster)
 
 
 @router.get("/{cluster_id}", response_model=ClusterResponse)

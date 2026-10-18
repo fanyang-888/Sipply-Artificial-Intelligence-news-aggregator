@@ -88,6 +88,8 @@ class TopicRef(BaseModel):
 
 class ClusterResponse(BaseModel):
     id: str
+    # Permanent URL key: /story/<slug>
+    slug: str = ""
     clusterType: str
     title: LocalizedStr
     theme: str
@@ -130,6 +132,7 @@ class DigestResponse(BaseModel):
 
 class ArchiveClusterRow(BaseModel):
     id: str
+    slug: str | None = None
     type: str = "cluster"
     title: str
     title_zh: str | None = None
@@ -178,6 +181,7 @@ class RadarCoverage(BaseModel):
     # for the editor only (GET /api/admin/radar/gaps), never on the public page
     status: str
     clusterId: str | None = None
+    slug: str | None = None
     title: str | None = None
     titleZh: str | None = None
 
