@@ -59,3 +59,18 @@ def test_digest_email_decodes_titles_and_escapes_html():
     assert "Kids &lt;script&gt; &amp; parents" in page and "<script>" not in page
     assert "A &lt;b&gt; tag" in page  # decoded once, then escaped for HTML
     assert "FEATURED: ChatGPT isn’t safe" in _build_text(stories, date(2026, 10, 15))
+
+
+def test_digest_email_links_stories_at_their_story_address():
+    import uuid
+    from datetime import date
+    from types import SimpleNamespace
+
+    from app.services.email_service import _build_html, _build_text
+
+    sid = uuid.UUID("ac94574a-93c6-4a1e-9593-a6e17e04b56e")
+    stories = [SimpleNamespace(id=sid, slug="replit-drops-anthropic-ac94574a", representative_title="Replit drops Anthropic", summary="s")]
+    assert 'href="https://www.sipply.dev/story/replit-drops-anthropic-ac94574a"' in _build_html(stories, date(2026, 10, 19))
+    assert "https://www.sipply.dev/story/replit-drops-anthropic-ac94574a" in _build_text(stories, date(2026, 10, 19))
+    assert "/cluster/" not in _build_html(stories, date(2026, 10, 19))
+

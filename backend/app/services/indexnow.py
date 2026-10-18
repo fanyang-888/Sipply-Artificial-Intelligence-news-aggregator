@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.models.cluster import Cluster
 from app.services.entities import entities_in
+from app.services.headlines import story_slug
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SIT
     changed since ``since`` (summarized, or given new articles once summarized),
     plus the company pages those stories appear on."""
     stories = db.execute(
-        select(Cluster.id, Cluster.representative_title).where(
+        select(Cluster.id, Cluster.slug, Cluster.headline, Cluster.representative_title).where(
             Cluster.summarized_at.is_not(None),
             or_(Cluster.summarized_at >= since, and_(Cluster.last_seen_at.is_not(None), Cluster.last_seen_at >= since)),
         )
@@ -50,9 +51,10 @@ def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SIT
     urls = [f"{site}{path}" for path in HUB_PATHS]
     urls.append(f"{site}/weekly/{_week_key(now)}")
     urls.append(f"{site}/daily/{now.astimezone(timezone.utc).date().isoformat()}")
-    urls += [f"{site}/cluster/{story_id}" for story_id, _ in stories]
-    slugs = dict.fromkeys(e.slug for _, title in stories for e in entities_in(title or ""))
-    urls += [f"{site}/topics/{slug}" for slug in slugs]
+    # Each story at its permanent address (/cluster/<id> only redirects there)
+    urls += [f"{site}/story/{story_slug(s)}" for s in stories]
+    topics = dict.fromkeys(e.slug for s in stories for e in entities_in(s.representative_title or ""))
+    urls += [f"{site}/topics/{topic}" for topic in topics]
     return list(dict.fromkeys(urls))
 
 

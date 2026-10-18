@@ -18,7 +18,7 @@ import os
 from datetime import date
 from typing import TYPE_CHECKING
 
-from app.services.headlines import story_title
+from app.services.headlines import story_slug, story_title
 
 if TYPE_CHECKING:
     from app.models.cluster import Cluster
@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _FROM = os.getenv("RESEND_FROM", "Sipply <digest@sipply.dev>")
-_SITE = "https://sipply.dev"
+# The canonical origin (the apex redirects to www): links land on the page in one hop
+_SITE = os.getenv("SITE_URL", "https://www.sipply.dev").rstrip("/")
 
 
 # ---------------------------------------------------------------------------
@@ -49,8 +50,10 @@ _LABEL = f"margin:0;font-family:{_MONO};font-size:11px;letter-spacing:.14em;text
 
 
 def _story_url(cluster: "Cluster") -> str:
-    story_id = getattr(cluster, "id", None)
-    return f"{_SITE}/cluster/{story_id}" if story_id else _SITE
+    """The story's permanent address, /story/<slug>."""
+    if getattr(cluster, "id", None) is None:
+        return _SITE
+    return f"{_SITE}/story/{story_slug(cluster)}"
 
 
 def _build_html(clusters: list["Cluster"], today: date) -> str:

@@ -74,4 +74,8 @@ def test_a_runs_urls_are_its_new_or_updated_stories_their_company_pages_and_the_
         f"{site}/", f"{site}/radar", f"{site}/archive", f"{site}/topics", f"{site}/weekly", f"{site}/daily",
         f"{site}/weekly/2026-W42", f"{site}/daily/2026-10-16",
     ]
-    assert set(urls[8:]) == {f"{site}/cluster/{fresh.id}", f"{site}/cluster/{updated.id}", f"{site}/topics/openai"}
+    assert set(urls[8:]) == {
+        f"{site}/story/openai-ships-a-new-model-{fresh.id.hex[:8]}",
+        f"{site}/story/a-research-result-{updated.id.hex[:8]}",
+        f"{site}/topics/openai",
+    }
