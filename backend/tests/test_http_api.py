@@ -144,3 +144,13 @@ def test_story_lists_a_republished_article_once(client, db, make_cluster, make_s
     assert [a["title"] for a in body["articles"]].count("Replit is no longer working with Anthropic, CEO says") == 1
     assert len(body["articles"]) == 2
     assert body["articleCount"] == 2
+
+
+def test_chinese_headline_drops_the_publisher_name_too(client, make_cluster):
+    # The translation kept the suffix: "Anthropic表示其员工队伍变得不再初级，会议时间增加 | TechCrunch"
+    story = make_cluster(
+        title="Anthropic says its workforce has become less junior | TechCrunch",
+        title_zh="Anthropic表示其员工队伍变得不再初级 | TechCrunch",
+    )
+    body = client.get(f"/api/clusters/{story.id}").json()
+    assert body["title"] == {"en": "Anthropic says its workforce has become less junior", "zh": "Anthropic表示其员工队伍变得不再初级"}
