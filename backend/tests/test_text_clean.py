@@ -23,6 +23,27 @@ def test_clean_title(raw, clean):
     assert clean_title(raw) == clean
 
 
+@pytest.mark.parametrize(
+    ("raw", "clean"),
+    [
+        # Seen 2026-10-18: TechCrunch's feed titles now end in the site name, and Sipply's
+        # headline (page title, JSON-LD headline, home page) read "... | TechCrunch | Sipply"
+        ("Replit is no longer working with Anthropic, CEO says | TechCrunch", "Replit is no longer working with Anthropic, CEO says"),
+        ("Disney agrees to hire the majority of Character.AI’s workforce | TechCrunch", "Disney agrees to hire the majority of Character.AI’s workforce"),
+        ("Singapore office and government MOU | Anthropic", "Singapore office and government MOU"),
+        ("Sora gets a new app - The Verge", "Sora gets a new app"),
+        ("New chips announced — Ars Technica", "New chips announced"),
+        # Only a known publisher's name is removed; other separators stay
+        ("Claude vs GPT | which one to pick", "Claude vs GPT | which one to pick"),
+        ("GPT-6 - what changed", "GPT-6 - what changed"),
+        ("Why TechCrunch matters", "Why TechCrunch matters"),
+        ("TechCrunch", "TechCrunch"),  # never empties a title
+    ],
+)
+def test_clean_title_drops_a_trailing_publisher_name(raw, clean):
+    assert clean_title(raw) == clean
+
+
 def test_digest_email_decodes_titles_and_escapes_html():
     from datetime import date
     from types import SimpleNamespace
