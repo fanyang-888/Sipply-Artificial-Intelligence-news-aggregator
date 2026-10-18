@@ -31,6 +31,8 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
     `- [Companies & models](${SITE_URL}/topics): every story about OpenAI, Anthropic, Google & Gemini, Meta, ` +
       "DeepSeek and other AI companies and model families, one page each",
     `- [Weekly recaps](${SITE_URL}/weekly): the top AI stories of each week, by category and company`,
+    `- [AI news by day](${SITE_URL}/daily): one page per day (UTC) with every story from that day, ` +
+      `news first; today's is ${SITE_URL}/daily/${new Date().toISOString().slice(0, 10)}`,
   ];
 
   const stories = digest ? [digest.featured, ...digest.topClusters].filter((c) => c != null) : [];
@@ -45,6 +47,14 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
     }
   }
 
-  lines.push("", "## Optional", "", `- [Sitemap](${SITE_URL}/sitemap.xml): every story page with its last update`, "");
+  lines.push(
+    "",
+    "## Optional",
+    "",
+    `- [RSS feed](${SITE_URL}/feed.xml): the 50 newest stories with summaries and sources`,
+    `- [Sitemap](${SITE_URL}/sitemap.xml): every story page with its last update`,
+    `- [News sitemap](${SITE_URL}/news-sitemap.xml): stories from the last 48 hours`,
+    "",
+  );
   return lines.join("\n");
 }

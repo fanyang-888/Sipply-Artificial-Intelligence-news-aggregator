@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getClusterIndex, getTopics, getWeeks } from "@/lib/api/server";
+import { getClusterIndex, getDays, getTopics, getWeeks } from "@/lib/api/server";
 import { SITE_URL, storyUrl } from "@/lib/seo/site";
 
 // Built per request instead of prerendered + ISR: on Vercel the prerendered
@@ -10,11 +10,12 @@ import { SITE_URL, storyUrl } from "@/lib/seo/site";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [stories, topics, weeks] = await Promise.all([
+  const [stories, topics, weeks, days] = await Promise.all([
     getClusterIndex(),
     // Hub lists are extras: a failure there shouldn't cost the story URLs
     getTopics().catch(() => []),
     getWeeks().catch(() => []),
+    getDays().catch(() => []),
   ]);
   // The home page, radar and archive change with every pipeline run (4× a day)
   const now = new Date();
@@ -35,6 +36,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: w.end,
       changeFrequency: "weekly" as const,
       priority: 0.5,
+    })),
+    { url: `${SITE_URL}/daily`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    // Today's page changes with every run; a finished day is settled
+    ...days.map((d, i) => ({
+      url: `${SITE_URL}/daily/${d.date}`,
+      lastModified: i === 0 ? now : `${d.date}T23:59:59Z`,
+      changeFrequency: i === 0 ? ("hourly" as const) : ("monthly" as const),
+      priority: i === 0 ? 0.8 : 0.5,
     })),
     ...stories.map((s) => ({
       url: storyUrl(s.id),

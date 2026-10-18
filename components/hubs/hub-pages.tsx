@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type { ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "@/lib/api/types";
+import type { ApiDayDetail, ApiDaySummary, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
 import { apiRowToArchiveRow } from "@/lib/mappers/archive";
 import { useNowMinute } from "@/lib/use-now-minute";
 import { radarSectorForTag } from "@/lib/utils/radar";
-import { formatWeekRange } from "@/lib/utils/weeks";
+import { formatDay, weekDays } from "@/lib/utils/days";
+import { formatWeekRange, isoWeekKey } from "@/lib/utils/weeks";
 import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -266,6 +267,26 @@ export function WeekPage({
             </section>
           ) : null}
           <section>
+            <h2 className={`${label} mb-3`}>{t.hubs.dayByDay}</h2>
+            <ul className="sp-rows -mx-6 text-[14px]">
+              {weekDays(week.start).map((day, i) => {
+                const count = week.dailyCounts?.[i] ?? 0;
+                return (
+                  <li key={day} className="flex justify-between gap-3 px-6 py-2">
+                    {count > 0 ? (
+                      <Link href={`/daily/${day}`} className="text-foreground no-underline hover:[color:var(--accent)]">
+                        {formatDay(day, lang)}
+                      </Link>
+                    ) : (
+                      <span className="[color:var(--text-muted)]">{formatDay(day, lang)}</span>
+                    )}
+                    <span className="font-mono text-[12px] [color:var(--text-muted)]">{count}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+          <section>
             <h2 className={`${label} mb-3`}>{t.hubs.byCategory}</h2>
             <ul className="sp-rows -mx-6 text-[14px]">
               {[...categories].sort((a, b) => b[1] - a[1]).map(([name, count]) => (
@@ -281,3 +302,118 @@ export function WeekPage({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// /daily
+// ---------------------------------------------------------------------------
+
+/** Each day with its count and top headlines, newest first. */
+export function DaysIndex({ days, today }: { days: ApiDaySummary[] | null; today: string }) {
+  const { t, lang } = useI18n();
+  return (
+    <div>
+      <PageHeader title={t.hubs.dailyTitle} description={t.hubs.dailyDescription} />
+      {!days ? (
+        <Unavailable />
+      ) : (
+        <ul className="sp-glass sp-rows max-w-4xl overflow-hidden">
+          {days.map((d) => (
+            <li key={d.date} className="px-6 py-5">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                <Link href={`/daily/${d.date}`} className="font-display text-[1.25rem] leading-tight text-foreground no-underline hover:[color:var(--accent)]">
+                  {t.hubs.dayTitle(formatDay(d.date, lang))}
+                  {d.date === today ? (
+                    <span className="ml-3 inline-block rounded-full px-2.5 py-0.5 align-[0.2em] font-mono text-[10px] uppercase tracking-[0.12em] [background:var(--accent)] [color:var(--bg)]">
+                      {t.hubs.today}
+                    </span>
+                  ) : null}
+                </Link>
+                <span className={`${label} shrink-0 normal-case tracking-[0.04em]`}>{t.hubs.weekStories(d.storyCount)}</span>
+              </div>
+              {d.headlines.length > 0 ? (
+                <ul className="mt-2.5 space-y-1">
+                  {d.headlines.map((h) => (
+                    <li key={h.id} className="truncate text-[14px] leading-snug">
+                      <Link href={`/cluster/${h.id}`} className="[color:var(--text-soft)] no-underline hover:text-foreground">
+                        {lang === "zh" && h.titleZh ? h.titleZh : h.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// /daily/[date]
+// ---------------------------------------------------------------------------
+
+export function DayPage({
+  day,
+  newer,
+  older,
+}: {
+  day: ApiDayDetail | null;
+  newer: ApiDaySummary | null;
+  older: ApiDaySummary | null;
+}) {
+  const { t, lang } = useI18n();
+  if (!day) return <Unavailable />;
+  const week = isoWeekKey(new Date(`${day.date}T12:00:00Z`));
+  return (
+    <div>
+      <PageHeader
+        back={{ href: "/daily", label: t.hubs.allDays }}
+        eyebrow={
+          <>
+            <span>{day.date}</span>
+            {older ? (
+              <Link href={`/daily/${older.date}`} className="no-underline hover:text-foreground">
+                ‹ {t.hubs.olderDay}
+              </Link>
+            ) : null}
+            {newer ? (
+              <Link href={`/daily/${newer.date}`} className="no-underline hover:text-foreground">
+                {t.hubs.newerDay} ›
+              </Link>
+            ) : null}
+            <Link href={`/weekly/${week}`} className="no-underline hover:text-foreground">
+              {t.hubs.weekRecap}
+            </Link>
+          </>
+        }
+        title={t.hubs.dayTitle(formatDay(day.date, lang))}
+        description={t.hubs.weekStories(day.storyCount)}
+      />
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="min-w-0" aria-labelledby="day-stories">
+          <h2 id="day-stories" className={uiSectionTitle}>
+            {t.hubs.topStories}
+          </h2>
+          <StoryList stories={day.stories} />
+        </section>
+        {day.topics.length > 0 ? (
+          <aside className="sp-glass h-fit p-6 lg:mt-[3.1rem]">
+            <h2 className={`${label} mb-3`}>{t.hubs.companies}</h2>
+            <ul className="flex flex-wrap gap-2">
+              {day.topics.map((c) => (
+                <li key={c.key}>
+                  <Link href={`/topics/${c.key}`} className="sp-chip">
+                    <span>{c.name}</span>
+                    <span className="font-mono text-[11px] [color:var(--text-muted)]">{c.count}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+

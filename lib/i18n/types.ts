@@ -11,6 +11,7 @@ export type Translations = {
     radar: string;
     topics: string;
     weekly: string;
+    byDay: string;
     searchPlaceholder: string;
     searchAria: string;
     mainAria: string;
@@ -107,6 +108,15 @@ export type Translations = {
     newer: string;
     older: string;
     allWeeks: string;
+    dailyTitle: string;
+    dailyDescription: string;
+    dayTitle: (date: string) => string;
+    today: string;
+    newerDay: string;
+    olderDay: string;
+    allDays: string;
+    dayByDay: string;
+    weekRecap: string;
     browse: string;
     unavailable: string;
   };

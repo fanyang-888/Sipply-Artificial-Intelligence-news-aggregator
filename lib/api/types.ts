@@ -86,6 +86,35 @@ export type ApiWeekDetail = ApiWeekSummary & {
   topics: { key: string; name: string; count: number }[];
 };
 
+/** One UTC day with stories (/api/days), newest first. */
+export type ApiDaySummary = {
+  /** YYYY-MM-DD (UTC) */
+  date: string;
+  storyCount: number;
+  /** The day's best stories, news first. */
+  headlines: { id: string; title: string; titleZh: string | null }[];
+};
+
+/** /api/days/{date}: every story that first appeared that day, news first. */
+export type ApiDayDetail = ApiDaySummary & {
+  stories: ApiArchiveClusterRow[];
+  topics: { key: string; name: string; count: number }[];
+};
+
+/** /api/feed: the newest stories by first appearance (RSS feed, news sitemap). */
+export type ApiFeedItem = {
+  id: string;
+  title: string;
+  titleZh: string | null;
+  summary: string | null;
+  whyItMatters: string | null;
+  topicTag: string | null;
+  sourceNames: string[];
+  /** When the story first appeared on Sipply */
+  publishedAt: string | null;
+  updatedAt: string | null;
+};
+
 export type ApiDigest = {
   date: string;
   featured: ApiCluster | null;

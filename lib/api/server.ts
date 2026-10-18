@@ -9,7 +9,18 @@
 import { cache } from "react";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { ApiError } from "./client";
-import type { ApiCluster, ApiDigest, ApiSearchResponse, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "./types";
+import type {
+  ApiCluster,
+  ApiDayDetail,
+  ApiDaySummary,
+  ApiDigest,
+  ApiFeedItem,
+  ApiSearchResponse,
+  ApiTopicDetail,
+  ApiTopicSummary,
+  ApiWeekDetail,
+  ApiWeekSummary,
+} from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
@@ -76,3 +87,17 @@ export async function getLatestStories(limit: number): Promise<{ result: ApiSear
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
   return getJson<ApiClusterIndexEntry[]>("/api/clusters/index", 3600);
 }
+
+export function getDays(): Promise<ApiDaySummary[]> {
+  return getJson<ApiDaySummary[]>("/api/days", 300);
+}
+
+export const getDay = cache((day: string) =>
+  getJson<ApiDayDetail>(`/api/days/${encodeURIComponent(day)}`, 300),
+);
+
+/** The newest stories, for the RSS feed and the news sitemap. */
+export function getFeed(limit = 50): Promise<ApiFeedItem[]> {
+  return getJson<ApiFeedItem[]>(`/api/feed?limit=${limit}`, 300);
+}
+
