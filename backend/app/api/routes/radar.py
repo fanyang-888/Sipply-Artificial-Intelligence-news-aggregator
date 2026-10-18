@@ -131,7 +131,7 @@ def _coverage(topic: SignalTopic, ring: int, stories: dict[Any, Cluster]) -> Rad
         status="covered",
         clusterId=str(story.id),
         title=clean_title(story.representative_title),
-        titleZh=story.representative_title_zh,
+        titleZh=clean_title(story.representative_title_zh) or None,
     )
 
 

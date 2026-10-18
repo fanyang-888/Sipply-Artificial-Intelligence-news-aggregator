@@ -262,7 +262,7 @@ def _summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> Wee
         storyCount=len(stories),
         dailyCounts=daily,
         headlines=[
-            WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=c.representative_title_zh)
+            WeekHeadline(id=str(c.id), title=clean_title(c.representative_title), titleZh=clean_title(c.representative_title_zh) or None)
             for c in week_headlines(stories, news_source_ids)
         ],
     )
