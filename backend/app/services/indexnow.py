@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -29,7 +29,7 @@ KEY = os.getenv("INDEXNOW_KEY", "aa8db26b0873dac1032938789ff80a3a")
 MAX_URLS = 10_000  # per request, the protocol's limit
 TIMEOUT_SEC = 20.0
 # Pages that change with every run, submitted each time
-HUB_PATHS: tuple[str, ...] = ("/", "/radar", "/archive", "/topics", "/weekly")
+HUB_PATHS: tuple[str, ...] = ("/", "/radar", "/archive", "/topics", "/weekly", "/daily")
 
 
 def _week_key(when: datetime) -> str:
@@ -38,7 +38,7 @@ def _week_key(when: datetime) -> str:
 
 
 def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SITE_URL) -> list[str]:
-    """The hub pages, this week's recap, and every story page that is new or
+    """The hub pages, this week's recap and today's page, and every story page that is new or
     changed since ``since`` (summarized, or given new articles once summarized),
     plus the company pages those stories appear on."""
     stories = db.execute(
@@ -49,6 +49,7 @@ def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SIT
     ).all()
     urls = [f"{site}{path}" for path in HUB_PATHS]
     urls.append(f"{site}/weekly/{_week_key(now)}")
+    urls.append(f"{site}/daily/{now.astimezone(timezone.utc).date().isoformat()}")
     urls += [f"{site}/cluster/{story_id}" for story_id, _ in stories]
     slugs = dict.fromkeys(e.slug for _, title in stories for e in entities_in(title or ""))
     urls += [f"{site}/topics/{slug}" for slug in slugs]
