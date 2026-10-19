@@ -9,10 +9,10 @@ const L = {
   en: {
     title: "AI citations",
     subtitle:
-      "Each day the questions behind the top radar topics go to an AI assistant with web search. Editor-only: the public radar shows which sites it cites, never how Sipply did.",
+      "Every Monday the questions behind the top 10 radar topics go to an AI assistant with web search. Editor-only: the public radar shows which sites it cites, never how Sipply did.",
     loading: "Loading…",
     loadFailed: "Failed to load:",
-    none: "No answers checked yet. The check runs once a day at 14:00 UTC.",
+    none: "No answers checked yet. The check runs every Monday at 14:00 UTC.",
     cited: (cited: number, checks: number) => `Sipply cited in ${cited} of ${checks} answers`,
     read: (n: number) => `read (cited or not) in ${n}`,
     covered: (cited: number, covered: number) => `On topics Sipply had a story on: cited in ${cited} of ${covered}.`,
@@ -27,10 +27,10 @@ const L = {
   },
   zh: {
     title: "AI 引用",
-    subtitle: "每天把雷达上主要话题对应的问题拿去问带网页搜索的 AI 助手。只给编辑看：公开的雷达页只显示它引用哪些网站，不显示 Sipply 的情况。",
+    subtitle: "每周一把雷达上前 10 个话题对应的问题拿去问带网页搜索的 AI 助手。只给编辑看：公开的雷达页只显示它引用哪些网站，不显示 Sipply 的情况。",
     loading: "加载中…",
     loadFailed: "加载失败：",
-    none: "还没有检查记录。每天 UTC 14:00 检查一次。",
+    none: "还没有检查记录。每周一 UTC 14:00 检查一次。",
     cited: (cited: number, checks: number) => `${checks} 次回答里 Sipply 被引用 ${cited} 次`,
     read: (n: number) => `被读到（不论是否引用）${n} 次`,
     covered: (cited: number, covered: number) => `其中 Sipply 有报道的话题 ${covered} 次，被引用 ${cited} 次。`,

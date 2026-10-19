@@ -50,8 +50,9 @@ router = APIRouter(prefix="/api/radar", tags=["radar"])
 
 _CACHE_KEY = "ai_tool:radar:{limit}"
 _ANSWERS_CACHE_KEY = "ai_tool:radar:answers:{days}"
-# A topic shows the latest check of its question from this many days back
-ANSWER_CHECK_MAX_AGE_DAYS = 7
+# A topic shows the latest check of its question from this many days back: the weekly
+# check (scripts/run_pipeline.py) plus a day, so last week's shows until this week's lands
+ANSWER_CHECK_MAX_AGE_DAYS = 8
 CITATIONS_SHOWN = 6
 TOP_DOMAINS = 10
 RECENT_CHECKS = 20

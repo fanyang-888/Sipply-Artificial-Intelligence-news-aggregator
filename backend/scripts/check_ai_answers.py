@@ -4,7 +4,7 @@ Usage (from backend/):
     python -m scripts.check_ai_answers            # up to MAX_CHECKS questions
     python -m scripts.check_ai_answers --limit 3
 
-The cron pipeline runs this once a day (ANSWER_CHECK_HOUR_UTC). Skipped when
+The cron pipeline runs this once a week (Monday's ANSWER_CHECK_HOUR_UTC run). Skipped when
 OPENAI_API_KEY is not set. See app/signals/answers.py for what it costs.
 """
 

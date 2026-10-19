@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 342 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
+| **Tests** | 344 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -130,7 +130,7 @@ flowchart TB
     D --> OPS["Operator email<br/>on a failed stage,<br/>daily summary at 20:00"]
 ```
 
-Every stage is a standalone script in `backend/scripts/`; `run_pipeline.py` runs them in order, times each one, and records the result in `pipeline_runs` (shown at `/admin/pipeline-runs`). The radar stages depend on outside APIs, so their failures are logged without failing the news. A paid "what do AI assistants cite" check exists but is off by default (`ANSWER_CHECKS_ENABLED`).
+Every stage is a standalone script in `backend/scripts/`; `run_pipeline.py` runs them in order, times each one, and records the result in `pipeline_runs` (shown at `/admin/pipeline-runs`). The radar stages depend on outside APIs, so their failures are logged without failing the news. A paid "what do AI assistants cite" check runs once a week, about $0.80 a month (`ANSWER_CHECKS_ENABLED`).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/chart-run-time-dark.svg" />
@@ -193,7 +193,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 - **IndexNow** (`backend/app/services/indexnow.py`). After every successful run the new and updated story pages, the topic pages they appear on, today's day page and the hub pages go to `api.indexnow.org` (Bing, Yandex, Seznam, Naver, Yep). Bing's index feeds ChatGPT search and Copilot, so a new story is findable within minutes. The key file is `public/<key>.txt`; local and test runs never submit. See [ADR 9](docs/adr/0009-tell-search-engines.md).
 - **Search Console and Bing Webmaster.** Set `GOOGLE_SITE_VERIFICATION` / `BING_SITE_VERIFICATION` in Vercel and the ownership `<meta>` tags appear on every page.
 - **Tested in CI.** The smoke job builds the site, starts it, and reads every kind of page as GPTBot would: titles, canonical URLs, JSON-LD, story links in the HTML, share images, sitemap, robots.txt, llms.txt, a real 404 and a noindex admin. See [ADR 8](docs/adr/0008-test-what-crawlers-see.md).
-- **Citation tracking** (`backend/app/signals/answers.py`, off by default). When `ANSWER_CHECKS_ENABLED=1`, the 14:00 run asks OpenAI's Responses API with web search the question a reader would ask about each top radar topic (gpt-4.1-mini, about $0.018 a question) and records the answer and the sources it cited. The results are for the operator; public pages describe the world, not Sipply's own standing ([ADR 6](docs/adr/0006-no-self-assessment-in-public.md)).
+- **Citation tracking** (`backend/app/signals/answers.py`, once a week). Monday's 14:00 UTC run asks OpenAI's Responses API with web search the question a reader would ask about each top radar topic (gpt-4.1-mini, about $0.018 a question, 10 questions, about $0.80 a month) and records the answer and the sources it cited. The results are for the operator; public pages describe the world, not Sipply's own standing ([ADR 6](docs/adr/0006-no-self-assessment-in-public.md)).
 
 ---
 
@@ -204,7 +204,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 342 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 344 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Thirteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
@@ -443,7 +443,7 @@ On startup `alembic upgrade head` runs in a background thread, so Railway's heal
 | `OPENAI_API_KEY` | gpt-4o-mini: summaries, translation, radar |
 | `RESEND_API_KEY` | Email delivery |
 | `ALERT_EMAIL` | Operator emails: a failed stage, and a 24-hour summary on the 20:00 run (none while unset) |
-| `ANSWER_CHECKS_ENABLED` | `1` turns the paid AI-answer check back on (off by default) |
+| `ANSWER_CHECKS_ENABLED` | The paid AI-answer check runs every Monday by default; `1` makes it daily, `off` stops it |
 | `REDIS_URL` | Set by the Railway Redis plugin |
 | `JWT_SECRET` | Signs admin tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SECRET` | Admin login |
