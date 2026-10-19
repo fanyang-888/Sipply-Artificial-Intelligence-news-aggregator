@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { SubscribeBar } from "@/components/shared/subscribe-bar";
 import type { ApiWeekSummary } from "@/lib/api/types";
 import { useI18n } from "@/lib/i18n";

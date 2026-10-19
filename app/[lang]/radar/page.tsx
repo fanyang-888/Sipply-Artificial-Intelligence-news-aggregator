@@ -4,17 +4,17 @@ import { fetchRadar, fetchRadarAnswers } from "@/lib/api";
 import type { ApiRadar } from "@/lib/api/types";
 import { withRadarDefaults } from "@/lib/utils/radar";
 import { layoutRadar } from "@/lib/utils/radar-layout";
-import { RadarPageClient } from "@/app/radar/radar-page-client";
+import { RadarPageClient } from "@/app/[lang]/radar/radar-page-client";
+import { asLang, sectionMetadata } from "@/lib/seo/copy";
 
 // The pipeline refreshes signals 4× a day; re-render at most every 5 minutes
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "Trend Radar",
-  description:
-    "What the AI community is discussing right now: Hacker News, Bluesky, Lobsters, news, YouTube, DEV and new GitHub repos grouped into topics and scored by volume, engagement and velocity.",
-  alternates: { canonical: "/radar" },
-};
+type Props = { params: Promise<{ lang: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return sectionMetadata("radar", "/radar", asLang((await params).lang));
+}
 
 async function loadRadar(): Promise<ApiRadar | null> {
   try {

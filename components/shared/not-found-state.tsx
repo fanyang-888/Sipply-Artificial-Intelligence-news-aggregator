@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { uiButtonPrimary } from "@/lib/ui/classes";
 
 type NotFoundStateProps = {

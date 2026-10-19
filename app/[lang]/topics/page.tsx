@@ -3,18 +3,16 @@ import { getTopics, isBuildPhase } from "@/lib/api/server";
 import type { ApiTopicSummary } from "@/lib/api/types";
 import { TopicsIndex } from "@/components/hubs/hub-pages";
 import { JsonLd } from "@/components/shared/json-ld";
+import { asLang, sectionCopy, sectionMetadata } from "@/lib/seo/copy";
 import { pageListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 300;
 
-const DESCRIPTION =
-  "Every Sipply story about OpenAI, Anthropic, Google & Gemini, Meta, DeepSeek and other AI companies and model families, one page each.";
+type Props = { params: Promise<{ lang: string }> };
 
-export const metadata: Metadata = {
-  title: "Companies & models",
-  description: DESCRIPTION,
-  alternates: { canonical: "/topics" },
-};
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return sectionMetadata("topics", "/topics", asLang((await params).lang));
+}
 
 async function load(): Promise<ApiTopicSummary[] | null> {
   try {
@@ -26,16 +24,19 @@ async function load(): Promise<ApiTopicSummary[] | null> {
   }
 }
 
-export default async function TopicsPage() {
+export default async function TopicsPage({ params }: Props) {
+  const lang = asLang((await params).lang);
+  const copy = sectionCopy("topics", lang);
   const topics = await load();
   return (
     <>
       {topics ? (
         <JsonLd
           data={pageListJsonLd({
-            name: "Companies & models",
-            description: DESCRIPTION,
+            name: copy.title,
+            description: copy.description,
             path: "/topics",
+            lang,
             items: topics.map((t) => ({ name: t.name, path: `/topics/${t.slug}` })),
           })}
         />

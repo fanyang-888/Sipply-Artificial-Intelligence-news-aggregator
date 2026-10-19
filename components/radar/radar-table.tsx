@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useState } from "react";
 import type { ApiRadarTopic, RadarRing } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";

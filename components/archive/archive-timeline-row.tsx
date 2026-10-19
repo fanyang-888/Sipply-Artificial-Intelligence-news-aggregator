@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import type { ArchiveClusterRow } from "@/lib/mappers/archive";
 import { HighlightMatch } from "@/components/archive/highlight-match";
 import { storyPath } from "@/lib/seo/site";

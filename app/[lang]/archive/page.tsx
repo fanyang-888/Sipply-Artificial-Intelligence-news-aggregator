@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ArchivePageClient } from "@/app/archive/archive-page-client";
+import { ArchivePageClient } from "@/app/[lang]/archive/archive-page-client";
 import { ArchiveLoadingFallback } from "@/components/archive/archive-loading-fallback";
 import { JsonLd } from "@/components/shared/json-ld";
 import { getLatestStories } from "@/lib/api/server";
+import { asLang, sectionCopy, sectionMetadata } from "@/lib/seo/copy";
 import { collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { ARCHIVE_PAGE_SIZE } from "@/lib/utils/archive-url";
 
@@ -14,17 +15,15 @@ import { ARCHIVE_PAGE_SIZE } from "@/lib/utils/archive-url";
 // cache, so a request costs one cheap function call.
 export const dynamic = "force-dynamic";
 
-const DESCRIPTION =
-  "Every AI story Sipply has synthesized, newest first: searchable by keyword and filtered by category (models, research, funding, products, policy & safety, open source & infra).";
+type Props = { params: Promise<{ lang: string }> };
 
-export const metadata: Metadata = {
-  title: "Archive: every AI story",
-  description: DESCRIPTION,
-  alternates: { canonical: "/archive" },
-  openGraph: { siteName: "Sipply", title: "Sipply archive: every AI story", description: DESCRIPTION, url: "/archive" },
-};
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return sectionMetadata("archive", "/archive", asLang((await params).lang));
+}
 
-export default async function ArchivePage() {
+export default async function ArchivePage({ params }: Props) {
+  const lang = asLang((await params).lang);
+  const copy = sectionCopy("archive", lang);
   // The newest page of stories is in the HTML; the browser takes over for search, filters and paging
   const initial = await getLatestStories(ARCHIVE_PAGE_SIZE).catch(() => null);
   const result = initial?.result ?? null;
@@ -33,9 +32,10 @@ export default async function ArchivePage() {
       {result ? (
         <JsonLd
           data={collectionPageJsonLd({
-            name: "Sipply archive: every AI story",
-            description: DESCRIPTION,
+            name: `Sipply: ${copy.title}`,
+            description: copy.description,
             path: "/archive",
+            lang,
             stories: result.clusters,
             dateModified: result.clusters[0]?.lastSeenAt,
           })}

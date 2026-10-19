@@ -122,6 +122,26 @@ async function main() {
     `${news.status}, ${(news.body.match(/<url>/g) || []).length} URLs`,
   );
 
+  // Chinese: every page has a server-rendered /zh twin, and the two name each other (hreflang)
+  check("home names its Chinese page (hreflang)", /hrefLang="zh-CN" href="https:\/\/www\.sipply\.dev\/zh"/i.test(home));
+  const zhHome = await page("/zh", { minLinks: 5, linkPrefix: "/zh/story/", ld: ["ItemList"], label: "zh home" });
+  check("zh home is <html lang=zh-CN>", /<html[^>]*lang="zh-CN"/.test(zhHome));
+  check("zh home's canonical URL is /zh", zhHome.includes('rel="canonical" href="https://www.sipply.dev/zh"'));
+  check("zh home is in Chinese in the HTML", (zhHome.match(/[\u4e00-\u9fff]/g) || []).length > 500);
+  const zhStory = links(zhHome, "/zh/story/")[0];
+  if (zhStory) {
+    const html = await page(zhStory, { ld: ["NewsArticle", "BreadcrumbList"], label: "zh story" });
+    check("zh story is <html lang=zh-CN>", /<html[^>]*lang="zh-CN"/.test(html));
+    check("zh story's structured data is in Chinese", html.includes('"inLanguage":"zh-CN"'));
+    check("zh story names its English page (hreflang)", /hrefLang="en" href="https:\/\/www\.sipply\.dev\/story\//i.test(html));
+  } else {
+    check("zh home links to a zh story", false);
+  }
+  const en = await fetch(`${BASE}/en/radar`, { redirect: "manual", headers: { "User-Agent": UA } });
+  check("/en/… redirects 308 to the address without it", en.status === 308 && (en.headers.get("location") || "").endsWith("/radar"), `${en.status}`);
+  const zhMissing = await get("/zh/no-such-page-smoke-test");
+  check("unknown zh URL is a 404", zhMissing.status === 404, `status ${zhMissing.status}`);
+
   const missing = await get("/no-such-page-smoke-test");
   check("unknown URL is a 404", missing.status === 404, `status ${missing.status}`);
 
@@ -134,6 +154,7 @@ async function main() {
   const sitemap = await get("/sitemap.xml");
   const locs = (sitemap.body.match(/<loc>/g) || []).length;
   check("sitemap lists ≥10 URLs", sitemap.status === 200 && locs >= 10, `${locs} URLs`);
+  check("sitemap lists the Chinese pages", sitemap.body.includes("<loc>https://www.sipply.dev/zh/story/"));
 
   const robots = await get("/robots.txt");
   check("robots.txt points to the sitemap", robots.status === 200 && robots.body.includes("Sitemap:"));

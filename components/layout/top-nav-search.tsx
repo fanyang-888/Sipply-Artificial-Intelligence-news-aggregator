@@ -4,10 +4,11 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { useI18n } from "@/lib/i18n";
+import { localePath, splitLocale } from "@/lib/i18n/routing";
 import { archiveHref, parseArchiveQuery } from "@/lib/utils/archive-url";
 
 export function TopNavSearch() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [q, setQ] = useState("");
   const router = useRouter();
   const pathname = usePathname();
@@ -16,16 +17,12 @@ export function TopNavSearch() {
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = q.trim();
-    if (pathname === "/archive") {
+    if (splitLocale(pathname).path === "/archive") {
       const { topic } = parseArchiveQuery(searchParams);
-      router.push(archiveHref({ q: trimmed, topic }));
+      router.push(localePath(archiveHref({ q: trimmed, topic }), lang));
       return;
     }
-    router.push(
-      trimmed
-        ? `/archive?q=${encodeURIComponent(trimmed)}`
-        : "/archive",
-    );
+    router.push(localePath(trimmed ? `/archive?q=${encodeURIComponent(trimmed)}` : "/archive", lang));
   }
 
   return (

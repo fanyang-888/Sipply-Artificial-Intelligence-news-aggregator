@@ -110,9 +110,18 @@ describe("websiteJsonLd", () => {
     const graph = ld["@graph"] as Record<string, unknown>[];
     expect(graph.map((n) => n["@type"])).toEqual(["Organization", "WebSite"]);
     const site = graph[1];
-    expect(site.url).toBe("https://www.sipply.dev");
+    expect(site.url).toBe("https://www.sipply.dev/");
     expect((site.potentialAction as { target: { urlTemplate: string } }).target.urlTemplate).toBe(
       "https://www.sipply.dev/archive?q={search_term_string}",
+    );
+  });
+
+  it("describes the Chinese site at its /zh address", () => {
+    const site = (websiteJsonLd("zh")["@graph"] as Record<string, unknown>[])[1];
+    expect(site.url).toBe("https://www.sipply.dev/zh");
+    expect(site.inLanguage).toBe("zh-CN");
+    expect((site.potentialAction as { target: { urlTemplate: string } }).target.urlTemplate).toBe(
+      "https://www.sipply.dev/zh/archive?q={search_term_string}",
     );
   });
 });

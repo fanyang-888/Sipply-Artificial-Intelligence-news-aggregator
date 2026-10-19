@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { SourceLink } from "@/components/digest/source-link";
 import { RelativeAge } from "@/components/radar/radar-bits";

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { SITE_TAGLINE } from "@/lib/seo/site";

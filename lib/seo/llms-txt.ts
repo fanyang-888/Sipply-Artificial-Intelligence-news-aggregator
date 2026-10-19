@@ -18,7 +18,8 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
     "",
     "Stories update four times a day. Every story page carries a summary, key takeaways, why it matters " +
       "(overall and for product managers, developers and students), and links to all the source articles " +
-      "it is based on. Content is in English with a Chinese translation.",
+      `it is based on. Every page is in English and, under ${SITE_URL}/zh, in Simplified Chinese ` +
+      `(e.g. ${SITE_URL}/zh/archive); each page links its other language with hreflang.`,
     "",
     "## Main pages",
     "",

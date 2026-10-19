@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 307 backend · 72 frontend · 107 smoke checks of the built site, all in CI |
+| **Tests** | 328 backend · 79 frontend · 137 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -187,6 +187,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 - **Content in the HTML.** The home page, story pages, archive, topics, weekly recaps and the radar ship their full text in the server HTML; a reader's personalization re-ranks on the client.
 - **Structured data.** `NewsArticle` JSON-LD on story pages with the original sources, `ItemList` on the home page, `CollectionPage` and `BreadcrumbList` on the hubs.
 - **Machine entry points.** `/sitemap.xml` (every story, rendered per request), `/news-sitemap.xml` (a Google News sitemap of the last 48 hours), `/feed.xml` (RSS of the 50 newest stories, linked from every page), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed) and `/llms.txt`.
+- **Chinese at its own address.** Every page has a server-rendered Chinese twin under `/zh` (`/zh/story/…`, `/zh/radar`, …) with `<html lang="zh-CN">`, Chinese titles and structured data; each page names the other with `hreflang`, and both are in the sitemap. Before this, crawlers saw two Chinese characters on the home page ([ADR 12](docs/adr/0012-a-url-per-language.md)).
 - **A page per day.** `/daily/2026-10-18` lists every story that first appeared that day, news first; its title reads "AI news today, October 18, 2026" on the day and "AI news, …" after. AI search cites dated round-ups like this for "AI news today" questions (audit of 2026-10-18).
 - **Metadata for crawlers that don't run JavaScript.** `htmlLimitedBots` includes GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot, so they get the `<head>` metadata in the HTML.
 - **IndexNow** (`backend/app/services/indexnow.py`). After every successful run the new and updated story pages, the topic pages they appear on, today's day page and the hub pages go to `api.indexnow.org` (Bing, Yandex, Seznam, Naver, Yep). Bing's index feeds ChatGPT search and Copilot, so a new story is findable within minutes. The key file is `public/<key>.txt`; local and test runs never submit. See [ADR 9](docs/adr/0009-tell-search-engines.md).
@@ -203,9 +204,9 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 307 pytest tests; typecheck, lint with zero warnings, 72 vitest tests; a production build read by the 107-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 328 pytest tests; typecheck, lint with zero warnings, 79 vitest tests; a production build read by the 137-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
-| Decisions | Eleven [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
+| Decisions | Twelve [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
 ---
 
@@ -223,7 +224,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Email | Resend | Subscriber digest and operator alerts |
 | Search engines | IndexNow | New pages announced after each run |
 | Deployment | Vercel + Railway | Frontend CDN; managed Postgres, Redis and cron |
-| i18n | Custom `useI18n()` hook | EN/ZH with type-checked translation keys, no dependency |
+| i18n | `app/[lang]` + `proxy.ts`, custom `useI18n()` | English at the root, Chinese under /zh, both server-rendered; type-checked translation keys, no dependency |
 
 ---
 

@@ -160,7 +160,7 @@ async function main() {
 
   const home = await (await fetch(BASE + "/")).text();
   const story = home.match(/href="(\/story\/[^"#?]+)"/)?.[1];
-  const paths = ["/", "/radar", "/archive", "/topics", "/weekly", "/daily", ...(story ? [story] : [])];
+  const paths = ["/", "/radar", "/archive", "/topics", "/weekly", "/daily", ...(story ? [story] : []), "/zh", ...(story ? [`/zh${story}`] : [])];
 
   let browser;
   try {

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { SectionTitle } from "@/components/shared/section-title";
 import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/utils/localized-string";

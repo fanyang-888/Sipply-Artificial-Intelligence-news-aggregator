@@ -58,6 +58,14 @@ describe("news sitemap", () => {
     expect(xml).not.toContain("/cluster/c3");
   });
 
+  it("lists the Chinese page of a story with a Chinese title too", () => {
+    const zh = buildNewsSitemap([item({ slug: "a1-story", titleZh: "OpenAI 与 Anthropic 达成安全共识" })], NOW);
+    expect(zh).toContain("<loc>https://www.sipply.dev/zh/story/a1-story</loc>");
+    expect(zh).toContain("<news:language>zh-cn</news:language>");
+    expect(zh).toContain("<news:title>OpenAI 与 Anthropic 达成安全共识</news:title>");
+    expect(zh.match(/<url>/g)).toHaveLength(2);
+  });
+
   it("names the publication, language, date and escaped title", () => {
     expect(xml).toContain("<news:name>Sipply</news:name>");
     expect(xml).toContain("<news:language>en</news:language>");

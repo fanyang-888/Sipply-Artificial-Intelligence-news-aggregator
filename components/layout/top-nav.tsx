@@ -2,8 +2,9 @@
 
 import { Suspense, useSyncExternalStore } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { usePathname } from "next/navigation";
+import { splitLocale } from "@/lib/i18n/routing";
 import { useI18n } from "@/lib/i18n";
 import { TopNavSearch } from "@/components/layout/top-nav-search";
 import { LanguageToggle } from "@/components/layout/language-toggle";
@@ -54,7 +55,8 @@ function ThemeToggle() {
 
 export function TopNav() {
   const { t } = useI18n();
-  const pathname = usePathname();
+  // Which section is open, whatever the language (/zh/archive is the archive too)
+  const pathname = splitLocale(usePathname()).path;
   const onArchive = pathname === "/archive";
   const onRadar = pathname === "/radar";
   const onTopics = pathname.startsWith("/topics");

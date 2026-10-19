@@ -20,6 +20,8 @@ describe("day pages", () => {
     const now = new Date("2026-10-18T09:00:00Z");
     expect(dayTitle("2026-10-18", 14, now)).toBe("AI news today, October 18, 2026: 14 stories");
     expect(dayTitle("2026-10-17", 1, now)).toBe("AI news, October 17, 2026: 1 story");
+    expect(dayTitle("2026-10-18", 14, now, "zh")).toBe("今日 AI 新闻（2026年10月18日）：14 篇报道");
+    expect(dayTitle("2026-10-17", 1, now, "zh")).toBe("2026年10月17日 AI 新闻：1 篇报道");
   });
 
   it("finds the days before and after (the list is newest first)", () => {
