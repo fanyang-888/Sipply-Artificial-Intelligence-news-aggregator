@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 344 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
+| **Tests** | 350 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -204,7 +204,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 344 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 350 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Thirteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
@@ -236,6 +236,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Smart filtering | Rule-based gate (keywords, length, dedup) removes off-topic articles at zero API cost |
 | ML signal scoring | 0–100: rule-based dimensions (recency, source authority) + the TF-IDF Ridge model |
 | Story clustering | TF-IDF + cosine similarity groups related articles into stories |
+| Related stories | Worked out for every recent story once per run (one TF-IDF fit, a few seconds) and stored, so a story request reads them instead of comparing against thousands of stories |
 | Cross-day dedup | Stories that evolve across days are merged, not duplicated |
 | One event, one story | When outlets word one event differently, gpt-4o-mini confirms the duplicate and the stories merge; old addresses redirect ([ADR 13](docs/adr/0013-merge-duplicate-stories.md)) |
 | Role personalization | PM / Developer / Student lenses with their own "why it matters" |

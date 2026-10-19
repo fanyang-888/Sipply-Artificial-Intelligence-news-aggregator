@@ -46,6 +46,8 @@ class Cluster(Base):
     tags: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     topic_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
     meta: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Up to four related story ids, written by the relate_stories stage; None = not worked out yet
+    related_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
 
     # ---------- LLM Summary (English) ----------
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)

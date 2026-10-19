@@ -67,12 +67,14 @@ def _is_answer_check_run(started_at: datetime, triggered_by: str) -> bool:
     return schedule == "daily" or started_at.weekday() == _ANSWER_CHECK_WEEKDAY
 
 
-# Trend Radar stages and the duplicate-story merge depend on third-party APIs and
-# only improve what the news stages made; their failure is recorded in
+# Trend Radar stages, the duplicate-story merge and related stories depend on
+# third-party APIs or only improve what the news stages made (the API works out
+# related stories itself when they're missing); their failure is recorded in
 # stage_results but doesn't mark the news pipeline as failed.
 _BEST_EFFORT_STAGES = frozenset(
     {
         "merge_duplicate_stories",
+        "relate_stories",
         "ingest_signals",
         "build_signal_topics",
         "merge_signal_topics",
@@ -287,6 +289,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         summarize,
         translate_clusters,
         backfill_headlines,
+        relate_stories,
         ingest_signals,
         build_signal_topics,
         merge_signal_topics,
@@ -307,6 +310,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         ("summarize",             lambda: summarize.main([])),
         ("translate_clusters",    lambda: translate_clusters.main(["--batch-size", "50"])),
         ("backfill_headlines",    lambda: backfill_headlines.main(["--limit", "40"])),
+        ("relate_stories",        lambda: relate_stories.main([])),
         ("ingest_signals",        lambda: ingest_signals.main([])),
         ("build_signal_topics",   lambda: build_signal_topics.main([])),
         ("merge_signal_topics",   lambda: merge_signal_topics.main([])),

@@ -134,21 +134,32 @@ def _by_slug(db: Session, slug: str) -> Cluster | None:
     return _with_articles(db, merged) if merged is not None else None
 
 
-def _story_response(db: Session, cluster: Cluster) -> ClusterResponse:
+# A story only changes on a pipeline run, which clears the ai_tool:* keys
+_STORY_CACHE_KEY = "ai_tool:story:{id}"
+_STORY_CACHE_TTL = 3600
+
+
+def _story_response(db: Session, cluster: Cluster) -> JSONResponse:
     from app.api.routes.radar import _signal_out
 
-    return cluster_to_response(
-        cluster,
-        # Stories about the same thing (similar text, same company, same tag), not just the same type
-        related_cluster_ids=related_cluster_ids(db, cluster),
-        # What people said about it on HN, Bluesky and other communities (via the Trend Radar)
-        discussions=[_signal_out(s) for s in story_discussions(db, cluster.id)],
-    )
+    key = _STORY_CACHE_KEY.format(id=cluster.id)
+    data = cache_get(key)
+    if data is None:
+        data = cluster_to_response(
+            cluster,
+            # Stories about the same thing (similar text, same company, same tag), not just the same
+            # type: worked out by the relate_stories stage, or here for a story it hasn't reached yet
+            related_cluster_ids=cluster.related_ids if cluster.related_ids is not None else related_cluster_ids(db, cluster),
+            # What people said about it on HN, Bluesky and other communities (via the Trend Radar)
+            discussions=[_signal_out(s) for s in story_discussions(db, cluster.id)],
+        ).model_dump(mode="json")
+        cache_set(key, data, ttl=_STORY_CACHE_TTL)
+    return JSONResponse(content=data)
 
 
 # Declared before /{cluster_id}: a two-segment path, never an id
 @router.get("/by-slug/{slug}", response_model=ClusterResponse)
-def get_cluster_by_slug(slug: str, db: Session = Depends(get_db)) -> ClusterResponse:
+def get_cluster_by_slug(slug: str, db: Session = Depends(get_db)) -> JSONResponse:
     """A story by its URL key. The response's ``slug`` is the canonical one: when it differs
     from the request, the caller redirects there."""
     cluster = _by_slug(db, slug.lower())
@@ -158,20 +169,10 @@ def get_cluster_by_slug(slug: str, db: Session = Depends(get_db)) -> ClusterResp
 
 
 @router.get("/{cluster_id}", response_model=ClusterResponse)
-def get_cluster(cluster_id: str, db: Session = Depends(get_db)) -> ClusterResponse:
+def get_cluster(cluster_id: str, db: Session = Depends(get_db)) -> JSONResponse:
     try:
         cid = uuid.UUID(cluster_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid cluster id")
 
-    cluster = _load_cluster(db, cid)
-
-    from app.api.routes.radar import _signal_out
-
-    return cluster_to_response(
-        cluster,
-        # Stories about the same thing (similar text, same company, same tag), not just the same type
-        related_cluster_ids=related_cluster_ids(db, cluster),
-        # What people said about it on HN, Bluesky and other communities (via the Trend Radar)
-        discussions=[_signal_out(s) for s in story_discussions(db, cluster.id)],
-    )
+    return _story_response(db, _load_cluster(db, cid))

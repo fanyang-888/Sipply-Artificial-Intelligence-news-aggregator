@@ -9,11 +9,12 @@ the page then shows fewer (or no) related stories rather than unrelated ones.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Iterable
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.cluster import Cluster
@@ -70,6 +71,68 @@ def rank_related(target: StoryText, candidates: list[StoryText], limit: int = RE
             scored.append((score, seen, cand.id))
     scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
     return [cid for _, _, cid in scored[:limit]]
+
+
+def related_for_all(
+    stories: list[StoryText], targets: Iterable[int], limit: int = RELATED_LIMIT
+) -> dict[str, list[str]]:
+    """``rank_related`` for each story in ``targets`` (indices), candidates being the other
+    ``stories`` seen within RELATED_WINDOW_DAYS of it. One TF-IDF fit over all of them, so a
+    pipeline run can relate thousands of stories in seconds instead of once per page view."""
+    targets = list(targets)
+    if not stories:
+        return {}
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    try:
+        # Rows are L2-normalized, so a dot product is the cosine similarity
+        matrix = TfidfVectorizer(**_VECTORIZER).fit_transform([_text(s) for s in stories])
+    except ValueError:  # every text was stop words
+        return {stories[i].id: [] for i in targets}
+    entities = [{e.slug for e in entities_in(s.title)} for s in stories]
+    window = timedelta(days=RELATED_WINDOW_DAYS)
+    floor = datetime.min.replace(tzinfo=timezone.utc)
+
+    out: dict[str, list[str]] = {}
+    for i in targets:
+        target = stories[i]
+        anchor = target.last_seen_at or datetime.now(timezone.utc)
+        sims = (matrix[i] @ matrix.T).toarray().ravel()
+        scored: list[tuple[float, datetime, str]] = []
+        for j, cand in enumerate(stories):
+            seen = cand.last_seen_at
+            if j == i or seen is None or abs(seen - anchor) > window:
+                continue
+            score = float(sims[j])
+            if entities[i] & entities[j]:
+                score += ENTITY_BONUS
+            if target.topic_tag and cand.topic_tag == target.topic_tag:
+                score += TOPIC_TAG_BONUS
+            if score >= RELATED_MIN_SCORE:
+                scored.append((score, seen or floor, cand.id))
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        out[target.id] = [cid for _, _, cid in scored[:limit]]
+    return out
+
+
+def assign_related(db: Session, *, now: datetime) -> dict[str, int]:
+    """Work out and store the related stories of every public story seen in the last
+    RELATED_WINDOW_DAYS (new stories may have joined their window) and of any story that
+    has none stored yet. Returns {"stories": public stories, "related": stories updated}."""
+    rows = db.execute(
+        select(
+            Cluster.id, Cluster.representative_title, Cluster.summary, Cluster.topic_tag, Cluster.last_seen_at,
+            Cluster.related_ids.is_(None),
+        ).where(Cluster.representative_title_zh.isnot(None))
+    ).all()
+    stories = [StoryText(str(cid), title, summary, tag, seen) for cid, title, summary, tag, seen, _ in rows]
+    recent = now - timedelta(days=RELATED_WINDOW_DAYS)
+    targets = [i for i, row in enumerate(rows) if row[5] or (row[4] is not None and row[4] >= recent)]
+    related = related_for_all(stories, targets)
+    if related:
+        db.execute(update(Cluster), [{"id": uuid.UUID(sid), "related_ids": ids} for sid, ids in related.items()])
+        db.commit()
+    return {"stories": len(stories), "related": len(related)}
 
 
 def related_cluster_ids(db: Session, cluster: Cluster, limit: int = RELATED_LIMIT) -> list[str]:
