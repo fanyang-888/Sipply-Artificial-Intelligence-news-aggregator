@@ -70,12 +70,16 @@ def test_a_runs_urls_are_its_new_or_updated_stories_their_company_pages_and_the_
     urls = indexnow.changed_urls(db, since=since, now=now)
 
     site = "https://www.sipply.dev"
-    assert urls[:8] == [
+    english = [u for u in urls if not u.startswith(f"{site}/zh")]
+    assert english[:8] == [
         f"{site}/", f"{site}/radar", f"{site}/archive", f"{site}/topics", f"{site}/weekly", f"{site}/daily",
         f"{site}/weekly/2026-W42", f"{site}/daily/2026-10-16",
     ]
-    assert set(urls[8:]) == {
+    assert set(english[8:]) == {
         f"{site}/story/openai-ships-a-new-model-{fresh.id.hex[:8]}",
         f"{site}/story/a-research-result-{updated.id.hex[:8]}",
         f"{site}/topics/openai",
     }
+    # Every page also at its Chinese address (/zh, /zh/story/…)
+    chinese = [u for u in urls if u.startswith(f"{site}/zh")]
+    assert chinese == [f"{site}/zh" if u == f"{site}/" else u.replace(site, f"{site}/zh", 1) for u in english]

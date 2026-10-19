@@ -41,7 +41,7 @@ def _week_key(when: datetime) -> str:
 def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SITE_URL) -> list[str]:
     """The hub pages, this week's recap and today's page, and every story page that is new or
     changed since ``since`` (summarized, or given new articles once summarized),
-    plus the company pages those stories appear on."""
+    plus the company pages those stories appear on; each in English, then at its /zh address."""
     stories = db.execute(
         select(Cluster.id, Cluster.slug, Cluster.headline, Cluster.representative_title).where(
             Cluster.summarized_at.is_not(None),
@@ -55,7 +55,10 @@ def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SIT
     urls += [f"{site}/story/{story_slug(s)}" for s in stories]
     topics = dict.fromkeys(e.slug for s in stories for e in entities_in(s.representative_title or ""))
     urls += [f"{site}/topics/{topic}" for topic in topics]
-    return list(dict.fromkeys(urls))
+    english = list(dict.fromkeys(urls))
+    # Every page has a Chinese twin under /zh (the frontend's app/[lang]); search engines get both
+    chinese = [f"{site}/zh" if u == f"{site}/" else f"{site}/zh{u[len(site):]}" for u in english]
+    return english + chinese
 
 
 def submit(
