@@ -52,6 +52,8 @@ export function buildLlmsTxt(digest: ApiDigest | null): string {
     "",
     "## Optional",
     "",
+    `- [Full text](${SITE_URL}/llms-full.txt): the 50 newest stories in full`,
+    `- Any story as markdown: its address plus ".md", e.g. ${SITE_URL}/story/<slug>.md`,
     `- [RSS feed](${SITE_URL}/feed.xml): the 50 newest stories with summaries and sources`,
     `- [Sitemap](${SITE_URL}/sitemap.xml): every story page with its last update`,
     `- [News sitemap](${SITE_URL}/news-sitemap.xml): stories from the last 48 hours`,
