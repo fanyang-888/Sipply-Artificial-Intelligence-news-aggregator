@@ -18,6 +18,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.cluster import Cluster
+from app.models.story_redirect import StoryRedirect
 from app.services.entities import entities_in
 from app.services.headlines import story_slug
 
@@ -40,8 +41,9 @@ def _week_key(when: datetime) -> str:
 
 def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SITE_URL) -> list[str]:
     """The hub pages, this week's recap and today's page, and every story page that is new or
-    changed since ``since`` (summarized, or given new articles once summarized),
-    plus the company pages those stories appear on; each in English, then at its /zh address."""
+    changed since ``since`` (summarized, or given new articles once summarized), the old
+    address of each story merged into another since then, plus the company pages those
+    stories appear on; each in English, then at its /zh address."""
     stories = db.execute(
         select(Cluster.id, Cluster.slug, Cluster.headline, Cluster.representative_title).where(
             Cluster.summarized_at.is_not(None),
@@ -53,6 +55,13 @@ def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SIT
     urls.append(f"{site}/daily/{now.astimezone(timezone.utc).date().isoformat()}")
     # Each story at its permanent address (/cluster/<id> only redirects there)
     urls += [f"{site}/story/{story_slug(s)}" for s in stories]
+    # A story merged into another this run: its old address now redirects, so engines drop the duplicate
+    urls += [
+        f"{site}/story/{slug}"
+        for slug in db.execute(
+            select(StoryRedirect.old_slug).where(StoryRedirect.old_slug.is_not(None), StoryRedirect.created_at >= since)
+        ).scalars()
+    ]
     topics = dict.fromkeys(e.slug for s in stories for e in entities_in(s.representative_title or ""))
     urls += [f"{site}/topics/{topic}" for topic in topics]
     english = list(dict.fromkeys(urls))

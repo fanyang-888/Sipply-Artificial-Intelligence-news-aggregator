@@ -51,10 +51,12 @@ def _answer_checks_enabled() -> bool:
     return os.getenv("ANSWER_CHECKS_ENABLED", "").strip().lower() in {"1", "true", "yes"}
 
 
-# Trend Radar stages depend on third-party APIs; their failure is recorded in
+# Trend Radar stages and the duplicate-story merge depend on third-party APIs and
+# only improve what the news stages made; their failure is recorded in
 # stage_results but doesn't mark the news pipeline as failed.
 _BEST_EFFORT_STAGES = frozenset(
     {
+        "merge_duplicate_stories",
         "ingest_signals",
         "build_signal_topics",
         "merge_signal_topics",
@@ -267,6 +269,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         cluster_articles,
         update_cluster_status,
         dedup_clusters,
+        merge_duplicate_stories,
         summarize,
         translate_clusters,
         backfill_headlines,
@@ -286,6 +289,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         ("cluster_articles",      lambda: cluster_articles.main([])),
         ("update_cluster_status", lambda: update_cluster_status.main([])),
         ("dedup_clusters",        lambda: dedup_clusters.main([])),
+        ("merge_duplicate_stories", lambda: merge_duplicate_stories.main([])),
         ("summarize",             lambda: summarize.main([])),
         ("translate_clusters",    lambda: translate_clusters.main(["--batch-size", "50"])),
         ("backfill_headlines",    lambda: backfill_headlines.main(["--limit", "40"])),

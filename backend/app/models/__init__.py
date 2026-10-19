@@ -6,6 +6,7 @@ from app.models.ingest_url_state import IngestUrlState
 from app.models.pipeline_run import PipelineRun
 from app.models.signal import Signal, SignalTopic
 from app.models.source import Source
+from app.models.story_redirect import StoryRedirect
 
 __all__ = [
     "AnswerCheck",
@@ -17,4 +18,5 @@ __all__ = [
     "Signal",
     "SignalTopic",
     "Source",
+    "StoryRedirect",
 ]

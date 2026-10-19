@@ -14,6 +14,7 @@ from app.api.schemas import ClusterResponse, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
 from app.models.cluster import Cluster
+from app.models.story_redirect import StoryRedirect
 from app.services.discussions import story_discussions
 from app.services.headlines import story_slug
 from app.services.related import related_cluster_ids
@@ -32,8 +33,18 @@ def _load_cluster(db: Session, cluster_id: uuid.UUID) -> Cluster:
         .where(Cluster.id == cluster_id)
     ).scalar_one_or_none()
     if cluster is None:
+        # Merged into another story (app/services/story_merge.py): answer with that one
+        redirect = db.get(StoryRedirect, cluster_id)
+        cluster = _with_articles(db, redirect.cluster_id) if redirect else None
+    if cluster is None:
         raise HTTPException(status_code=404, detail="Cluster not found")
     return cluster
+
+
+def _with_articles(db: Session, cluster_id: uuid.UUID) -> Cluster | None:
+    return db.execute(
+        select(Cluster).options(selectinload(Cluster.articles)).where(Cluster.id == cluster_id)
+    ).scalar_one_or_none()
 
 
 @router.get("", response_model=list[ClusterResponse])
@@ -99,10 +110,14 @@ _SLUG_ID = re.compile(r"-([0-9a-f]{8,12})$")
 
 def _by_slug(db: Session, slug: str) -> Cluster | None:
     """The story with this slug; failing that, the one whose id starts with the slug's
-    trailing hex (old or mistyped words), preferring an exact slug among several."""
+    trailing hex (old or mistyped words), preferring an exact slug among several; failing
+    that, the story a merged one became (by its old slug, then its old id)."""
     exact = db.execute(select(Cluster).options(selectinload(Cluster.articles)).where(Cluster.slug == slug)).scalar_one_or_none()
     if exact is not None:
         return exact
+    merged = db.execute(select(StoryRedirect.cluster_id).where(StoryRedirect.old_slug == slug)).scalar_one_or_none()
+    if merged is not None:
+        return _with_articles(db, merged)
     m = _SLUG_ID.search(slug)
     if not m:
         return None
@@ -111,7 +126,12 @@ def _by_slug(db: Session, slug: str) -> Cluster | None:
     found = db.execute(
         select(Cluster).options(selectinload(Cluster.articles)).where(cast(Cluster.id, String).like(f"{prefix}%")).order_by(Cluster.first_seen_at)
     ).scalars().all()
-    return next((c for c in found if story_slug(c) == slug), found[0] if found else None)
+    if found:
+        return next((c for c in found if story_slug(c) == slug), found[0])
+    merged = db.execute(
+        select(StoryRedirect.cluster_id).where(cast(StoryRedirect.old_id, String).like(f"{prefix}%")).limit(1)
+    ).scalar_one_or_none()
+    return _with_articles(db, merged) if merged is not None else None
 
 
 def _story_response(db: Session, cluster: Cluster) -> ClusterResponse:

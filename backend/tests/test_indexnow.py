@@ -83,3 +83,27 @@ def test_a_runs_urls_are_its_new_or_updated_stories_their_company_pages_and_the_
     # Every page also at its Chinese address (/zh, /zh/story/…)
     chinese = [u for u in urls if u.startswith(f"{site}/zh")]
     assert chinese == [f"{site}/zh" if u == f"{site}/" else u.replace(site, f"{site}/zh", 1) for u in english]
+
+
+def test_a_story_merged_this_run_is_submitted_at_its_old_address(db, make_cluster):
+    import uuid
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.story_redirect import StoryRedirect
+
+    now = datetime(2026, 10, 16, 8, 5, tzinfo=timezone.utc)
+    since = now - timedelta(hours=6)
+    kept = make_cluster(title="Meta drops its scraping terms", summarized_at=now - timedelta(days=2), last_seen_at=now - timedelta(days=2))
+    db.add_all([
+        StoryRedirect(old_id=uuid.uuid4(), old_slug="meta-removes-language-11111111", cluster_id=kept.id, created_at=now - timedelta(hours=1)),
+        StoryRedirect(old_id=uuid.uuid4(), old_slug=None, cluster_id=kept.id, created_at=now - timedelta(hours=1)),
+        StoryRedirect(old_id=uuid.uuid4(), old_slug="merged-long-ago-22222222", cluster_id=kept.id, created_at=now - timedelta(days=3)),
+    ])
+    db.flush()
+
+    urls = indexnow.changed_urls(db, since=since, now=now)
+    site = "https://www.sipply.dev"
+    # So search engines recrawl it, follow the redirect and drop the duplicate
+    assert f"{site}/story/meta-removes-language-11111111" in urls
+    assert f"{site}/zh/story/meta-removes-language-11111111" in urls
+    assert not any("merged-long-ago" in u for u in urls)

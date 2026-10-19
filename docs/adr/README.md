@@ -16,3 +16,4 @@ Short records of decisions that shaped Sipply: the context, what was decided, an
 | [10](0010-radar-page-weight-accepted.md) | Keep the radar page's weight for now |
 | [11](0011-visible-without-javascript.md) | A page is visible as soon as its HTML arrives (its language gate is replaced by ADR 12) |
 | [12](0012-a-url-per-language.md) | Each language has its own URL: English at the root, Chinese under /zh, both rendered on the server |
+| [13](0013-merge-duplicate-stories.md) | One event, one story: duplicates are merged by a model judge, and old addresses redirect |
