@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 328 backend · 79 frontend · 137 smoke checks of the built site, all in CI |
+| **Tests** | 328 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -186,7 +186,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 
 - **Content in the HTML.** The home page, story pages, archive, topics, weekly recaps and the radar ship their full text in the server HTML; a reader's personalization re-ranks on the client.
 - **Structured data.** `NewsArticle` JSON-LD on story pages with the original sources, `ItemList` on the home page, `CollectionPage` and `BreadcrumbList` on the hubs.
-- **Machine entry points.** `/sitemap.xml` (every story, rendered per request), `/news-sitemap.xml` (a Google News sitemap of the last 48 hours), `/feed.xml` (RSS of the 50 newest stories, linked from every page), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed) and `/llms.txt`.
+- **Machine entry points.** `/sitemap.xml` (every story, rendered per request), `/news-sitemap.xml` (a Google News sitemap of the last 48 hours), `/feed.xml` (RSS of the 50 newest stories, linked from every page), `/robots.txt` (AI crawlers explicitly allowed, `/admin` and `/api/` disallowed), `/llms.txt` and `/llms-full.txt` (the 50 newest stories in full). Every story also has a markdown copy at its address plus `.md` (English then Chinese), declared in its `<head>` with `rel="alternate" type="text/markdown"`.
 - **Chinese at its own address.** Every page has a server-rendered Chinese twin under `/zh` (`/zh/story/…`, `/zh/radar`, …) with `<html lang="zh-CN">`, Chinese titles and structured data; each page names the other with `hreflang`, and both are in the sitemap. Before this, crawlers saw two Chinese characters on the home page ([ADR 12](docs/adr/0012-a-url-per-language.md)).
 - **A page per day.** `/daily/2026-10-18` lists every story that first appeared that day, news first; its title reads "AI news today, October 18, 2026" on the day and "AI news, …" after. AI search cites dated round-ups like this for "AI news today" questions (audit of 2026-10-18).
 - **Metadata for crawlers that don't run JavaScript.** `htmlLimitedBots` includes GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot, so they get the `<head>` metadata in the HTML.
@@ -204,7 +204,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 328 pytest tests; typecheck, lint with zero warnings, 79 vitest tests; a production build read by the 137-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 328 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Twelve [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 

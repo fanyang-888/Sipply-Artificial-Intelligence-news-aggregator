@@ -87,6 +87,9 @@ async function main() {
     check("story has a headline", /<h1[^>]*>\s*\S/.test(html));
     check("story og:image", Boolean(meta(html, "og:image")));
     check("story article:published_time", Boolean(meta(html, "article:published_time")));
+    const md = await get(`${story}.md`);
+    check("story's markdown copy", md.status === 200 && md.body.startsWith("# ") && md.body.includes("## Sources"), `${md.status}`);
+    check("story page links its markdown copy", html.includes(`type="text/markdown" href="https://www.sipply.dev${story}.md"`));
     const og = await get(`${story}/opengraph-image`);
     check("story share image is a PNG", og.status === 200 && og.type.startsWith("image/png"), `${og.status} ${og.type}`);
   } else {
@@ -159,6 +162,9 @@ async function main() {
   const robots = await get("/robots.txt");
   check("robots.txt points to the sitemap", robots.status === 200 && robots.body.includes("Sitemap:"));
   check("robots.txt points to the news sitemap", robots.body.includes("/news-sitemap.xml"));
+
+  const full = await get("/llms-full.txt");
+  check("llms-full.txt has the newest stories in full", full.status === 200 && full.body.startsWith("# Sipply") && (full.body.match(/^## /gm) || []).length >= 10);
 
   const llms = await get("/llms.txt");
   check("llms.txt starts with the site name", llms.status === 200 && llms.body.startsWith("# Sipply"));

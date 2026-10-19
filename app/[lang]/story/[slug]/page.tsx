@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const zh = lang === "zh";
     const title = (zh && data.title?.zh) || data.title?.en || "";
     const description = ((zh && data.summary?.zh) || data.summary?.en || "").slice(0, 160);
-    const alternates = pageAlternates(storyPath(data), lang);
+    // Canonical, both languages, and the markdown copy for machines (/story/<slug>.md)
+    const alternates = { ...pageAlternates(storyPath(data), lang), types: { "text/markdown": `${storyPath(data)}.md` } };
     return {
       title,
       description,
