@@ -42,9 +42,11 @@ export function formatDay(key: string, lang: Lang, { weekday = true }: { weekday
  * The page title search engines and AI assistants see: "AI news today, …" only on
  * the day itself, so an older page never claims to be today's.
  */
-export function dayTitle(key: string, storyCount: number, now: Date = new Date()): string {
-  const date = formatDay(key, "en", { weekday: false });
-  const lead = key === utcDayKey(now) ? `AI news today, ${date}` : `AI news, ${date}`;
+export function dayTitle(key: string, storyCount: number, now: Date = new Date(), lang: Lang = "en"): string {
+  const today = key === utcDayKey(now);
+  const date = formatDay(key, lang, { weekday: false });
+  if (lang === "zh") return `${today ? `今日 AI 新闻（${date}）` : `${date} AI 新闻`}：${storyCount} 篇报道`;
+  const lead = today ? `AI news today, ${date}` : `AI news, ${date}`;
   return `${lead}: ${storyCount} ${storyCount === 1 ? "story" : "stories"}`;
 }
 

@@ -4,17 +4,16 @@ import type { ApiDaySummary } from "@/lib/api/types";
 import { formatDay, utcDayKey } from "@/lib/utils/days";
 import { DaysIndex } from "@/components/hubs/hub-pages";
 import { JsonLd } from "@/components/shared/json-ld";
+import { asLang, sectionCopy, sectionMetadata } from "@/lib/seo/copy";
 import { pageListJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 300;
 
-const DESCRIPTION = "Every AI story Sipply covered, one page per day: what happened first, then papers and newsletters.";
+type Props = { params: Promise<{ lang: string }> };
 
-export const metadata: Metadata = {
-  title: "AI news by day",
-  description: DESCRIPTION,
-  alternates: { canonical: "/daily" },
-};
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return sectionMetadata("daily", "/daily", asLang((await params).lang));
+}
 
 async function load(): Promise<ApiDaySummary[] | null> {
   try {
@@ -25,17 +24,23 @@ async function load(): Promise<ApiDaySummary[] | null> {
   }
 }
 
-export default async function DailyPage() {
+export default async function DailyPage({ params }: Props) {
+  const lang = asLang((await params).lang);
+  const copy = sectionCopy("daily", lang);
   const days = await load();
   return (
     <>
       {days ? (
         <JsonLd
           data={pageListJsonLd({
-            name: "AI news by day",
-            description: DESCRIPTION,
+            name: copy.title,
+            description: copy.description,
+            lang,
             path: "/daily",
-            items: days.map((d) => ({ name: `AI news, ${formatDay(d.date, "en", { weekday: false })}`, path: `/daily/${d.date}` })),
+            items: days.map((d) => ({
+              name: lang === "zh" ? `${formatDay(d.date, "zh", { weekday: false })} AI 新闻` : `AI news, ${formatDay(d.date, "en", { weekday: false })}`,
+              path: `/daily/${d.date}`,
+            })),
           })}
         />
       ) : null}

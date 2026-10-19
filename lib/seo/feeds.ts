@@ -5,7 +5,8 @@
  */
 
 import type { ApiFeedItem } from "@/lib/api/types";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, storyUrl } from "@/lib/seo/site";
+import { localePath } from "@/lib/i18n/routing";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL, storyPath, storyUrl } from "@/lib/seo/site";
 
 /** Google News sitemaps list articles published in the last two days. */
 const NEWS_WINDOW_MS = 48 * 3_600_000;
@@ -66,21 +67,25 @@ export function buildRss(items: ApiFeedItem[], now: Date = new Date()): string {
 
 export function buildNewsSitemap(items: ApiFeedItem[], now: Date = new Date()): string {
   const recent = items.filter((s) => s.publishedAt && now.getTime() - new Date(s.publishedAt).getTime() <= NEWS_WINDOW_MS);
-  const urls = recent.map((s) =>
+  const entry = (loc: string, language: string, title: string, published: string) =>
     [
       "  <url>",
-      `    <loc>${storyUrl(s)}</loc>`,
+      `    <loc>${loc}</loc>`,
       "    <news:news>",
       "      <news:publication>",
       `        <news:name>${xml(SITE_NAME)}</news:name>`,
-      "        <news:language>en</news:language>",
+      `        <news:language>${language}</news:language>`,
       "      </news:publication>",
-      `      <news:publication_date>${new Date(s.publishedAt as string).toISOString()}</news:publication_date>`,
-      `      <news:title>${xml(flat(s.title))}</news:title>`,
+      `      <news:publication_date>${new Date(published).toISOString()}</news:publication_date>`,
+      `      <news:title>${xml(flat(title))}</news:title>`,
       "    </news:news>",
       "  </url>",
-    ].join("\n"),
-  );
+    ].join("\n");
+  // Each story in English, and its Chinese page (/zh/…) when it has a Chinese title
+  const urls = recent.flatMap((s) => [
+    entry(storyUrl(s), "en", s.title, s.publishedAt as string),
+    ...(s.titleZh ? [entry(`${SITE_URL}${localePath(storyPath(s), "zh")}`, "zh-cn", s.titleZh, s.publishedAt as string)] : []),
+  ]);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">',

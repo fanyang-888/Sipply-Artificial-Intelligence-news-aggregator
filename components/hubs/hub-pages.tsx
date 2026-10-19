@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import type { ApiDayDetail, ApiDaySummary, ApiTopicDetail, ApiTopicSummary, ApiWeekDetail, ApiWeekSummary } from "@/lib/api/types";
 import { topicGroupByKey, topicGroupLabel } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";

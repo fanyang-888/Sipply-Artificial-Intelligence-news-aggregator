@@ -9,31 +9,37 @@ import { JsonLd } from "@/components/shared/json-ld";
 import { getCluster, getClusterBySlug, getDigest, isBuildPhase, isMissing } from "@/lib/api/server";
 import type { ApiCluster } from "@/lib/api/types";
 import { breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo/json-ld";
+import type { Lang } from "@/lib/i18n";
+import { localePath, pageAlternates } from "@/lib/i18n/routing";
+import { asLang, sectionCopy } from "@/lib/seo/copy";
 import { storyPath } from "@/lib/seo/site";
 import { positionInDigest, type TodayPosition } from "@/lib/utils/today-position";
 import { ClusterPageClient } from "./cluster-page-client";
 
 type Props = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ lang: string; slug: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, lang: raw } = await params;
+  const lang = asLang(raw);
   try {
     const data = await getClusterBySlug(slug);
-    const title = data.title?.en ?? "";
-    const description = (data.summary?.en ?? "").slice(0, 160);
-    const path = storyPath(data);
+    const zh = lang === "zh";
+    const title = (zh && data.title?.zh) || data.title?.en || "";
+    const description = ((zh && data.summary?.zh) || data.summary?.en || "").slice(0, 160);
+    const alternates = pageAlternates(storyPath(data), lang);
     return {
       title,
       description,
-      alternates: { canonical: path },
+      alternates,
       openGraph: {
         type: "article",
         siteName: "Sipply",
+        locale: zh ? "zh_CN" : "en_US",
         title,
         description,
-        url: path,
+        url: alternates.canonical,
         publishedTime: data.firstSeenAt ?? undefined,
         modifiedTime: data.lastSeenAt ?? undefined,
         section: data.topicTag ?? undefined,
@@ -60,7 +66,7 @@ async function todayPosition(id: string): Promise<TodayPosition | null> {
 
 type LoadedStory = { cluster: ApiCluster; related: ApiCluster[]; today: TodayPosition | null };
 
-async function loadStory(slug: string): Promise<LoadedStory | null> {
+async function loadStory(slug: string, lang: Lang): Promise<LoadedStory | null> {
   let cluster: ApiCluster;
   try {
     cluster = await getClusterBySlug(slug);
@@ -72,7 +78,7 @@ async function loadStory(slug: string): Promise<LoadedStory | null> {
     throw err;
   }
   // Old or mistyped words for a real story: send them to its one address
-  if (cluster.slug && cluster.slug !== slug) permanentRedirect(storyPath(cluster));
+  if (cluster.slug && cluster.slug !== slug) permanentRedirect(localePath(storyPath(cluster), lang));
   const [related, today] = await Promise.all([
     Promise.all(cluster.relatedClusterIds.map((rid) => getCluster(rid).catch(() => null))),
     todayPosition(cluster.id),
@@ -81,18 +87,22 @@ async function loadStory(slug: string): Promise<LoadedStory | null> {
 }
 
 export default async function StoryPage({ params }: Props) {
-  const { slug } = await params;
-  const story = await loadStory(slug);
+  const { slug, lang: raw } = await params;
+  const lang = asLang(raw);
+  const story = await loadStory(slug, lang);
   return (
     <>
-      {story ? <JsonLd data={newsArticleJsonLd(story.cluster)} /> : null}
+      {story ? <JsonLd data={newsArticleJsonLd(story.cluster, lang)} /> : null}
       {story ? (
         <JsonLd
-          data={breadcrumbJsonLd([
-            { name: "Sipply", path: "/" },
-            { name: "Archive", path: "/archive" },
-            { name: story.cluster.title.en, path: storyPath(story.cluster) },
-          ])}
+          data={breadcrumbJsonLd(
+            [
+              { name: "Sipply", path: "/" },
+              { name: sectionCopy("archive", lang).title, path: "/archive" },
+              { name: (lang === "zh" && story.cluster.title.zh) || story.cluster.title.en, path: storyPath(story.cluster) },
+            ],
+            lang,
+          )}
         />
       ) : null}
       <ClusterPageClient key={slug} slug={slug} initial={story} />

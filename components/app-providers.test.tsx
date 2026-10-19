@@ -5,7 +5,7 @@ import { AppProviders } from "./app-providers";
 describe("AppProviders", () => {
   it("keeps the page visible in the server HTML, so it shows before scripts run and without them", () => {
     const html = renderToString(
-      <AppProviders>
+      <AppProviders lang="en">
         <main>Today in AI</main>
       </AppProviders>,
     );

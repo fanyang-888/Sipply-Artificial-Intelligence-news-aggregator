@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { SourceLink } from "@/components/digest/source-link";
 import { ageLabel } from "@/components/radar/radar-bits";
 import { RoleSwitch } from "@/components/home/role-switch";

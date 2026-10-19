@@ -1,83 +1,45 @@
 "use client";
 
-import {
-  createContext,
-  startTransition,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import type { Lang, Translations } from "./types";
 import { en } from "./en";
 import { zh } from "./zh";
+import { isLocalizable, localePath, splitLocale } from "./routing";
 
-const STORAGE_KEY = "pai-lang";
-
-function isLang(v: string | null): v is Lang {
-  return v === "en" || v === "zh";
-}
+/** The reader's chosen language. On an English page, the inline script in the root layout
+ * sends a reader who chose Chinese to the /zh address before the first paint. */
+export const LANG_STORAGE_KEY = "pai-lang";
 
 type I18nContextValue = {
+  /** The page's language: it comes from the URL (/zh/… is Chinese), so the server renders it. */
   lang: Lang;
+  /** Remember ``next`` and open this page in it. */
   setLang: (lang: Lang) => void;
   t: Translations;
-  /** True after the saved language has been read on the client. */
-  i18nReady: boolean;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    let saved: Lang | null = null;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (isLang(raw)) saved = raw;
-    } catch {
-      /* ignore */
-    }
-    // A transition, so React finishes hydrating the page first. An ordinary update here
-    // reaches every page through this context while the page's Suspense boundary may still be
-    // hydrating; React then drops the server HTML, shows the loading skeleton and renders the
-    // page again on the client (a ~300 ms flash, layout shift up to 0.75).
-    startTransition(() => {
-      if (saved) setLangState(saved);
-      setHydrated(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, lang);
-    } catch {
-      /* ignore */
-    }
-    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    // The page now renders in the saved language: show it (see the root layout's inline script)
-    document.documentElement.removeAttribute("data-lang-gate");
-  }, [lang, hydrated]);
-
-  const setLang = useCallback((next: Lang) => {
-    setLangState(next);
-  }, []);
-
-  const t = useMemo(() => (lang === "zh" ? zh : en), [lang]);
-
-  const value = useMemo(
-    () => ({ lang, setLang, t, i18nReady: hydrated }),
-    [lang, setLang, t, hydrated],
+export function I18nProvider({ lang, children }: { lang: Lang; children: ReactNode }) {
+  const setLang = useCallback(
+    (next: Lang) => {
+      try {
+        localStorage.setItem(LANG_STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      if (next === lang) return;
+      const { path } = splitLocale(window.location.pathname);
+      // A full load: the other language has its own <html lang>, title and metadata
+      const target = isLocalizable(path) ? localePath(path, next) : path;
+      window.location.assign(`${target}${window.location.search}${window.location.hash}`);
+    },
+    [lang],
   );
 
-  return (
-    <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
-  );
+  const value = useMemo(() => ({ lang, setLang, t: lang === "zh" ? zh : en }), [lang, setLang]);
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n(): I18nContextValue {

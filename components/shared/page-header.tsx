@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import type { ReactNode } from "react";
 import { uiMicroLabel, uiPageDescription, uiPageTitle } from "@/lib/ui/classes";
 

@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/shared/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchSearch } from "@/lib/api";
 import { apiRowToArchiveRow, type ArchiveResultRow } from "@/lib/mappers/archive";
@@ -15,6 +15,7 @@ import { ARCHIVE_PAGE_SIZE, archiveHref, parseArchiveQuery } from "@/lib/utils/a
 import type { ApiSearchResponse } from "@/lib/api/types";
 import { topicTagsForGroup } from "@/lib/constants/topic-groups";
 import { useI18n } from "@/lib/i18n";
+import { localePath } from "@/lib/i18n/routing";
 import { ArchiveTimelineRow } from "@/components/archive/archive-timeline-row";
 import { ArchiveThemeSuggestions } from "@/components/archive/archive-theme-suggestions";
 import { ArchiveToolbar } from "@/components/archive/archive-toolbar";
@@ -204,12 +205,12 @@ export function ArchivePageClient({ initial }: ArchivePageClientProps) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const { topic: tp } = latestFiltersRef.current;
-      router.replace(archiveHref({ q: nextQ, topic: tp }));
+      router.replace(localePath(archiveHref({ q: nextQ, topic: tp }), lang));
     }, KEYWORD_URL_DEBOUNCE_MS);
-  }, [router]);
+  }, [router, lang]);
 
   function handleKeywordChange(value: string) { setKeyword(value); scheduleKeywordUrlSync(value); }
-  function handleTopicChange(k: string) { if (debounceRef.current) clearTimeout(debounceRef.current); setTopic(k); router.replace(archiveHref({ q: keyword, topic: k })); }
+  function handleTopicChange(k: string) { if (debounceRef.current) clearTimeout(debounceRef.current); setTopic(k); router.replace(localePath(archiveHref({ q: keyword, topic: k }), lang)); }
 
   const hasActiveFilters = Boolean(keyword.trim() || topic);
   const showNoResults = rows.length === 0 && hasActiveFilters && !loading && initialLoaded;

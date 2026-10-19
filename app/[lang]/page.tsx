@@ -6,18 +6,21 @@ import { JsonLd } from "@/components/shared/json-ld";
 import { fetchRadar } from "@/lib/api";
 import { getDigest, getLastPipelineRunAt, getWeeks } from "@/lib/api/server";
 import type { ApiDigest, ApiRadar } from "@/lib/api/types";
+import { pageAlternates } from "@/lib/i18n/routing";
+import { asLang, siteCopy } from "@/lib/seo/copy";
 import { digestItemListJsonLd } from "@/lib/seo/json-ld";
-import { SITE_DESCRIPTION } from "@/lib/seo/site";
 import { radarOrder, withRadarDefaults } from "@/lib/utils/radar";
-import { HomePageClient } from "@/app/home-page-client";
+import { HomePageClient } from "@/app/[lang]/home-page-client";
 
 // The pipeline runs 4× a day; re-render at most every 5 minutes
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  description: SITE_DESCRIPTION,
-  alternates: { canonical: "/" },
-};
+type Props = { params: Promise<{ lang: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const lang = asLang((await params).lang);
+  return { description: siteCopy(lang).description, alternates: pageAlternates("/", lang) };
+}
 
 /** Radar topics the home page previews (panel 03). */
 const RADAR_PREVIEW = 3;
@@ -39,7 +42,8 @@ async function loadRadar(): Promise<ApiRadar | null> {
   }
 }
 
-export default async function HomePage() {
+export default async function HomePage({ params }: Props) {
+  const lang = asLang((await params).lang);
   const [digest, pipelineUpdatedAt, radar, weeks] = await Promise.all([
     loadDigest(),
     // Only for the "Updated" line, which is hidden when this fails
@@ -57,7 +61,7 @@ export default async function HomePage() {
     .map((s) => s.label);
   return (
     <>
-      {digest ? <JsonLd data={digestItemListJsonLd(digest)} /> : null}
+      {digest ? <JsonLd data={digestItemListJsonLd(digest, lang)} /> : null}
       <HomePageClient
         initialDigest={digest}
         pipelineUpdatedAt={pipelineUpdatedAt}
