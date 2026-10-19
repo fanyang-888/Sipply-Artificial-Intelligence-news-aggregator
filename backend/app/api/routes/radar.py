@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
@@ -146,7 +146,10 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
 
     topics = list(
         db.execute(
-            select(SignalTopic).order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc()).limit(limit)
+            select(SignalTopic)
+            .where(SignalTopic.newsworthy.is_not(False))  # NULL: not judged yet, shown
+            .order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
+            .limit(limit)
         ).scalars().all()
     )
     members: dict[Any, list[Signal]] = defaultdict(list)
@@ -225,12 +228,14 @@ def build_radar(db: Session, *, limit: int, now: datetime | None = None) -> dict
         func.coalesce(Signal.points, 0) + func.coalesce(Signal.num_comments, 0) + func.coalesce(Signal.like_count, 0)
     )
     asking_kinds = [k for fam in sorted(ASKING_FAMILIES) for k in kinds_for_family(fam)]
+    not_news = select(SignalTopic.id).where(SignalTopic.newsworthy.is_(False))
     candidates = db.execute(
         select(Signal)
         .where(
             Signal.is_question.is_(True),
             Signal.source_kind.in_(asking_kinds),
             Signal.published_at >= window_start,
+            or_(Signal.topic_id.is_(None), Signal.topic_id.not_in(not_news)),
         )
         .order_by(engagement_sql.desc(), Signal.published_at.desc())
         .limit(QUESTION_CANDIDATES)
@@ -377,7 +382,11 @@ def build_gaps(db: Session) -> dict[str, Any]:
         select(SignalTopic).order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
     ).scalars().all()
     checked = [
-        t for t in topics if t.described_at is not None and evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2
+        t
+        for t in topics
+        if t.described_at is not None
+        and t.newsworthy is not False
+        and evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2
     ]
     gaps = [t for t in checked if t.covered_cluster_id is None]
     members: dict[Any, list[Signal]] = defaultdict(list)

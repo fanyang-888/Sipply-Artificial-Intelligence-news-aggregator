@@ -361,6 +361,7 @@ def test_build_topics_carries_descriptions_to_the_matching_topic(db):
     story_id = uuid.uuid4()
     openai.summary_en, openai.summary_zh = "OpenAI fired three safety researchers.", "OpenAI 解雇了三名安全研究员。"
     openai.covered_cluster_id, openai.described_signal_count, openai.described_at = story_id, 2, NOW
+    openai.newsworthy = True
     db.flush()
     old_id = openai.id
 
@@ -372,10 +373,10 @@ def test_build_topics_carries_descriptions_to_the_matching_topic(db):
     rows = {t.label[:6]: t for t in db.execute(select(SignalTopic)).scalars()}
     kept = rows["OpenAI"]
     assert kept.id != old_id and kept.signal_count == 3
-    assert (kept.summary_zh, kept.covered_cluster_id, kept.described_signal_count) == (
-        "OpenAI 解雇了三名安全研究员。", story_id, 2,
+    assert (kept.summary_zh, kept.covered_cluster_id, kept.described_signal_count, kept.newsworthy) == (
+        "OpenAI 解雇了三名安全研究员。", story_id, 2, True,
     )
-    assert rows["Gemini"].described_at is None and rows["Gemini"].summary_en is None
+    assert rows["Gemini"].described_at is None and rows["Gemini"].newsworthy is None
 
 
 def test_run_ingest_end_to_end_with_mocked_sources(db):

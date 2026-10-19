@@ -14,12 +14,14 @@ NOW = datetime(2026, 10, 13, 14, 0, tzinfo=timezone.utc)
 
 
 class FakeOpenAI:
-    """Stands in for openai.OpenAI. ``pick(posts, stories)`` returns the story id to answer with."""
+    """Stands in for openai.OpenAI. ``pick(posts, stories)`` returns the story id to answer with;
+    a topic whose first post contains one of ``junk`` is answered as not news."""
 
-    def __init__(self, pick=lambda posts, stories: None, drop_ids=()):
+    def __init__(self, pick=lambda posts, stories: None, drop_ids=(), junk=()):
         self.calls: list[list[dict]] = []
         self.pick = pick
         self.drop_ids = set(drop_ids)
+        self.junk = junk
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
 
     def _create(self, **kw):
@@ -32,6 +34,7 @@ class FakeOpenAI:
                 "summary_zh": f"中文 {t['posts'][0]}",
                 "story": self.pick(t["posts"], t["stories"]),
                 "question": f"What happened with {t['posts'][0]}?",
+                "newsworthy": not any(word in t["posts"][0] for word in self.junk),
             }
             for t in sent
             if t["id"] not in self.drop_ids
@@ -108,11 +111,35 @@ def test_describe_batch_maps_answers_and_only_accepts_own_candidates():
         "summary_zh": "中文 Gemini 4 Argon",
         "story": a,
         "question": "What happened with Gemini 4 Argon?",
+        "newsworthy": True,
     }
     assert results[1]["story"] is None
     assert results[2] is None  # no answer for it
     assert results[3]["story"] is None
     assert (p, c) == (1000, 300)
+
+
+def test_describe_batch_says_whether_a_topic_is_news():
+    fake = FakeOpenAI(junk=("#synthart",))
+    items = [
+        {"posts": ["Orc Carving a Pumpkin #ThOrcsday #synthart"], "stories": []},
+        {"posts": ["Google releases Gemini 4 Argon"], "stories": []},
+    ]
+    results, _, _ = D.describe_batch(fake, items)
+    assert [r["newsworthy"] for r in results] == [False, True]
+
+    # No verdict, or not a yes/no one: not judged, so the topic still shows
+    def create(**kw):
+        rows = [
+            {"id": 0, "summary_en": "a", "summary_zh": "甲"},
+            {"id": 1, "summary_en": "b", "summary_zh": "乙", "newsworthy": "no"},
+        ]
+        content = json.dumps({"topics": rows}, ensure_ascii=False)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))], usage=None)
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    results, _, _ = D.describe_batch(client, items)
+    assert [r["newsworthy"] for r in results] == [None, None]
 
 
 def test_describe_batch_ignores_malformed_rows():
@@ -163,7 +190,7 @@ def seed_topics(db):
     build_topics(db, now=NOW, relevance_fn=lambda title: 50.0)
 
 
-def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
+def test_run_describe_judges_every_public_topic_and_links_the_story(db, make_cluster):
     from sqlalchemy import select
 
     from app.models.signal import SignalTopic
@@ -176,10 +203,11 @@ def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
     )
     make_cluster(title="Meta Muse ages out", last_seen_at=NOW - timedelta(days=20))
 
-    fake = FakeOpenAI(pick=first_story_containing("Muse Wonder"))
+    fake = FakeOpenAI(pick=first_story_containing("Muse Wonder"), junk=("These Claude videos",))
     summary = D.run_describe(db, fake, now=NOW, window_days=14, batch_size=1)
-    assert (summary["pending"], summary["described"], summary["covered"], summary["failed"]) == (2, 2, 1, 0)
-    assert len(fake.calls) == 2 and summary["cost_usd"] > 0
+    assert (summary["pending"], summary["described"], summary["covered"], summary["failed"]) == (3, 3, 1, 0)
+    assert summary["not_news"] == 1
+    assert len(fake.calls) == 3 and summary["cost_usd"] > 0
     # Old stories are not candidates
     sent_titles = [s["title"] for call in fake.calls for t in call for s in t["stories"]]
     sent_about = [s["about"] for call in fake.calls for t in call for s in t["stories"]]
@@ -191,18 +219,41 @@ def test_run_describe_inner_rings_only_and_links_the_story(db, make_cluster):
     assert meta.covered_cluster_id == muse.id and meta.summary_zh.startswith("中文 ")
     assert meta.described_signal_count == 16 and meta.described_at == NOW
     assert meta.question_en.startswith("What happened with Meta launches Muse Wonder")
+    assert meta.newsworthy is True
     assert haiku.described_at == NOW and haiku.covered_cluster_id is None  # checked: Sipply has no story
-    assert videos.described_at is None  # weak signal: not described
+    # A weak signal is on the public radar too, so it is judged; this one is not news
+    assert videos.described_at == NOW and videos.newsworthy is False
 
-    # Next run: the covered topic is left alone, the uncovered one is checked again
+    # Next run: the covered topic and the judged weak signal are left alone,
+    # the uncovered inner topic is checked again (Sipply may have a story by now)
     again = FakeOpenAI()
     assert D.run_describe(db, again, now=NOW, window_days=14)["pending"] == 1
     assert [t["posts"][0] for call in again.calls for t in call] == ["Claude Haiku 5.5 released"]
 
 
+def test_weak_signals_are_described_only_while_on_the_public_radar(db):
+    from sqlalchemy import select
+
+    from app.models.signal import SignalTopic
+
+    seed_topics(db)
+    labels = lambda topics: sorted(t.label[:10] for t in topics)
+    # The public radar shows the top ``public`` topics; inner-ring ones are described wherever they rank
+    assert labels(D.topics_to_describe(db, public=1)) == ["Claude Hai", "Meta launc"]
+    assert labels(D.topics_to_describe(db, public=3)) == ["Claude Hai", "Meta launc", "These Clau"]
+
+    # A topic already judged not news leaves the radar, so the next one moves up into view
+    meta = next(t for t in db.execute(select(SignalTopic)).scalars() if t.label.startswith("Meta"))
+    meta.newsworthy, meta.described_at, meta.question_en = False, NOW, "Q?"
+    meta.covered_cluster_id, meta.described_signal_count = uuid.uuid4(), meta.signal_count
+    db.flush()
+    assert labels(D.topics_to_describe(db, public=2)) == ["Claude Hai", "These Clau"]
+
+
 def test_needs_description_after_growth():
     topic = SimpleNamespace(
-        described_at=NOW, covered_cluster_id=uuid.uuid4(), question_en="Q?", described_signal_count=10, signal_count=14
+        described_at=NOW, covered_cluster_id=uuid.uuid4(), question_en="Q?", newsworthy=True,
+        described_signal_count=10, signal_count=14,
     )
     assert not D.needs_description(topic)
     topic.signal_count = 15
@@ -210,6 +261,12 @@ def test_needs_description_after_growth():
     # Described before questions existed: describe again once to get one
     topic.signal_count, topic.question_en = 14, None
     assert D.needs_description(topic)
+    # Described before the news check existed: once more, to judge it
+    topic.question_en, topic.newsworthy = "Q?", None
+    assert D.needs_description(topic)
+    # No Sipply story: an inner topic is checked again every run, a weak signal is not
+    topic.newsworthy, topic.covered_cluster_id = False, None
+    assert D.needs_description(topic) and not D.needs_description(topic, inner=False)
 
 
 def test_run_describe_stops_at_the_first_api_error(db):
@@ -223,4 +280,4 @@ def test_run_describe_stops_at_the_first_api_error(db):
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=boom)))
     summary = D.run_describe(db, client, now=NOW, window_days=14, batch_size=1)
     assert len(calls) == 1
-    assert summary["described"] == 0 and summary["failed"] == 2
+    assert summary["described"] == 0 and summary["failed"] == 3

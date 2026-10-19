@@ -62,10 +62,10 @@ Return JSON: {"topics": [{"id": ..., "headline_en": ..., "headline_zh": ..., "an
 
 
 def needs_brief(topic: SignalTopic) -> bool:
-    """A described inner-ring topic with no Sipply story, never briefed or grown since."""
+    """A described inner-ring news topic with no Sipply story, never briefed or grown since."""
     if evidence_ring(topic.signal_count, len(topic.source_counts or {})) > 2:
         return False
-    if topic.described_at is None or topic.covered_cluster_id is not None:
+    if topic.described_at is None or topic.covered_cluster_id is not None or topic.newsworthy is False:
         return False
     if topic.brief is None:
         return True

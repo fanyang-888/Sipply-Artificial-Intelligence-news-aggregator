@@ -122,6 +122,8 @@ class SignalTopic(Base):
     covered_cluster_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     # What a reader would ask an AI assistant about this topic (checked by check_ai_answers)
     question_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # False: not news (a meme, AI art, a teaser video…), left off the public radar. None: not judged yet
+    newsworthy: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     described_signal_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     described_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Content brief for a topic Sipply hasn't covered (app.signals.briefs); size it was written at

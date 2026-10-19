@@ -123,6 +123,8 @@ def seed(db, make_cluster):
     ]
     for label, n, sources, score, question, covered in rows:
         db.add(SignalTopic(label=label, signal_count=n, source_counts=sources, score=score, question_en=question, covered_cluster_id=covered))
+    # Not news: no one asks an assistant about it, and it isn't on the radar
+    db.add(SignalTopic(label="Orc carving a pumpkin", signal_count=40, source_counts={"youtube": 30, "bluesky": 10}, score=85.0, question_en="How did the orc carve a pumpkin?", newsworthy=False))
     db.flush()
     return story
 

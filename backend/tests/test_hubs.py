@@ -106,6 +106,7 @@ def stories(db, make_cluster):
     }
     db.add(SignalTopic(label="Claude Haiku 5.5 benchmarks", signal_count=20, source_counts={"hn": 5, "news": 15}, score=70, rising=True))
     db.add(SignalTopic(label="Gemini 4 Argon", signal_count=3, source_counts={"hn": 3}, score=50))
+    db.add(SignalTopic(label="That one friend who asks Claude everything", signal_count=12, source_counts={"youtube": 8, "threads": 4}, score=80, newsworthy=False))
     db.flush()
     return made
 

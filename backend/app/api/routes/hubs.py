@@ -237,7 +237,9 @@ def build_topic(db: Session, slug: str, *, now: datetime) -> dict[str, Any] | No
             signalCount=t.signal_count,
             rising=t.rising,
         )
-        for t in db.execute(select(SignalTopic).order_by(SignalTopic.score.desc())).scalars()
+        for t in db.execute(
+            select(SignalTopic).where(SignalTopic.newsworthy.is_not(False)).order_by(SignalTopic.score.desc())
+        ).scalars()
         if entity.matches(t.label)
     ]
     return TopicDetail(

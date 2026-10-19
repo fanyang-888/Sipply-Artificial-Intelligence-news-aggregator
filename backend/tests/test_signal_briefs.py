@@ -71,7 +71,7 @@ def test_missing_chinese_falls_back_to_english_and_lists_are_capped():
 def topic(**over):
     base = dict(
         signal_count=8, source_counts={"hn": 5, "news": 3}, described_at=NOW, covered_cluster_id=None,
-        brief=None, brief_signal_count=None,
+        brief=None, brief_signal_count=None, newsworthy=True,
     )
     return SimpleNamespace(**{**base, **over})
 
@@ -81,6 +81,7 @@ def test_only_described_gaps_in_the_inner_rings_get_a_brief():
     assert not B.needs_brief(topic(covered_cluster_id=uuid.uuid4()))  # Sipply has a story
     assert not B.needs_brief(topic(described_at=None))  # coverage not checked yet
     assert not B.needs_brief(topic(signal_count=2, source_counts={"youtube": 2}))  # weak signal
+    assert not B.needs_brief(topic(newsworthy=False))  # not news: nothing to write
 
 
 def test_a_briefed_topic_is_briefed_again_only_once_it_grows():
