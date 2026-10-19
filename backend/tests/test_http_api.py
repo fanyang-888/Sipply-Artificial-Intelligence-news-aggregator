@@ -79,6 +79,34 @@ def test_cluster_related_stories_share_a_subject(client, make_cluster):
     assert body["relatedClusterIds"] == [str(near.id)]
 
 
+def test_a_story_uses_the_related_stories_the_pipeline_stored(client, make_cluster, monkeypatch):
+    def live(db, cluster):
+        raise AssertionError("worked out per request")
+
+    monkeypatch.setattr("app.api.routes.clusters.related_cluster_ids", live)
+    near = make_cluster(title="Claude Haiku 5.5 benchmarks: faster and cheaper")
+    story = make_cluster(title="Anthropic launches Claude Haiku 5.5", related_ids=[str(near.id)])
+    story.slug = f"anthropic-launches-claude-haiku-5-5-{story.id.hex[:8]}"
+    assert client.get(f"/api/clusters/{story.id}").json()["relatedClusterIds"] == [str(near.id)]
+    assert client.get(f"/api/clusters/by-slug/{story.slug}").json()["relatedClusterIds"] == [str(near.id)]
+
+
+def test_a_story_is_cached_until_the_next_run(client, make_cluster, monkeypatch):
+    store: dict = {}
+    calls: list[str] = []
+    monkeypatch.setattr("app.api.routes.clusters.cache_get", lambda key: store.get(key))
+    monkeypatch.setattr("app.api.routes.clusters.cache_set", lambda key, value, ttl=300: store.__setitem__(key, value))
+    monkeypatch.setattr("app.api.routes.clusters.related_cluster_ids", lambda db, cluster: calls.append("live") or [])
+    story = make_cluster(title="Anthropic launches Claude Haiku 5.5")
+    story.slug = f"anthropic-launches-claude-haiku-5-5-{story.id.hex[:8]}"
+
+    first = client.get(f"/api/clusters/by-slug/{story.slug}").json()
+    # The English and Chinese pages, and crawlers, ask again: answered from the cache
+    assert client.get(f"/api/clusters/by-slug/{story.slug}").json() == first
+    assert client.get(f"/api/clusters/{story.id}").json() == first
+    assert calls == ["live"] and f"ai_tool:story:{story.id}" in store
+
+
 def test_story_lists_community_discussion_from_the_radar(client, db, make_cluster):
     from datetime import datetime, timedelta, timezone
 
@@ -198,7 +226,7 @@ def test_story_listings_carry_the_slug_and_sipplys_headline(client, make_cluster
 
     for route in ("digest", "clusters", "search"):
         monkeypatch.setattr(f"app.api.routes.{route}.cache_get", lambda key: None, raising=False)
-        monkeypatch.setattr(f"app.api.routes.{route}.cache_set", lambda key, value: None, raising=False)
+        monkeypatch.setattr(f"app.api.routes.{route}.cache_set", lambda key, value, ttl=300: None, raising=False)
     story = make_cluster(title="Some source title", headline="Gemini 4 Argon opens to all developers", summarized_at=datetime.now(timezone.utc))
     unslugged = make_cluster(title="Older story without a stored slug")
 
