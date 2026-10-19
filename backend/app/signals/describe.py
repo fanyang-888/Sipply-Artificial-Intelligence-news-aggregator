@@ -1,8 +1,11 @@
 """Describe Trend Radar topics: a short summary (EN + 中文) and the Sipply story
 that already covers the topic, if there is one.
 
-Only topics in the two inner rings (enough evidence to act on, see
-topics.evidence_ring) are described. For each one, TF-IDF over Sipply's story
+Topics in the two inner rings (enough evidence to act on, see
+topics.evidence_ring) are described wherever they rank; weak signals only while
+the public radar shows them. GPT also says whether a topic is news at all:
+memes, AI art and teaser videos are kept off the public radar (2026-10-18:
+"Orc Carving a Pumpkin #synthart" ranked 14th). For each one, TF-IDF over Sipply's story
 titles and summaries in the radar window picks CANDIDATES_PER_TOPIC candidate
 stories; gpt-4o-mini writes the summary from the topic's post titles and says
 which candidate (if any) is about the same event. On 23 hand-checked topics
@@ -10,9 +13,9 @@ which candidate (if any) is about the same event. On 23 hand-checked topics
 Sipply had covered.
 
 A described topic is skipped on later runs (build_topics carries the
-description over) unless it has grown by REDESCRIBE_GROWTH since, or Sipply
-had no story on it yet — Sipply may have written one since. Normal runs cost
-well under a cent.
+description over) unless it has grown by REDESCRIBE_GROWTH since, or, in the
+inner rings, Sipply had no story on it yet — Sipply may have written one since.
+Normal runs cost well under a cent.
 """
 
 from __future__ import annotations
@@ -35,7 +38,9 @@ logger = logging.getLogger(__name__)
 
 MODEL = "gpt-4o-mini"
 BATCH_SIZE = 8
-MAX_TOPICS_PER_RUN = 30
+MAX_TOPICS_PER_RUN = 40
+# The /radar page shows the top 40 topics (fetchRadar in lib/api/index.ts)
+PUBLIC_TOPICS = 40
 TITLES_PER_TOPIC = 8
 CANDIDATES_PER_TOPIC = 5
 MIN_CANDIDATE_SIMILARITY = 0.02
@@ -58,28 +63,40 @@ For every topic return:
 - "summary_zh": the same in Simplified Chinese (简体中文). Keep names of products, models, companies and people in English.
 - "story": the id of the candidate story that reports the same event or announcement, or null if none does. Use each story's title and "about" text. A story about the same company but a different event is not a match, and neither is a research paper that only shares a keyword. Judge the topic as a whole: if the posts are a mix of unrelated items, a story matching just one of them is not a match.
 - "question": the question a curious reader would type into an AI assistant to learn about this story, in English, at most 15 words, naming the company or product (e.g. "What did Microsoft's president say about AI regulation and milk?").
+- "newsworthy": true if the posts are about something an AI news site would report: a release, announcement, research result, deal, lawsuit, policy, outage, or a notable person's statement. false for memes and jokes, personal anecdotes, AI-generated art or videos, lists of prompts, generic tips and tutorials, and hype videos whose teaser titles name no concrete event. Judge the topic as a whole; when unsure, true.
 
 Input is a JSON list of {"id": ..., "posts": [...], "stories": [{"id": ..., "title": ..., "about": ...}]}.
-Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ..., "question": ...}, ...]} with one entry for every input id."""
+Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ..., "question": ..., "newsworthy": ...}, ...]} with one entry for every input id."""
 
 
-def needs_description(topic: SignalTopic) -> bool:
-    if topic.described_at is None or topic.covered_cluster_id is None or topic.question_en is None:
+def needs_description(topic: SignalTopic, *, inner: bool = True) -> bool:
+    if topic.described_at is None or topic.question_en is None or topic.newsworthy is None:
+        return True
+    # Only for topics Sipply would act on: it may have written a story since
+    if inner and topic.covered_cluster_id is None:
         return True
     described = topic.described_signal_count or 0
     return topic.signal_count >= described * REDESCRIBE_GROWTH
 
 
-def topics_to_describe(db: Session, *, limit: int = MAX_TOPICS_PER_RUN) -> list[SignalTopic]:
-    """Inner- and middle-ring topics that are new, have grown, or had no Sipply story yet; best first."""
+def topics_to_describe(
+    db: Session, *, limit: int = MAX_TOPICS_PER_RUN, public: int = PUBLIC_TOPICS
+) -> list[SignalTopic]:
+    """Topics that are new, have grown, or (inner rings) had no Sipply story yet; best first.
+
+    Inner- and middle-ring topics wherever they rank; weak signals only among the
+    top ``public`` topics the radar shows (not counting ones judged not news), so
+    every topic a reader sees has been judged.
+    """
     topics = db.execute(
         select(SignalTopic).order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
     ).scalars().all()
-    picked = [
-        t
-        for t in topics
-        if evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2 and needs_description(t)
-    ]
+    shown = {t.id for t in [t for t in topics if t.newsworthy is not False][:public]}
+    picked = []
+    for t in topics:
+        inner = evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2
+        if (inner or t.id in shown) and needs_description(t, inner=inner):
+            picked.append(t)
     return picked[:limit]
 
 
@@ -127,8 +144,8 @@ def describe_batch(
     """Describe topics in one request.
 
     ``items``: [{"posts": [title, …], "stories": [(story key, title, opening of its summary), …]}].
-    Returns ({"summary_en", "summary_zh", "story": story key or None, "question": str or None} or None per item,
-    prompt tokens, completion tokens).
+    Returns ({"summary_en", "summary_zh", "story": story key or None, "question": str or None,
+    "newsworthy": bool or None} or None per item, prompt tokens, completion tokens).
     """
     payload = [
         {
@@ -176,6 +193,8 @@ def describe_batch(
             # Anything but one of this topic's own candidate ids counts as "no story"
             "story": keys.get(row.get("story")) if isinstance(row.get("story"), str) else None,
             "question": question.strip()[:QUESTION_MAX_CHARS] if isinstance(question, str) and question.strip() else None,
+            # Only a yes/no answer counts; anything else leaves the topic unjudged (and shown)
+            "newsworthy": row.get("newsworthy") if isinstance(row.get("newsworthy"), bool) else None,
         }
     return out, prompt_tokens, completion_tokens
 
@@ -213,7 +232,7 @@ def run_describe(
         [" ".join([t.label, *titles[t.id]]) for t in topics], [story_text(s) for s in stories]
     )
 
-    described = covered = failed = prompt_tokens = completion_tokens = 0
+    described = covered = not_news = failed = prompt_tokens = completion_tokens = 0
     for start in range(0, len(topics), batch_size):
         batch = topics[start : start + batch_size]
         items = [
@@ -247,10 +266,12 @@ def run_describe(
             topic.summary_zh = result["summary_zh"]
             topic.covered_cluster_id = result["story"]
             topic.question_en = result["question"]
+            topic.newsworthy = result["newsworthy"]
             topic.described_signal_count = topic.signal_count
             topic.described_at = now
             described += 1
             covered += result["story"] is not None
+            not_news += result["newsworthy"] is False
         db.commit()
 
     cost = (prompt_tokens * _PRICE_INPUT + completion_tokens * _PRICE_OUTPUT) / 1_000_000
@@ -258,6 +279,7 @@ def run_describe(
         "pending": len(topics),
         "described": described,
         "covered": covered,
+        "not_news": not_news,
         "failed": failed,
         "stories": len(stories),
         "cost_usd": round(cost, 4),

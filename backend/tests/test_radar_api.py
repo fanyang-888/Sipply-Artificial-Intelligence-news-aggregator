@@ -110,6 +110,34 @@ def test_radar_questions_are_ones_people_asked(client, db):
     }
 
 
+def test_radar_leaves_out_topics_that_are_not_news(client, db, radar_data):
+    from sqlalchemy import select
+
+    openai = next(t for t in db.execute(select(SignalTopic)).scalars() if t.label.startswith("OpenAI"))
+    openai.newsworthy = False
+    db.flush()
+
+    body = client.get("/api/radar", params={"limit": 1}).json()
+    # The next topic takes its place, and the questions asked in it go too
+    assert [t["label"] for t in body["topics"]] == ["Gemini 4 Argon launches"]
+    assert [q["title"] for q in body["questions"]] == ["How do you evaluate coding agents?"]
+    # Signal counts per source still count everything that was collected
+    assert {s["key"]: s["signalCount"] for s in body["sources"]}["hn"] == 6
+
+
+def test_a_topic_that_is_not_news_is_no_gap(client, db, radar_data):
+    from sqlalchemy import select
+
+    from app.auth import get_current_user
+
+    top = db.execute(select(SignalTopic).order_by(SignalTopic.score.desc())).scalars().first()
+    top.described_at, top.newsworthy = datetime.now(timezone.utc), False
+    db.flush()
+    app.dependency_overrides[get_current_user] = lambda: "editor"
+    gaps = client.get("/api/admin/radar/gaps").json()
+    assert gaps["checked"] == 0 and gaps["topics"] == []
+
+
 def test_radar_limit_is_validated(client):
     assert client.get("/api/radar", params={"limit": 0}).status_code == 422
     assert client.get("/api/radar", params={"limit": 61}).status_code == 422

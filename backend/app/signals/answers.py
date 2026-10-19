@@ -122,10 +122,10 @@ def ask(client: Any, question: str) -> dict[str, Any]:
 
 
 def topics_to_check(db: Session, *, limit: int = MAX_CHECKS) -> list[SignalTopic]:
-    """Inner- and middle-ring topics with a question, best first."""
+    """Inner- and middle-ring news topics with a question, best first."""
     topics = db.execute(
         select(SignalTopic)
-        .where(SignalTopic.question_en.is_not(None))
+        .where(SignalTopic.question_en.is_not(None), SignalTopic.newsworthy.is_not(False))
         .order_by(SignalTopic.score.desc(), SignalTopic.engagement.desc())
     ).scalars().all()
     return [t for t in topics if evidence_ring(t.signal_count, len(t.source_counts or {})) <= 2][:limit]

@@ -176,7 +176,7 @@ flowchart LR
 | Recency | 10% | Age of the newest signal |
 | Relevance | 15% | The article relevance model on the topic label |
 
-**On the page.** Rings show evidence: *mainstream* (15+ signals), *picking up* (5–14, or 3+ on two platforms), *weak signal* (the rest). Sectors are the site's categories. Color is momentum: *new* (only in the last 3 days), *rising* (discussed before, now clearly faster), *steady or cooling*. Each topic card has an AI summary in both languages, the score split, a 14-day trend, the platform mix, the top posts, and Sipply's story on the topic when there is one (TF-IDF picks candidates, GPT confirms the match). How the model was chosen: [ADR 4](docs/adr/0004-trend-radar-model.md).
+**On the page.** Rings show evidence: *mainstream* (15+ signals), *picking up* (5–14, or 3+ on two platforms), *weak signal* (the rest). Sectors are the site's categories. Color is momentum: *new* (only in the last 3 days), *rising* (discussed before, now clearly faster), *steady or cooling*. Each topic card has an AI summary in both languages, the score split, a 14-day trend, the platform mix, the top posts, and Sipply's story on the topic when there is one (TF-IDF picks candidates, GPT confirms the match). The same call says whether a topic is news at all; memes, AI art and teaser videos are left off. How the model was chosen: [ADR 4](docs/adr/0004-trend-radar-model.md).
 
 ---
 

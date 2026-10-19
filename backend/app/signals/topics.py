@@ -94,6 +94,7 @@ DESCRIPTION_FIELDS = (
     "summary_en",
     "summary_zh",
     "question_en",
+    "newsworthy",
     "covered_cluster_id",
     "described_signal_count",
     "described_at",
