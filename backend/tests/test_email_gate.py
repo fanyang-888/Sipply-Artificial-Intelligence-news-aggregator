@@ -30,11 +30,12 @@ def run(monkeypatch):
     monkeypatch.setattr(rp, "_finish_run", fake_finish)
     monkeypatch.setattr(rp, "_install_timeout", lambda sec: None)
 
-    def _run(hour: int, triggered_by: str = "cron", force: bool = False):
+    def _run(hour: int, triggered_by: str = "cron", force: bool = False, day: int = 25):
+        # 2026-09-25 is a Friday; day=28 is the next Monday
         class FakeDateTime(datetime):
             @classmethod
             def now(cls, tz=None):
-                return datetime(2026, 9, 25, hour, 0, 30, tzinfo=timezone.utc)
+                return datetime(2026, 9, day, hour, 0, 30, tzinfo=timezone.utc)
 
         monkeypatch.setattr(rp, "datetime", FakeDateTime)
         executed.clear()
@@ -120,11 +121,22 @@ def test_news_stage_failure_still_fails_the_pipeline(run_with_failure):
     assert recorded["_status"] == "failed"
 
 
-def test_ai_answer_check_is_off_unless_enabled(run, monkeypatch):
+def test_ai_answer_check_runs_once_a_week_by_default(run, monkeypatch):
     monkeypatch.delenv("ANSWER_CHECKS_ENABLED", raising=False)
-    _, executed, recorded = run(14)
-    assert "check_ai_answers" not in executed  # paid web searches, switched off by default
-    assert recorded["check_ai_answers"]["status"] == "skipped"
+    _, executed, _ = run(14, day=28)
+    assert "check_ai_answers" in executed  # Monday's 14:00 UTC cron run: about $0.18 a week
+    for day, hour in ((25, 14), (28, 8), (28, 20), (29, 14)):
+        _, executed, recorded = run(hour, day=day)
+        assert "check_ai_answers" not in executed, (day, hour)
+        assert recorded["check_ai_answers"]["status"] == "skipped"
+    _, executed, _ = run(14, triggered_by="manual", day=28)
+    assert "check_ai_answers" not in executed
+
+
+def test_ai_answer_check_can_be_switched_off(run, monkeypatch):
+    monkeypatch.setenv("ANSWER_CHECKS_ENABLED", "off")
+    _, executed, recorded = run(14, day=28)
+    assert "check_ai_answers" not in executed and recorded["check_ai_answers"]["status"] == "skipped"
 
 
 def test_ai_answer_check_runs_once_a_day_when_enabled(run, monkeypatch):

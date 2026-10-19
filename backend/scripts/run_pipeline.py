@@ -13,8 +13,9 @@ Railway Cron service (see railway.cron.toml) but also works locally:
 The pipeline runs several times a day, but the digest email goes out only
 once: on the cron run that starts at DIGEST_EMAIL_HOUR_UTC (default 20, the
 last run of the day). Other runs record send_digest_email as "skipped".
-check_ai_answers (paid web searches, about $0.18 a day) is off unless
-ANSWER_CHECKS_ENABLED=1; then it runs on the ANSWER_CHECK_HOUR_UTC cron run.
+check_ai_answers (paid web searches, about $0.18 a run) runs once a week, on
+Monday's ANSWER_CHECK_HOUR_UTC cron run; ANSWER_CHECKS_ENABLED=1 makes it daily,
+ANSWER_CHECKS_ENABLED=off stops it.
 
 A failed stage emails ALERT_EMAIL; the evening run also emails a summary
 of the last 24 hours (app/services/alerts.py).
@@ -42,13 +43,28 @@ _PIPELINE_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_TIMEOUT_MINUTES", "90")) * 6
 
 # Must match one of the hours in railway.cron.toml's cronSchedule, or no email is ever sent.
 _DIGEST_EMAIL_HOUR_UTC = int(os.getenv("DIGEST_EMAIL_HOUR_UTC", "20"))
-# Once a day, on this cron run, ask an AI assistant the radar questions (paid web search)
+# On this cron run, ask an AI assistant the radar questions (paid web search):
+# once a week (on _ANSWER_CHECK_WEEKDAY, 0 = Monday) unless ANSWER_CHECKS_ENABLED says otherwise
 _ANSWER_CHECK_HOUR_UTC = int(os.getenv("ANSWER_CHECK_HOUR_UTC", "14"))
+_ANSWER_CHECK_WEEKDAY = int(os.getenv("ANSWER_CHECK_WEEKDAY", "0"))
 
 
-def _answer_checks_enabled() -> bool:
-    """The scheduled AI-answer check costs ~$0.18 a run and is off unless ANSWER_CHECKS_ENABLED=1."""
-    return os.getenv("ANSWER_CHECKS_ENABLED", "").strip().lower() in {"1", "true", "yes"}
+def _answer_check_schedule() -> str:
+    """ "weekly" by default (~$0.18 a run, ~$0.80 a month); ANSWER_CHECKS_ENABLED=1 makes it
+    "daily", ANSWER_CHECKS_ENABLED=off turns it "off"."""
+    value = os.getenv("ANSWER_CHECKS_ENABLED", "").strip().lower()
+    if value in {"1", "true", "yes", "daily"}:
+        return "daily"
+    if value in {"0", "false", "no", "off"}:
+        return "off"
+    return "weekly"
+
+
+def _is_answer_check_run(started_at: datetime, triggered_by: str) -> bool:
+    schedule = _answer_check_schedule()
+    if schedule == "off" or triggered_by != "cron" or started_at.hour != _ANSWER_CHECK_HOUR_UTC:
+        return False
+    return schedule == "daily" or started_at.weekday() == _ANSWER_CHECK_WEEKDAY
 
 
 # Trend Radar stages and the duplicate-story merge depend on third-party APIs and
@@ -216,9 +232,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
     # Decide on the email from the start time, not the (much later) email-stage time
     started_at = datetime.now(timezone.utc)
     send_email = force_email or _is_digest_email_run(started_at, triggered_by)
-    check_answers = check_answers or (
-        _answer_checks_enabled() and triggered_by == "cron" and started_at.hour == _ANSWER_CHECK_HOUR_UTC
-    )
+    check_answers = check_answers or _is_answer_check_run(started_at, triggered_by)
     logger.info(
         "========== daily pipeline starting  timeout=%dm  send_email=%s ==========",
         _PIPELINE_TIMEOUT_SECONDS // 60,
@@ -384,7 +398,7 @@ def _cli_main() -> None:
     parser.add_argument(
         "--check-answers",
         action="store_true",
-        help="Ask the AI-answer questions on this run (paid web search; the cron does it at ANSWER_CHECK_HOUR_UTC only when ANSWER_CHECKS_ENABLED=1)",
+        help="Ask the AI-answer questions on this run (paid web search; the cron does it on Monday's ANSWER_CHECK_HOUR_UTC run)",
     )
     args = parser.parse_args()
     sys.exit(main(triggered_by=args.triggered_by, force_email=args.force_email, check_answers=args.check_answers))

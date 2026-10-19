@@ -231,3 +231,26 @@ def test_answers_endpoint_and_topic_check(db, make_cluster, monkeypatch):
     assert "sipplyCited" not in milk["answerCheck"]
     assert [c["domain"] for c in milk["answerCheck"]["citations"]] == ["sipply.dev", "theguardian.com"]
     assert topics["No question yet"]["answerCheck"] is None
+
+
+def test_a_weekly_check_still_shows_until_the_next_one(db, make_cluster, monkeypatch):
+    from datetime import timedelta
+
+    from fastapi.testclient import TestClient
+
+    from app.api.routes import radar as R
+    from app.db import get_db
+    from app.main import app
+
+    monkeypatch.setattr(R, "cache_get", lambda key: None)
+    monkeypatch.setattr(R, "cache_set", lambda key, value: None)
+    seed(db, make_cluster)
+    now = datetime.now(timezone.utc)
+    # Last Monday's run, seen just before this Monday's check lands
+    A.run_checks(db, FakeOpenAI(lambda q: sdk_response(cited=["https://www.reuters.com/x"], sources=[])), now=now - timedelta(days=7, hours=2))
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        topics = {t["label"]: t for t in TestClient(app).get("/api/radar").json()["topics"]}
+    finally:
+        app.dependency_overrides.clear()
+    assert topics["AI less regulated than milk"]["answerCheck"]["citations"][0]["domain"] == "reuters.com"
