@@ -76,7 +76,9 @@ def test_content_stages_run_every_time(run):
     content_stages = list(skipped_run)
     _, email_run, _ = run(20)
     assert [s for s in email_run if s != "send_digest_email"] == content_stages
-    assert len(content_stages) == 15  # + backfill_headlines
+    assert len(content_stages) == 16  # + merge_duplicate_stories
+    # Duplicates are merged before summarize, so the kept story is summarized over all its sources
+    assert content_stages.index("merge_duplicate_stories") == content_stages.index("dedup_clusters") + 1
 
 
 @pytest.fixture
@@ -101,8 +103,11 @@ def run_with_failure(monkeypatch):
     return _run
 
 
-@pytest.mark.parametrize("stage", ["ingest_signals", "build_signal_topics", "merge_signal_topics", "translate_signals", "describe_signal_topics"])
-def test_trend_radar_failure_does_not_fail_the_pipeline(run_with_failure, stage):
+@pytest.mark.parametrize(
+    "stage",
+    ["merge_duplicate_stories", "ingest_signals", "build_signal_topics", "merge_signal_topics", "translate_signals", "describe_signal_topics"],
+)
+def test_best_effort_stage_failure_does_not_fail_the_pipeline(run_with_failure, stage):
     code, recorded = run_with_failure(stage)
     assert code == 0
     assert recorded["_status"] == "success"

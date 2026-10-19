@@ -174,6 +174,25 @@ def test_a_story_is_found_by_its_slug(client, make_cluster):
     assert client.get("/api/clusters/by-slug/no-id-at-all").status_code == 404
 
 
+def test_a_merged_storys_old_address_answers_with_the_story_it_became(client, db, make_cluster):
+    import uuid
+
+    from app.models.story_redirect import StoryRedirect
+
+    kept = make_cluster(title="Meta’s new terms may allow it to train AI on news sites for free")
+    kept.slug = f"metas-new-terms-may-allow-it-to-train-ai-{kept.id.hex[:8]}"
+    old_id = uuid.uuid4()
+    old_slug = f"meta-removes-language-that-raised-scraping-{old_id.hex[:8]}"
+    db.add(StoryRedirect(old_id=old_id, old_slug=old_slug, cluster_id=kept.id))
+    db.flush()
+
+    # By its old slug, its old words with the old id, or its old id: the kept story, with its own slug
+    for path in (f"by-slug/{old_slug}", f"by-slug/other-words-{old_id.hex[:8]}", str(old_id)):
+        body = client.get(f"/api/clusters/{path}").json()
+        assert body["id"] == str(kept.id) and body["slug"] == kept.slug, path
+    assert client.get(f"/api/clusters/{uuid.uuid4()}").status_code == 404
+
+
 def test_story_listings_carry_the_slug_and_sipplys_headline(client, make_cluster, monkeypatch):
     from datetime import datetime, timezone
 
