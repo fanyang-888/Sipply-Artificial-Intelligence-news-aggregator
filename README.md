@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 360 backend · 87 frontend · 140 smoke checks of the built site, all in CI |
+| **Tests** | 360 backend · 88 frontend · 140 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -204,7 +204,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 360 pytest tests; typecheck, lint with zero warnings, 87 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 360 pytest tests; typecheck, lint with zero warnings, 88 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Fourteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
