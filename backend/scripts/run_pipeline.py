@@ -120,6 +120,45 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+def close_interrupted_runs(db: Any, *, now: datetime) -> list[datetime]:
+    """Mark runs still "running" past the timeout as failed: their process was stopped before it
+    could record the end (a redeploy stops a cron run mid-way, 2026-10-20 14:06 UTC; a crash;
+    the timeout's os._exit). Returns their start times, oldest first."""
+    stale = db.execute(
+        select(PipelineRun)
+        .where(
+            PipelineRun.status == "running",
+            PipelineRun.started_at < now - timedelta(seconds=_PIPELINE_TIMEOUT_SECONDS + 600),
+        )
+        .order_by(PipelineRun.started_at)
+    ).scalars().all()
+    for run in stale:
+        run.status = "failed"
+        run.finished_at = now
+        run.stage_results = {
+            **(run.stage_results or {}),
+            "interrupted": {"status": "failed", "reason": "stopped before it finished (redeploy, crash or timeout)"},
+        }
+    db.commit()
+    return [run.started_at for run in stale]
+
+
+def _previous_interrupted(now: datetime) -> dict[str, Any] | None:
+    """This run's note on earlier runs that never finished, or None. Never raises."""
+    try:
+        with session_scope() as db:
+            closed = close_interrupted_runs(db, now=now)
+    except Exception:
+        logger.warning("pipeline could not check for interrupted runs", exc_info=True)
+        return None
+    if not closed:
+        return None
+    started = ", ".join(t.strftime("%Y-%m-%d %H:%M UTC") for t in closed)
+    logger.warning("pipeline found runs that never finished: %s", started)
+    # "failed" so the operator gets the usual failure email; it doesn't fail this run
+    return {"status": "failed", "reason": f"run(s) started {started} stopped before finishing"}
+
+
 def _create_run(triggered_by: str) -> uuid.UUID:
     """Insert a new pipeline_run row with status=running; return its id."""
     with session_scope() as db:
@@ -262,8 +301,12 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
     t_total = time.monotonic()
 
     # Record run start
+    # Before this run's own row: earlier runs a redeploy or crash stopped are closed and reported
+    interrupted = _previous_interrupted(started_at)
     run_id = _create_run(triggered_by)
     stage_results: dict[str, Any] = {}
+    if interrupted:
+        stage_results["interrupted_runs"] = interrupted
 
     # ------------------------------------------------------------------
     # Stage 1: ingest  (async; call _run() directly to avoid sys.argv)

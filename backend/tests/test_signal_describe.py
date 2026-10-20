@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from app.signals import describe as D
 from app.signals.base import SignalItem
 
-NOW = datetime(2026, 10, 13, 14, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 21, 14, 0, tzinfo=timezone.utc)
 
 
 class FakeOpenAI:
@@ -248,6 +248,20 @@ def test_weak_signals_are_described_only_while_on_the_public_radar(db):
     meta.covered_cluster_id, meta.described_signal_count = uuid.uuid4(), meta.signal_count
     db.flush()
     assert labels(D.topics_to_describe(db, public=2)) == ["Claude Hai", "These Clau"]
+
+
+def test_topics_judged_news_under_the_old_rules_are_judged_once_more():
+    judged = dict(covered_cluster_id=uuid.uuid4(), question_en="Q?", described_signal_count=10, signal_count=10)
+    before = SimpleNamespace(described_at=D.NEWSWORTHY_RULES_SINCE - timedelta(hours=1), newsworthy=True, **judged)
+    after = SimpleNamespace(described_at=D.NEWSWORTHY_RULES_SINCE + timedelta(hours=1), newsworthy=True, **judged)
+    not_news = SimpleNamespace(described_at=D.NEWSWORTHY_RULES_SINCE - timedelta(hours=1), newsworthy=False, **judged)
+    assert D.needs_description(before) and D.needs_description(before, inner=False)
+    assert not D.needs_description(after) and not D.needs_description(not_news)
+
+
+def test_the_judge_is_told_what_else_is_not_news():
+    for kind in ("comparing", "hashtags"):
+        assert kind in D._SYSTEM
 
 
 def test_needs_description_after_growth():

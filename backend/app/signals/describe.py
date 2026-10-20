@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -50,6 +50,9 @@ STORY_SUMMARY_CHARS = 300
 # arXiv paper titled "Distillation for Incrimination and …")
 STORY_ABOUT_CHARS = 200
 REDESCRIBE_GROWTH = 1.5
+# The newsworthy rules gained creator comparison videos and hashtag promotion posts
+# (2026-10-20); topics judged news before then are judged once more
+NEWSWORTHY_RULES_SINCE = datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc)
 SUMMARY_MAX_CHARS = 400
 QUESTION_MAX_CHARS = 200
 # USD per 1M tokens (same table as app/services/summarization.py)
@@ -63,7 +66,7 @@ For every topic return:
 - "summary_zh": the same in Simplified Chinese (简体中文). Keep names of products, models, companies and people in English.
 - "story": the id of the candidate story that reports the same event or announcement, or null if none does. Use each story's title and "about" text. A story about the same company but a different event is not a match, and neither is a research paper that only shares a keyword. Judge the topic as a whole: if the posts are a mix of unrelated items, a story matching just one of them is not a match.
 - "question": the question a curious reader would type into an AI assistant to learn about this story, in English, at most 15 words, naming the company or product (e.g. "What did Microsoft's president say about AI regulation and milk?").
-- "newsworthy": true if the posts are about something an AI news site would report: a release, announcement, research result, deal, lawsuit, policy, outage, or a notable person's statement. false for memes and jokes, personal anecdotes, AI-generated art or videos, lists of prompts, generic tips and tutorials, and hype videos whose teaser titles name no concrete event. Judge the topic as a whole; when unsure, true.
+- "newsworthy": true if the posts are about something an AI news site would report: a release, announcement, research result, deal, lawsuit, policy, outage, or a notable person's statement. false for memes and jokes, personal anecdotes, AI-generated art or videos, lists of prompts, generic tips and tutorials, hype videos whose teaser titles name no concrete event, creator videos comparing assistants or reacting to them ("ChatGPT vs Claude vs Gemini: which is best?", "is it better than…?") that report nothing new, and promotional posts made mostly of hashtags. Judge the topic as a whole; when unsure, true.
 
 Input is a JSON list of {"id": ..., "posts": [...], "stories": [{"id": ..., "title": ..., "about": ...}]}.
 Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "story": ..., "question": ..., "newsworthy": ...}, ...]} with one entry for every input id."""
@@ -71,6 +74,8 @@ Return JSON: {"topics": [{"id": ..., "summary_en": ..., "summary_zh": ..., "stor
 
 def needs_description(topic: SignalTopic, *, inner: bool = True) -> bool:
     if topic.described_at is None or topic.question_en is None or topic.newsworthy is None:
+        return True
+    if topic.newsworthy and topic.described_at < NEWSWORTHY_RULES_SINCE:
         return True
     # Only for topics Sipply would act on: it may have written a story since
     if inner and topic.covered_cluster_id is None:
