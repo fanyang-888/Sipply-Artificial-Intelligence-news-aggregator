@@ -3,10 +3,11 @@
  * and /sitemaps/stories-<n>.xml (STORIES_PER_SITEMAP stories each), every page in
  * both languages, each naming the other (hreflang).
  *
- * Split because one 4 MB sitemap (16K URLs) was never rebuilt on Vercel when the
- * pipeline marked it stale, neither as app/sitemap.ts nor as a route handler, while
- * the 40-60 KB news sitemap and RSS feed were (2026-10-20). Each file here stays
- * around 260 KB. The entries match what app/sitemap.ts made.
+ * On Vercel whatever is served at /sitemap.xml keeps its build-time copy (as
+ * app/sitemap.ts, as a route handler, at 4 MB or at 2 KB: 2026-10-20), while
+ * /sitemaps/* files are rebuilt when the pipeline marks them stale. So the index
+ * only names files, including spares for stories to come, and the files carry the
+ * URLs (about 260 KB each). The entries match what app/sitemap.ts made.
  */
 
 import type { Lang } from "@/lib/i18n";
@@ -48,9 +49,16 @@ function inBothLanguages(pages: PageEntry[]): SitemapEntry[] {
   });
 }
 
-/** The files the index lists: the hub pages, then one per STORIES_PER_SITEMAP stories. */
+/**
+ * Story files listed beyond those with stories. On Vercel /sitemap.xml keeps its
+ * build-time copy whatever is refreshed (2026-10-20), so the index names the files
+ * the next 2,000 stories will fill; until then they are valid, empty sitemaps.
+ */
+export const SPARE_STORY_SITEMAPS = 8;
+
+/** The files the index lists: the hub pages, then one per STORIES_PER_SITEMAP stories, then the spares. */
 export function sitemapFiles(storyCount: number): string[] {
-  const chunks = Math.ceil(storyCount / STORIES_PER_SITEMAP);
+  const chunks = Math.ceil(storyCount / STORIES_PER_SITEMAP) + SPARE_STORY_SITEMAPS;
   return ["pages.xml", ...Array.from({ length: chunks }, (_, i) => `stories-${i}.xml`)];
 }
 
@@ -105,10 +113,9 @@ function xml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-export function buildSitemapIndexXml(files: string[], now: Date): string {
-  const items = files.map(
-    (f) => `<sitemap>\n<loc>${xml(`${SITE_URL}/sitemaps/${f}`)}</loc>\n<lastmod>${now.toISOString()}</lastmod>\n</sitemap>`,
-  );
+/** No <lastmod>: the index keeps its build-time copy, so a date there would only go stale. */
+export function buildSitemapIndexXml(files: string[]): string {
+  const items = files.map((f) => `<sitemap>\n<loc>${xml(`${SITE_URL}/sitemaps/${f}`)}</loc>\n</sitemap>`);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
