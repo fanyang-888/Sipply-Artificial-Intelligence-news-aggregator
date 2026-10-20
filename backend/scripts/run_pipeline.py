@@ -159,6 +159,32 @@ _LOCAL_ENVS = frozenset({"development", "dev", "local", "test"})
 _INDEXNOW_FALLBACK_HOURS = 7
 
 
+def _changed_since(db: Any, started_at: datetime) -> datetime:
+    """Where this run's changes start: the previous successful run's start."""
+    previous = db.execute(
+        select(PipelineRun.started_at)
+        .where(PipelineRun.status == "success", PipelineRun.started_at < started_at)
+        .order_by(PipelineRun.started_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    return previous or started_at - timedelta(hours=_INDEXNOW_FALLBACK_HOURS)
+
+
+def _revalidate_site(started_at: datetime) -> dict[str, Any]:
+    """Have the site rebuild the cached pages this run changed (app/services/site_revalidate.py). Never raises."""
+    if os.getenv("APP_ENV", "").strip().lower() in _LOCAL_ENVS:
+        return {"status": "skipped", "reason": "local run"}
+    try:
+        from app.services import site_revalidate
+
+        with session_scope() as db:
+            tags = site_revalidate.revalidate_tags(db, since=_changed_since(db, started_at))
+        return site_revalidate.submit(tags)
+    except Exception as exc:
+        logger.warning("pipeline site revalidate failed", exc_info=True)
+        return {"status": "failed", "error": type(exc).__name__}
+
+
 def _notify_search_engines(started_at: datetime) -> dict[str, Any]:
     """Submit this run's new and changed pages to IndexNow. Never raises."""
     if os.getenv("APP_ENV", "").strip().lower() in _LOCAL_ENVS or os.getenv("INDEXNOW_ENABLED", "1") == "0":
@@ -167,14 +193,7 @@ def _notify_search_engines(started_at: datetime) -> dict[str, Any]:
         from app.services import indexnow
 
         with session_scope() as db:
-            previous = db.execute(
-                select(PipelineRun.started_at)
-                .where(PipelineRun.status == "success", PipelineRun.started_at < started_at)
-                .order_by(PipelineRun.started_at.desc())
-                .limit(1)
-            ).scalar_one_or_none()
-            since = previous or started_at - timedelta(hours=_INDEXNOW_FALLBACK_HOURS)
-            urls = indexnow.changed_urls(db, since=since, now=started_at)
+            urls = indexnow.changed_urls(db, since=_changed_since(db, started_at), now=started_at)
         return indexnow.submit(urls)
     except Exception as exc:
         logger.warning("pipeline indexnow notify failed", exc_info=True)
@@ -354,6 +373,8 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
             logger.info("pipeline cache invalidated keys=%s", n)
         except Exception:
             logger.warning("pipeline cache invalidation failed", exc_info=True)
+        # Pages are cached for a day (stories a week): mark what this run changed for rebuilding
+        stage_results["revalidate_site"] = _revalidate_site(started_at)
         # Then have the site rebuild its pages now, not on the next reader's visit
         try:
             from app.services.page_warm import warm_pages
@@ -363,6 +384,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         # Last, with the pages rebuilt: tell search engines (Bing feeds ChatGPT search) what changed
         stage_results["notify_indexnow"] = _notify_search_engines(started_at)
     else:
+        stage_results["revalidate_site"] = {"status": "skipped", "reason": "pipeline failed"}
         stage_results["notify_indexnow"] = {"status": "skipped", "reason": "pipeline failed"}
 
     elapsed_total = time.monotonic() - t_total

@@ -12,8 +12,8 @@ import { digestItemListJsonLd } from "@/lib/seo/json-ld";
 import { radarOrder, withRadarDefaults } from "@/lib/utils/radar";
 import { HomePageClient } from "@/app/[lang]/home-page-client";
 
-// The pipeline runs 4× a day; re-render at most every 5 minutes
-export const revalidate = 300;
+// Rebuilt when the pipeline marks a run's data stale (lib/api/cache-policy.ts); a day at most
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -70,7 +70,9 @@ export default async function HomePage({ params }: Props) {
         radarSourceLabels={radarSourceLabels}
         radarWindowDays={radar?.windowDays ?? 14}
         week={weeks?.[0] ?? null}
-        renderedAt={new Date().toISOString()}
+        // Only the date is shown; a full timestamp would make every 5-minute rebuild a new
+        // page to store (an ISR write) even when nothing on it changed
+        renderedAt={new Date().toISOString().slice(0, 10)}
       />
     </>
   );

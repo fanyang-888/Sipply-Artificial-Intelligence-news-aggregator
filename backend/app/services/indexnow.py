@@ -39,29 +39,39 @@ def _week_key(when: datetime) -> str:
     return f"{year}-W{week:02d}"
 
 
+def changed_stories(db: Session, *, since: datetime) -> list[Any]:
+    """Stories new or changed since ``since``: summarized, or given new articles once summarized.
+    Rows of (id, slug, headline, representative_title), enough for ``story_slug``."""
+    return list(
+        db.execute(
+            select(Cluster.id, Cluster.slug, Cluster.headline, Cluster.representative_title).where(
+                Cluster.summarized_at.is_not(None),
+                or_(Cluster.summarized_at >= since, and_(Cluster.last_seen_at.is_not(None), Cluster.last_seen_at >= since)),
+            )
+        ).all()
+    )
+
+
+def merged_since(db: Session, *, since: datetime) -> list[Any]:
+    """Stories merged into another since ``since``: rows of (old_id, old_slug)."""
+    return list(
+        db.execute(select(StoryRedirect.old_id, StoryRedirect.old_slug).where(StoryRedirect.created_at >= since)).all()
+    )
+
+
 def changed_urls(db: Session, *, since: datetime, now: datetime, site: str = SITE_URL) -> list[str]:
     """The hub pages, this week's recap and today's page, and every story page that is new or
     changed since ``since`` (summarized, or given new articles once summarized), the old
     address of each story merged into another since then, plus the company pages those
     stories appear on; each in English, then at its /zh address."""
-    stories = db.execute(
-        select(Cluster.id, Cluster.slug, Cluster.headline, Cluster.representative_title).where(
-            Cluster.summarized_at.is_not(None),
-            or_(Cluster.summarized_at >= since, and_(Cluster.last_seen_at.is_not(None), Cluster.last_seen_at >= since)),
-        )
-    ).all()
+    stories = changed_stories(db, since=since)
     urls = [f"{site}{path}" for path in HUB_PATHS]
     urls.append(f"{site}/weekly/{_week_key(now)}")
     urls.append(f"{site}/daily/{now.astimezone(timezone.utc).date().isoformat()}")
     # Each story at its permanent address (/cluster/<id> only redirects there)
     urls += [f"{site}/story/{story_slug(s)}" for s in stories]
     # A story merged into another this run: its old address now redirects, so engines drop the duplicate
-    urls += [
-        f"{site}/story/{slug}"
-        for slug in db.execute(
-            select(StoryRedirect.old_slug).where(StoryRedirect.old_slug.is_not(None), StoryRedirect.created_at >= since)
-        ).scalars()
-    ]
+    urls += [f"{site}/story/{r.old_slug}" for r in merged_since(db, since=since) if r.old_slug]
     topics = dict.fromkeys(e.slug for s in stories for e in entities_in(s.representative_title or ""))
     urls += [f"{site}/topics/{topic}" for topic in topics]
     english = list(dict.fromkeys(urls))

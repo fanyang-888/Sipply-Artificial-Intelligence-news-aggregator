@@ -7,8 +7,8 @@ import { layoutRadar } from "@/lib/utils/radar-layout";
 import { RadarPageClient } from "@/app/[lang]/radar/radar-page-client";
 import { asLang, sectionMetadata } from "@/lib/seo/copy";
 
-// The pipeline refreshes signals 4× a day; re-render at most every 5 minutes
-export const revalidate = 300;
+// Rebuilt when the pipeline marks a run's data stale (lib/api/cache-policy.ts); a day at most
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ lang: string }> };
 

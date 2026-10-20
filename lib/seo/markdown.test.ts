@@ -58,4 +58,12 @@ describe("llms-full.txt", () => {
     expect(txt).toContain("Why it matters: Developers can build on it.");
     expect(txt).toContain("Sources: Google DeepMind Blog");
   });
+
+  it("dates itself by its newest story, so the cached file only changes when the stories do", () => {
+    const later = { ...item, id: "b2", slug: "b2-story", publishedAt: "2026-10-14T09:30:00+00:00", updatedAt: "2026-10-15T10:45:00+00:00" };
+    const a = llmsFullTxt([item, later], new Date("2026-10-19T00:00:00Z"));
+    const b = llmsFullTxt([item, later], new Date("2026-10-19T00:05:00Z"));
+    expect(a).toBe(b);
+    expect(a).toContain("as of 2026-10-15T10:45Z");
+  });
 });

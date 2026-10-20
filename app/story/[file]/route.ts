@@ -4,7 +4,8 @@ import { storyPath, storyUrl } from "@/lib/seo/site";
 
 // /story/<slug>.md, the story as markdown (English, then Chinese). The proxy leaves paths with an
 // extension alone, so this route answers them; story pages themselves are app/[lang]/story/[slug].
-export const revalidate = 3600;
+// Rebuilt when the pipeline marks the story changed (lib/api/cache-policy.ts); a week at most
+export const revalidate = 604800;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params;

@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 350 backend · 83 frontend · 140 smoke checks of the built site, all in CI |
+| **Tests** | 355 backend · 87 frontend · 140 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -130,7 +130,7 @@ flowchart TB
     D --> OPS["Operator email<br/>on a failed stage,<br/>daily summary at 20:00"]
 ```
 
-Every stage is a standalone script in `backend/scripts/`; `run_pipeline.py` runs them in order, times each one, and records the result in `pipeline_runs` (shown at `/admin/pipeline-runs`). The radar stages depend on outside APIs, so their failures are logged without failing the news. A paid "what do AI assistants cite" check runs once a week, about $0.80 a month (`ANSWER_CHECKS_ENABLED`).
+Every stage is a standalone script in `backend/scripts/`; `run_pipeline.py` runs them in order, times each one, and records the result in `pipeline_runs` (shown at `/admin/pipeline-runs`). The radar stages depend on outside APIs, so their failures are logged without failing the news. A paid "what do AI assistants cite" check runs once a week, about $0.80 a month (`ANSWER_CHECKS_ENABLED`). After a successful run the pipeline tells the site which cached pages changed (`/api/revalidate`), so pages can be cached for a day (stories a week) instead of being rebuilt on every visit ([ADR 14](docs/adr/0014-cache-long-refresh-on-change.md)).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/chart-run-time-dark.svg" />
@@ -204,9 +204,9 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 350 pytest tests; typecheck, lint with zero warnings, 83 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 355 pytest tests; typecheck, lint with zero warnings, 87 vitest tests; a production build read by the 140-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
-| Decisions | Thirteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
+| Decisions | Fourteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
 ---
 
@@ -445,6 +445,7 @@ On startup `alembic upgrade head` runs in a background thread, so Railway's heal
 | `RESEND_API_KEY` | Email delivery |
 | `ALERT_EMAIL` | Operator emails: a failed stage, and a 24-hour summary on the 20:00 run (none while unset) |
 | `ANSWER_CHECKS_ENABLED` | The paid AI-answer check runs every Monday by default; `1` makes it daily, `off` stops it |
+| `REVALIDATE_SECRET` | Shared by Vercel (production) and the cron service: lets the pipeline mark changed pages for rebuilding ([ADR 14](docs/adr/0014-cache-long-refresh-on-change.md)) |
 | `REDIS_URL` | Set by the Railway Redis plugin |
 | `JWT_SECRET` | Signs admin tokens |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SECRET` | Admin login |

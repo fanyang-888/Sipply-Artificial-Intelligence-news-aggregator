@@ -4,6 +4,8 @@
  */
 
 import { apiFetch, apiPost } from "./client";
+// Constants only: lib/api/server.ts's fetchers stay out of client bundles
+import { RUN_TAG, RUN_TTL } from "./cache-policy";
 import type {
   ApiCluster,
   ApiDigest,
@@ -76,14 +78,14 @@ export async function fetchSearch(params: {
 // Trend Radar
 // ---------------------------------------------------------------------------
 
-/** Server-side: cached for 5 minutes, the same lifetime as the API's own cache. */
+/** Server-side: cached until the pipeline's next run marks it stale (a day at most). */
 export async function fetchRadar(limit = 40): Promise<ApiRadar> {
-  return apiFetch<ApiRadar>(`/api/radar?limit=${limit}`, { next: { revalidate: 300 } });
+  return apiFetch<ApiRadar>(`/api/radar?limit=${limit}`, { next: { revalidate: RUN_TTL, tags: [RUN_TAG] } });
 }
 
 /** Server-side: what AI assistants cited for the radar questions (last ``days`` days). */
 export async function fetchRadarAnswers(days = 30): Promise<ApiRadarAnswers> {
-  return apiFetch<ApiRadarAnswers>(`/api/radar/answers?days=${days}`, { next: { revalidate: 300 } });
+  return apiFetch<ApiRadarAnswers>(`/api/radar/answers?days=${days}`, { next: { revalidate: RUN_TTL, tags: [RUN_TAG] } });
 }
 
 // ---------------------------------------------------------------------------
