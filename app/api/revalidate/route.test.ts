@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const revalidateTag = vi.fn();
-const revalidatePath = vi.fn();
-vi.mock("next/cache", () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTag(...args),
-  revalidatePath: (...args: unknown[]) => revalidatePath(...args),
-}));
+vi.mock("next/cache", () => ({ revalidateTag: (...args: unknown[]) => revalidateTag(...args) }));
 
 const { POST } = await import("./route");
 
@@ -22,7 +18,6 @@ function request(body: unknown, auth: string | null = `Bearer ${SECRET}`) {
 describe("POST /api/revalidate", () => {
   beforeEach(() => {
     revalidateTag.mockClear();
-    revalidatePath.mockClear();
     vi.stubEnv("REVALIDATE_SECRET", SECRET);
   });
 
@@ -36,13 +31,6 @@ describe("POST /api/revalidate", () => {
       ["story:google-launches-universal-cart-6ddc0f5e", { expire: 0 }],
       [`story-id:${id}`, { expire: 0 }],
     ]);
-    // On Vercel the sitemap (a metadata route) isn't tied to its fetches' tags: refreshed by path
-    expect(revalidatePath.mock.calls).toEqual([["/sitemap.xml"]]);
-  });
-
-  it("refreshes the sitemap only with a run's data", async () => {
-    await POST(request({ tags: ["story-id:6ddc0f5e-6121-46cd-b03a-f9865cb5ddae"] }));
-    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("refuses anyone without the secret, and works only once it is set", async () => {
