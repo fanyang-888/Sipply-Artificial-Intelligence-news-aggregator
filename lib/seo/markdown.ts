@@ -60,13 +60,21 @@ export function storyMarkdown(c: ApiCluster): string {
   return lines.join("\n");
 }
 
+/** ``now`` is used only when no story has a date: dating the file by the clock would make
+ * each cache rebuild a new file (an ISR write) although no story changed. */
 export function llmsFullTxt(items: ApiFeedItem[], now: Date = new Date()): string {
+  const newest = items
+    .map((s) => s.updatedAt ?? s.publishedAt)
+    .filter((d): d is string => Boolean(d))
+    .map((d) => new Date(d).getTime())
+    .reduce((a, b) => Math.max(a, b), Number.NEGATIVE_INFINITY);
+  const asOf = Number.isFinite(newest) ? new Date(newest) : now;
   const lines = [
     `# ${SITE_NAME} — ${SITE_TAGLINE}`,
     "",
     `> ${SITE_DESCRIPTION}`,
     "",
-    `The ${items.length} newest stories in full, as of ${now.toISOString().slice(0, 16)}Z. Each story's page has the ` +
+    `The ${items.length} newest stories in full, as of ${asOf.toISOString().slice(0, 16)}Z. Each story's page has the ` +
       `takeaways and every source article; a markdown copy is at its address plus ".md", and a Chinese page under ${SITE_URL}/zh. ` +
       `The map of the site is ${SITE_URL}/llms.txt.`,
     "",

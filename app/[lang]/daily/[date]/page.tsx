@@ -10,7 +10,8 @@ import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { dayTitle, formatDay, isDayKey, neighbourDays } from "@/lib/utils/days";
 import { DayPage } from "@/components/hubs/hub-pages";
 
-export const revalidate = 300;
+// Rebuilt when the pipeline marks a run's data stale (lib/api/cache-policy.ts); a day at most
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ lang: string; date: string }> };
 

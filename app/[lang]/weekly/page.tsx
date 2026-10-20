@@ -7,7 +7,8 @@ import { JsonLd } from "@/components/shared/json-ld";
 import { asLang, sectionCopy, sectionMetadata } from "@/lib/seo/copy";
 import { pageListJsonLd } from "@/lib/seo/json-ld";
 
-export const revalidate = 300;
+// Rebuilt when the pipeline marks a run's data stale (lib/api/cache-policy.ts); a day at most
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ lang: string }> };
 

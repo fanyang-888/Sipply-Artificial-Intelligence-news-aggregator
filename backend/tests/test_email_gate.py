@@ -252,3 +252,36 @@ def test_an_email_problem_never_fails_the_pipeline(run_with_failure, monkeypatch
     monkeypatch.setattr("app.services.alerts.send_failure_alert", boom)
     code, recorded = run_with_failure("ingest_signals")
     assert code == 0 and recorded["_status"] == "success"
+
+
+@pytest.fixture
+def after_run(monkeypatch):
+    """What the pipeline does with the site after a run, in order (network and DB stubbed)."""
+    order: list[str] = []
+    monkeypatch.setattr("app.services.site_revalidate.revalidate_tags", lambda db, *, since: ["run", "story-id:x"])
+    monkeypatch.setattr(
+        "app.services.site_revalidate.submit",
+        lambda tags: order.append(f"revalidate {' '.join(tags)}") or {"status": "ok", "tags": len(tags), "http_status": 200},
+    )
+    monkeypatch.setattr("app.services.page_warm.warm_pages", lambda *a, **k: order.append("warm") or {})
+    monkeypatch.setattr("app.services.indexnow.changed_urls", lambda db, *, since, now: ["https://www.sipply.dev/"])
+    monkeypatch.setattr("app.services.indexnow.submit", lambda u: order.append("indexnow") or {"status": "ok"})
+    return order
+
+
+def test_a_successful_run_has_the_site_rebuild_what_changed_before_warming_it(run, monkeypatch, after_run):
+    monkeypatch.setenv("APP_ENV", "production")
+    code, _, recorded = run(8)
+    assert code == 0
+    # Rebuild marks first, so the warm-up and the crawlers IndexNow sends get the new pages
+    assert after_run == ["revalidate run story-id:x", "warm", "indexnow"]
+    assert recorded["revalidate_site"] == {"status": "ok", "tags": 2, "http_status": 200}
+
+
+def test_the_site_is_left_alone_by_local_and_failed_runs(run, run_with_failure, monkeypatch, after_run):
+    monkeypatch.setenv("APP_ENV", "development")
+    _, _, recorded = run(8)
+    assert recorded["revalidate_site"]["status"] == "skipped" and not any(s.startswith("revalidate") for s in after_run)
+    monkeypatch.setenv("APP_ENV", "production")
+    _, recorded = run_with_failure("summarize")
+    assert recorded["revalidate_site"]["status"] == "skipped"

@@ -5,16 +5,16 @@ import { ClusterPageView } from "@/components/cluster/cluster-page-view";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { useI18n } from "@/lib/i18n";
-import { fetchCluster, fetchClusterBySlug } from "@/lib/api";
+import { fetchCluster, fetchClusterBySlug, fetchTodayDigest } from "@/lib/api";
 import { apiClusterToCluster } from "@/lib/api/mappers";
 import { trackEvent } from "@/lib/api/track";
 import type { ApiCluster } from "@/lib/api/types";
 import type { Cluster } from "@/types/cluster";
-import type { TodayPosition } from "@/lib/utils/today-position";
+import { positionInDigest, type TodayPosition } from "@/lib/utils/today-position";
 
 type ClusterPageClientProps = {
   /** Server-fetched story; null when the server couldn't reach the API (fetch here instead). */
-  initial: { cluster: ApiCluster; related: ApiCluster[]; today: TodayPosition | null } | null;
+  initial: { cluster: ApiCluster; related: ApiCluster[] } | null;
   /** The URL's story key, for the client-side fetch when there is no server copy. */
   slug: string;
 };
@@ -36,6 +36,22 @@ export function ClusterPageClient({ initial, slug }: ClusterPageClientProps) {
   useEffect(() => {
     if (!id) return;
     trackEvent("cluster_viewed", id);
+  }, [id]);
+
+  // Where this story sits in today's order, for the way onward at the bottom of the page.
+  // Loaded here, not on the server, so the cached page doesn't change with every digest.
+  const [today, setToday] = useState<TodayPosition | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    fetchTodayDigest()
+      .then((digest) => {
+        if (!cancelled) setToday(positionInDigest(digest, id));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -86,7 +102,6 @@ export function ClusterPageClient({ initial, slug }: ClusterPageClientProps) {
     );
   }
 
-  const today = initial?.today ?? null;
   return (
     <ClusterPageView
       cluster={cluster}

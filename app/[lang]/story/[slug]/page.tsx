@@ -6,14 +6,13 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { JsonLd } from "@/components/shared/json-ld";
-import { getCluster, getClusterBySlug, getDigest, isBuildPhase, isMissing } from "@/lib/api/server";
+import { getCluster, getClusterBySlug, isBuildPhase, isMissing } from "@/lib/api/server";
 import type { ApiCluster } from "@/lib/api/types";
 import { breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo/json-ld";
 import type { Lang } from "@/lib/i18n";
 import { localePath, pageAlternates } from "@/lib/i18n/routing";
 import { asLang, sectionCopy } from "@/lib/seo/copy";
 import { storyPath } from "@/lib/seo/site";
-import { positionInDigest, type TodayPosition } from "@/lib/utils/today-position";
 import { ClusterPageClient } from "./cluster-page-client";
 
 type Props = {
@@ -57,15 +56,14 @@ export function generateStaticParams() {
   return [];
 }
 
-async function todayPosition(id: string): Promise<TodayPosition | null> {
-  try {
-    return positionInDigest(await getDigest(), id);
-  } catch {
-    return null;
-  }
-}
+// Rebuilt when the pipeline marks the story changed (lib/api/cache-policy.ts); a week at most
+export const revalidate = 604800;
 
-type LoadedStory = { cluster: ApiCluster; related: ApiCluster[]; today: TodayPosition | null };
+// The page depends only on the story and its related stories (hourly). Today's order
+// (the "next story" at the bottom) is worked out in the browser: from the server it
+// tied every story page to the 5-minute digest, so each pipeline run changed them all
+// and every crawler visit afterwards rebuilt and re-stored the page (Vercel ISR writes).
+type LoadedStory = { cluster: ApiCluster; related: ApiCluster[] };
 
 async function loadStory(slug: string, lang: Lang): Promise<LoadedStory | null> {
   let cluster: ApiCluster;
@@ -80,11 +78,8 @@ async function loadStory(slug: string, lang: Lang): Promise<LoadedStory | null> 
   }
   // Old or mistyped words for a real story: send them to its one address
   if (cluster.slug && cluster.slug !== slug) permanentRedirect(localePath(storyPath(cluster), lang));
-  const [related, today] = await Promise.all([
-    Promise.all(cluster.relatedClusterIds.map((rid) => getCluster(rid).catch(() => null))),
-    todayPosition(cluster.id),
-  ]);
-  return { cluster, related: related.filter((c): c is ApiCluster => c !== null), today };
+  const related = await Promise.all(cluster.relatedClusterIds.map((rid) => getCluster(rid).catch(() => null)));
+  return { cluster, related: related.filter((c): c is ApiCluster => c !== null) };
 }
 
 export default async function StoryPage({ params }: Props) {

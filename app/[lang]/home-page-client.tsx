@@ -48,7 +48,7 @@ type HomePageClientProps = {
   radarWindowDays: number;
   /** This ISO week's summary (headlines) for panel 04. */
   week: ApiWeekSummary | null;
-  /** When the server rendered the page: the date line's value until the reader's own clock takes over. */
+  /** The UTC day the server rendered the page on (YYYY-MM-DD): the date line's value until the reader's own clock takes over. */
   renderedAt: string;
 };
 

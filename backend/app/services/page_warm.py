@@ -1,10 +1,9 @@
-"""Ask the site to rebuild its cached pages right after a pipeline run.
+"""Ask the site to rebuild its main pages right after a pipeline run.
 
-Vercel rebuilds a page in the background when a request finds it older than
-its revalidate time (5 minutes); that request still gets the old copy. Without
-this, the first reader after a quiet spell sees the previous run's page (and
-radar questions, rings and stories from hours ago). Requesting each page once
-here does the triggering instead, so readers get the rebuilt page.
+Pages are cached for a day and the run has just marked them stale
+(app/services/site_revalidate.py); Vercel rebuilds a stale page on its next
+request. Requesting each page once here makes that request ours, so the first
+reader gets the rebuilt page instead of waiting for it.
 """
 
 from __future__ import annotations

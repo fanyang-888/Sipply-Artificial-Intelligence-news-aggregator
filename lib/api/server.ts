@@ -8,6 +8,7 @@
 
 import { cache } from "react";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
+import { RUN_TAG, RUN_TTL, STORY_TTL, storyIdTag, storySlugTag } from "./cache-policy";
 import { ApiError } from "./client";
 import type {
   ApiCluster,
@@ -27,8 +28,8 @@ const API_BASE =
 
 export type ApiClusterIndexEntry = { id: string; slug?: string; lastSeenAt: string | null };
 
-async function getJson<T>(path: string, revalidate: number): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { next: { revalidate } });
+async function getJson<T>(path: string, revalidate: number, tags: string[] = [RUN_TAG]): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { next: { revalidate, tags } });
   if (!res.ok) throw new ApiError(res.status, `${res.status} ${path}`);
   return res.json() as Promise<T>;
 }
@@ -45,40 +46,40 @@ export function isBuildPhase(): boolean {
 
 /** Cached per render, so generateMetadata and the page share one request. */
 // "?with=slug" is ignored by the API; it only gives these responses a new cache key, so
-// copies cached (for up to an hour, kept across deploys) before stories had slugs are not reused
+// copies cached (kept across deploys) before stories had slugs are not reused
 export const getCluster = cache((id: string) =>
-  getJson<ApiCluster>(`/api/clusters/${encodeURIComponent(id)}?with=slug`, 3600),
+  getJson<ApiCluster>(`/api/clusters/${encodeURIComponent(id)}?with=slug`, STORY_TTL, [storyIdTag(id)]),
 );
 
 /** A story by its URL key; the response's ``slug`` is the canonical one (redirect when it differs). */
 export const getClusterBySlug = cache((slug: string) =>
-  getJson<ApiCluster>(`/api/clusters/by-slug/${encodeURIComponent(slug)}`, 3600),
+  getJson<ApiCluster>(`/api/clusters/by-slug/${encodeURIComponent(slug)}`, STORY_TTL, [storySlugTag(slug)]),
 );
 
 /** The global (non-personalized) digest; readers get their own order client-side. */
-export const getDigest = cache(() => getJson<ApiDigest>("/api/digest/today", 300));
+export const getDigest = cache(() => getJson<ApiDigest>("/api/digest/today", RUN_TTL));
 
 /** When the newest finished pipeline run ended (ISO), or null if none has finished. */
 export async function getLastPipelineRunAt(): Promise<string | null> {
-  const runs = await getJson<{ finished_at: string | null }[]>("/api/pipeline-runs?limit=3", 300);
+  const runs = await getJson<{ finished_at: string | null }[]>("/api/pipeline-runs?limit=3", RUN_TTL);
   return runs.find((r) => r.finished_at)?.finished_at ?? null;
 }
 
 export function getTopics(): Promise<ApiTopicSummary[]> {
-  return getJson<ApiTopicSummary[]>("/api/topics", 300);
+  return getJson<ApiTopicSummary[]>("/api/topics", RUN_TTL);
 }
 
 /** Cached per render, so generateMetadata and the page share one request. */
 export const getTopic = cache((slug: string) =>
-  getJson<ApiTopicDetail>(`/api/topics/${encodeURIComponent(slug)}`, 300),
+  getJson<ApiTopicDetail>(`/api/topics/${encodeURIComponent(slug)}`, RUN_TTL),
 );
 
 export function getWeeks(): Promise<ApiWeekSummary[]> {
-  return getJson<ApiWeekSummary[]>("/api/weeks", 300);
+  return getJson<ApiWeekSummary[]>("/api/weeks", RUN_TTL);
 }
 
 export const getWeek = cache((week: string) =>
-  getJson<ApiWeekDetail>(`/api/weeks/${encodeURIComponent(week)}`, 300),
+  getJson<ApiWeekDetail>(`/api/weeks/${encodeURIComponent(week)}`, RUN_TTL),
 );
 
 /**
@@ -87,24 +88,24 @@ export const getWeek = cache((week: string) =>
  * client reuses it for the freshness labels, so both sides of hydration agree.
  */
 export async function getLatestStories(limit: number): Promise<{ result: ApiSearchResponse; renderedAt: number }> {
-  const result = await getJson<ApiSearchResponse>(`/api/search?limit=${limit}&sort_by=date`, 300);
+  const result = await getJson<ApiSearchResponse>(`/api/search?limit=${limit}&sort_by=date`, RUN_TTL);
   return { result, renderedAt: Date.now() };
 }
 
 export function getClusterIndex(): Promise<ApiClusterIndexEntry[]> {
-  return getJson<ApiClusterIndexEntry[]>("/api/clusters/index?with=slug", 3600);
+  return getJson<ApiClusterIndexEntry[]>("/api/clusters/index?with=slug", RUN_TTL);
 }
 
 export function getDays(): Promise<ApiDaySummary[]> {
-  return getJson<ApiDaySummary[]>("/api/days", 300);
+  return getJson<ApiDaySummary[]>("/api/days", RUN_TTL);
 }
 
 export const getDay = cache((day: string) =>
-  getJson<ApiDayDetail>(`/api/days/${encodeURIComponent(day)}`, 300),
+  getJson<ApiDayDetail>(`/api/days/${encodeURIComponent(day)}`, RUN_TTL),
 );
 
 /** The newest stories, for the RSS feed and the news sitemap. */
 export function getFeed(limit = 50): Promise<ApiFeedItem[]> {
-  return getJson<ApiFeedItem[]>(`/api/feed?limit=${limit}`, 300);
+  return getJson<ApiFeedItem[]>(`/api/feed?limit=${limit}`, RUN_TTL);
 }
 
