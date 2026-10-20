@@ -26,7 +26,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   }
   const m = STORIES.exec(file);
   if (!m) return new Response("Not found", { status: 404 });
-  const entries = storyEntries(await getClusterIndex(), Number(m[1]));
-  if (entries.length === 0) return new Response("Not found", { status: 404 });
-  return xml(buildSitemapXml(entries));
+  // A spare file the index names before stories reach it: a valid, empty sitemap
+  return xml(buildSitemapXml(storyEntries(await getClusterIndex(), Number(m[1]))));
 }

@@ -9,13 +9,16 @@ const story = (n: number, seen = "2026-04-08T05:00:00+00:00") => ({
 });
 
 describe("sitemap index", () => {
-  it("lists the pages sitemap and one sitemap per 250 stories", () => {
-    expect(sitemapFiles(0)).toEqual(["pages.xml"]);
-    expect(sitemapFiles(250)).toEqual(["pages.xml", "stories-0.xml"]);
-    expect(sitemapFiles(501)).toEqual(["pages.xml", "stories-0.xml", "stories-1.xml", "stories-2.xml"]);
-    const xml = buildSitemapIndexXml(["pages.xml", "stories-0.xml"], NOW);
+  it("lists the pages sitemap, one sitemap per 250 stories, and room for the next 2,000", () => {
+    // On Vercel /sitemap.xml keeps its build-time copy, so it names files new stories will fill
+    const stories = (n: number) => Array.from({ length: n }, (_, i) => `stories-${i}.xml`);
+    expect(sitemapFiles(0)).toEqual(["pages.xml", ...stories(8)]);
+    expect(sitemapFiles(250)).toEqual(["pages.xml", ...stories(9)]);
+    expect(sitemapFiles(501)).toEqual(["pages.xml", ...stories(11)]);
+    const xml = buildSitemapIndexXml(["pages.xml", "stories-0.xml"]);
     expect(xml).toContain('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
-    expect(xml).toContain("<sitemap>\n<loc>https://www.sipply.dev/sitemaps/stories-0.xml</loc>\n<lastmod>2026-10-20T20:19:50.780Z</lastmod>\n</sitemap>");
+    expect(xml).toContain("<sitemap>\n<loc>https://www.sipply.dev/sitemaps/stories-0.xml</loc>\n</sitemap>");
+    expect(xml).not.toContain("<lastmod>");  // it would stay the build time
   });
 });
 
