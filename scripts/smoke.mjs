@@ -154,10 +154,15 @@ async function main() {
   const card = await get("/opengraph-image");
   check("site share image is a PNG", card.status === 200 && card.type.startsWith("image/png"), `${card.status} ${card.type}`);
 
+  // /sitemap.xml is an index of smaller sitemaps (lib/seo/sitemap.ts)
   const sitemap = await get("/sitemap.xml");
-  const locs = (sitemap.body.match(/<loc>/g) || []).length;
-  check("sitemap lists ≥10 URLs", sitemap.status === 200 && locs >= 10, `${locs} URLs`);
-  check("sitemap lists the Chinese pages", sitemap.body.includes("<loc>https://www.sipply.dev/zh/story/"));
+  const files = [...sitemap.body.matchAll(/<loc>https:\/\/www\.sipply\.dev(\/sitemaps\/[^<]+)<\/loc>/g)].map((m) => m[1]);
+  check("sitemap index lists the pages and story sitemaps", sitemap.status === 200 && sitemap.body.includes("<sitemapindex") && files.includes("/sitemaps/pages.xml") && files.some((f) => f.startsWith("/sitemaps/stories-")), files.join(" "));
+  const pagesMap = await get("/sitemaps/pages.xml");
+  const pageLocs = (pagesMap.body.match(/<loc>/g) || []).length;
+  check("pages sitemap lists ≥10 URLs", pagesMap.status === 200 && pageLocs >= 10, `${pageLocs} URLs`);
+  const storiesMap = await get(files.find((f) => f.startsWith("/sitemaps/stories-")) ?? "/sitemaps/stories-0.xml");
+  check("story sitemaps list the Chinese pages", storiesMap.status === 200 && storiesMap.body.includes("<loc>https://www.sipply.dev/zh/story/"));
 
   const robots = await get("/robots.txt");
   check("robots.txt points to the sitemap", robots.status === 200 && robots.body.includes("Sitemap:"));
