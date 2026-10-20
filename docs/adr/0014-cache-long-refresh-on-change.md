@@ -16,6 +16,7 @@ On 2026-10-20 the Vercel Hobby plan showed "Exceeded free resources": 290K of 20
   - Everything that changes with a run (home, radar, topics, weeks, days, feeds, sitemap index) lives a day, tagged `run`.
   - After each successful run, the pipeline POSTs the changed tags to `/api/revalidate`: always `run`, plus every story it created, changed or merged away, the same stories IndexNow is told about. It authenticates with `REVALIDATE_SECRET`, set on Vercel production and the Railway cron service.
   - Tags expire at once, so the page warm-up and the crawlers IndexNow sends get the new pages.
+- **The sitemap, news sitemap and RSS feed are cached the same way** (a day, `run` tag). Built per request, the 4 MB sitemap took 5-8 s of function time on every crawler visit.
 - **Nothing on a page depends on the clock** where it can be avoided: the home page gets the UTC day, and `llms-full.txt` is dated by its newest story.
 - **Changes are merged in batches**, because each production deploy rebuilds every visited page.
 

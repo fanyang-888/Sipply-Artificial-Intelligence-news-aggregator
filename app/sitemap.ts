@@ -1,19 +1,23 @@
 import type { MetadataRoute } from "next";
-import { getClusterIndex, getDays, getTopics, getWeeks } from "@/lib/api/server";
+import { getClusterIndex, getDays, getTopics, getWeeks, isBuildPhase } from "@/lib/api/server";
 import type { Lang } from "@/lib/i18n";
 import { LANGS, localePath } from "@/lib/i18n/routing";
 import { SITE_URL, storyPath } from "@/lib/seo/site";
 
-// Built per request instead of prerendered + ISR: on Vercel the prerendered
-// sitemap (made while the API was still deploying) never refreshed. The story
-// list itself is still cached for an hour in getClusterIndex's fetch cache, so
-// this costs one cheap function call per crawler visit. If the API is down the
-// request fails (500) and crawlers keep the sitemap they already have.
-export const dynamic = "force-dynamic";
+// Cached, and rebuilt when the pipeline marks a run's data stale ("run" tag,
+// lib/api/cache-policy.ts); a day at most. Built per request it took 5-8 s for
+// ~16K URLs (4 MB) on every crawler visit. (It was made per request after a copy
+// prerendered during a deploy never refreshed: that copy had no lifetime at all.)
+// A failed rebuild keeps the last good sitemap; a build without the API makes
+// one of the hub pages only, until the next run.
+export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stories, topics, weeks, days] = await Promise.all([
-    getClusterIndex(),
+    getClusterIndex().catch((err) => {
+      if (isBuildPhase()) return [];
+      throw err;
+    }),
     // Hub lists are extras: a failure there shouldn't cost the story URLs
     getTopics().catch(() => []),
     getWeeks().catch(() => []),
