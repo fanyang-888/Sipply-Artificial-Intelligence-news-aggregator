@@ -13,6 +13,12 @@ import pytest
 import scripts.run_pipeline as rp
 
 
+@pytest.fixture(autouse=True)
+def _no_interrupted_runs(monkeypatch):
+    """main() checks the database for runs that never finished; these tests have none."""
+    monkeypatch.setattr(rp, "_previous_interrupted", lambda now: None)
+
+
 @pytest.fixture
 def run(monkeypatch):
     executed: list[str] = []
@@ -285,3 +291,12 @@ def test_the_site_is_left_alone_by_local_and_failed_runs(run, run_with_failure, 
     monkeypatch.setenv("APP_ENV", "production")
     _, recorded = run_with_failure("summarize")
     assert recorded["revalidate_site"]["status"] == "skipped"
+
+
+def test_a_run_that_never_finished_is_reported_by_the_next_one(run, monkeypatch, operator_emails):
+    note = {"status": "failed", "reason": "run(s) started 2026-10-20 14:03 UTC stopped before finishing"}
+    monkeypatch.setattr(rp, "_previous_interrupted", lambda now: note)
+    code, _, recorded = run(8)
+    assert code == 0  # this run itself is fine
+    assert recorded["interrupted_runs"] == note
+    assert operator_emails == [("failure", ["interrupted_runs"], False)]

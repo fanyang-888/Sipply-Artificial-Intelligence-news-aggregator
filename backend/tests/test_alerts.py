@@ -34,6 +34,15 @@ def test_a_failed_stage_emails_the_operator(monkeypatch):
     assert "/admin/pipeline-runs" in sent[0]["html"]
 
 
+def test_the_alert_says_why_when_a_stage_gives_a_reason(monkeypatch):
+    monkeypatch.setenv("ALERT_EMAIL", "ops@example.test")
+    sent, sender = outbox()
+    note = {"status": "failed", "reason": "run(s) started 2026-10-20 14:03 UTC stopped before finishing"}
+    alerts.send_failure_alert({"interrupted_runs": note}, started_at=STARTED, news_failed=False, sender=sender)
+    assert "- interrupted_runs (0s): run(s) started 2026-10-20 14:03 UTC stopped before finishing" in sent[0]["text"]
+    assert "stopped before finishing" in sent[0]["html"]
+
+
 def test_no_alert_without_a_recipient_or_a_failure(monkeypatch):
     sent, sender = outbox()
     failed = {"summarize": {"status": "failed", "elapsed_sec": 1.0}}

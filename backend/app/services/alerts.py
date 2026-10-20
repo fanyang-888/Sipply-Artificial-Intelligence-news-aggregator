@@ -68,11 +68,16 @@ def send_failure_alert(
     impact = (
         "The site was not updated: a news stage failed, so the cache was kept and nothing was submitted to search engines."
         if news_failed
-        else "The site was updated; only best-effort Trend Radar stages failed."
+        else "The site was updated; only best-effort stages failed (or an earlier run never finished)."
     )
-    lines = [f"- {name} ({stage_results[name].get('elapsed_sec', 0)}s)" for name in failed]
+    # A stage that knows why it failed says so ("interrupted_runs: run(s) started … stopped before finishing")
+    def why(name: str) -> str:
+        reason = stage_results[name].get("reason")
+        return f": {reason}" if reason else ""
+
+    lines = [f"- {name} ({stage_results[name].get('elapsed_sec', 0)}s){why(name)}" for name in failed]
     text = "\n".join([f"Pipeline run of {when}", impact, "", "Failed stages:", *lines, "", f"Run log: {ADMIN_RUNS}"])
-    items = "".join(f"<li><code>{html.escape(name)}</code></li>" for name in failed)
+    items = "".join(f"<li><code>{html.escape(name)}</code>{html.escape(why(name))}</li>" for name in failed)
     body = (
         f"<p>Pipeline run of {html.escape(when)}</p><p>{html.escape(impact)}</p>"
         f"<p>Failed stages:</p><ul>{items}</ul><p><a href=\"{ADMIN_RUNS}\">Run log</a></p>"
