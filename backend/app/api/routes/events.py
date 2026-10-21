@@ -13,9 +13,10 @@ Two sinks (both best-effort; failures are swallowed so the client never errors):
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,20 @@ router = APIRouter(prefix="/api", tags=["events"])
 _ALLOWED_TYPES = frozenset({"cluster_viewed"})
 
 _DAILY_TTL = 90 * 86_400  # 90 days in seconds
+
+# Crawlers that run the page's JavaScript (Googlebot renders it), our own test browsers
+# (the CI stability check sends "sipply-stability", headless Chrome says so) and tools.
+# In the week of 2026-10-19 they made 8,039 "views" against 85 the week before.
+_AUTOMATED = re.compile(
+    r"bot\b|bot/|crawl|spider|slurp|headless|lighthouse|playwright|puppeteer|sipply-"
+    r"|python-|curl/|wget/|httpx|node-fetch|axios/|facebookexternalhit|preview",
+    re.IGNORECASE,
+)
+
+
+def is_automated(user_agent: str | None) -> bool:
+    """A crawler, a test browser or a script rather than a reader (no user agent counts as one)."""
+    return not user_agent or bool(_AUTOMATED.search(user_agent))
 
 
 class EventPayload(BaseModel):
@@ -35,10 +50,12 @@ class EventPayload(BaseModel):
 
 # Sync def so FastAPI runs it in a threadpool — the Redis + DB calls are blocking.
 @router.post("/events", status_code=204)
-def record_event(payload: EventPayload) -> None:
+def record_event(payload: EventPayload, request: Request) -> None:
     """Record a single client-side event. Always returns 204; errors are silent."""
     if payload.type not in _ALLOWED_TYPES:
         return  # silently drop unknown types
+    if is_automated(request.headers.get("user-agent")):
+        return  # not a reader: keep the metrics about people
 
     entity_id = payload.entity_id[:128]
     device_id = (payload.device_id or None) and payload.device_id[:64]

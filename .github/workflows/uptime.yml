@@ -1,0 +1,22 @@
+name: Uptime
+
+# Is www.sipply.dev up, and is the pipeline still running? Every 30 minutes
+# (scripts/uptime.mjs); a failed run makes GitHub email the repo owner.
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/uptime.mjs

@@ -25,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     with session_scope() as db:
         summary = assign_related(db, now=datetime.now(timezone.utc))
     logger.info("relate_stories %s", summary)
-    print(f"Done — stories={summary['stories']} related={summary['related']}")
+    print(f"Done — stories={summary['stories']} worked_out={summary['worked_out']} changed={summary['changed']}")
     return 0
 
 

@@ -116,23 +116,27 @@ def related_for_all(
 
 
 def assign_related(db: Session, *, now: datetime) -> dict[str, int]:
-    """Work out and store the related stories of every public story seen in the last
-    RELATED_WINDOW_DAYS (new stories may have joined their window) and of any story that
-    has none stored yet. Returns {"stories": public stories, "related": stories updated}."""
+    """Work out the related stories of every public story seen in the last RELATED_WINDOW_DAYS
+    (new stories may have joined their window) and of any story that has none stored yet, and
+    store the lists that changed. Rewriting an unchanged list still writes a new row version
+    (about 3.5 KB a story, some 2,000 stories a run), so those are left alone.
+    Returns {"stories": public stories, "worked_out": stories worked out, "changed": rows written}."""
     rows = db.execute(
         select(
             Cluster.id, Cluster.representative_title, Cluster.summary, Cluster.topic_tag, Cluster.last_seen_at,
-            Cluster.related_ids.is_(None),
+            Cluster.related_ids,
         ).where(Cluster.representative_title_zh.isnot(None))
     ).all()
     stories = [StoryText(str(cid), title, summary, tag, seen) for cid, title, summary, tag, seen, _ in rows]
+    stored = {str(row[0]): row[5] for row in rows}
     recent = now - timedelta(days=RELATED_WINDOW_DAYS)
-    targets = [i for i, row in enumerate(rows) if row[5] or (row[4] is not None and row[4] >= recent)]
+    targets = [i for i, row in enumerate(rows) if row[5] is None or (row[4] is not None and row[4] >= recent)]
     related = related_for_all(stories, targets)
-    if related:
-        db.execute(update(Cluster), [{"id": uuid.UUID(sid), "related_ids": ids} for sid, ids in related.items()])
+    changed = [{"id": uuid.UUID(sid), "related_ids": ids} for sid, ids in related.items() if stored[sid] != ids]
+    if changed:
+        db.execute(update(Cluster), changed)
         db.commit()
-    return {"stories": len(stories), "related": len(related)}
+    return {"stories": len(stories), "worked_out": len(related), "changed": len(changed)}
 
 
 def related_cluster_ids(db: Session, cluster: Cluster, limit: int = RELATED_LIMIT) -> list[str]:

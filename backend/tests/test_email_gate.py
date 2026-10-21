@@ -83,7 +83,8 @@ def test_content_stages_run_every_time(run):
     content_stages = list(skipped_run)
     _, email_run, _ = run(20)
     assert [s for s in email_run if s != "send_digest_email"] == content_stages
-    assert len(content_stages) == 17  # + relate_stories
+    assert len(content_stages) == 18  # + prune_old_data
+    assert content_stages[-1] == "prune_old_data"  # housekeeping last
     # Related stories are worked out once titles and translations are final
     assert content_stages.index("relate_stories") == content_stages.index("backfill_headlines") + 1
     # Duplicates are merged before summarize, so the kept story is summarized over all its sources
@@ -114,7 +115,7 @@ def run_with_failure(monkeypatch):
 
 @pytest.mark.parametrize(
     "stage",
-    ["merge_duplicate_stories", "relate_stories", "ingest_signals", "build_signal_topics", "merge_signal_topics", "translate_signals", "describe_signal_topics"],
+    ["merge_duplicate_stories", "relate_stories", "prune_old_data", "ingest_signals", "build_signal_topics", "merge_signal_topics", "translate_signals", "describe_signal_topics"],
 )
 def test_best_effort_stage_failure_does_not_fail_the_pipeline(run_with_failure, stage):
     code, recorded = run_with_failure(stage)

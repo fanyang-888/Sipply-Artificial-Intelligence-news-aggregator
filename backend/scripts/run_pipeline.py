@@ -75,6 +75,7 @@ _BEST_EFFORT_STAGES = frozenset(
     {
         "merge_duplicate_stories",
         "relate_stories",
+        "prune_old_data",
         "ingest_signals",
         "build_signal_topics",
         "merge_signal_topics",
@@ -358,6 +359,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         translate_signals,
         describe_signal_topics,
         brief_signal_topics,
+        prune_old_data,
         check_ai_answers,
         send_digest_email,
     )
@@ -379,6 +381,7 @@ def main(triggered_by: str = "cron", force_email: bool = False, check_answers: b
         ("translate_signals",     lambda: translate_signals.main([])),
         ("describe_signal_topics", lambda: describe_signal_topics.main([])),
         ("brief_signal_topics",   lambda: brief_signal_topics.main([])),
+        ("prune_old_data",        lambda: prune_old_data.main([])),
     ]
     if check_answers:
         stages.append(("check_ai_answers", lambda: check_ai_answers.main([])))
