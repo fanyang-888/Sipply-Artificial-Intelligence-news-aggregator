@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 360 backend · 91 frontend · 141 smoke checks of the built site, all in CI |
+| **Tests** | 373 backend · 91 frontend · 141 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -203,10 +203,22 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 |---|---|
 | Failure alerts | A failed stage emails `ALERT_EMAIL` with what failed and whether the site was updated (`backend/app/services/alerts.py`) |
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
-| Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs` |
-| CI on every pull request | Migrations on an empty Postgres + 360 pytest tests; typecheck, lint with zero warnings, 91 vitest tests; a production build read by the 141-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs`; a run stopped mid-way (a redeploy, a crash) is closed and reported by the next one |
+| Uptime | Every 30 minutes a GitHub Actions job checks the home page, a story page, `/zh`, the sitemaps, the API, and that the pipeline succeeded in the last 8 hours (`scripts/uptime.mjs`); a failure emails the owner |
+| CI on every pull request | Migrations on an empty Postgres + 373 pytest tests; typecheck, lint with zero warnings, 91 vitest tests; a production build read by the 141-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Fourteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
+
+## Hosting cost and caching
+
+The site runs on Vercel (pages) and Railway (API, Postgres, Redis, the cron). In October 2026, once search engines were told about every story page, crawler traffic exposed where the money went. Each cause was measured, fixed and measured again:
+
+| Symptom | Cause | Fix | Before → after |
+|---|---|---|---|
+| Railway bill at $10.94 by Oct 18, mostly network | The API reached Postgres through the public proxy, billed as egress, while the cron used the private network | Private network for Postgres and Redis (Redis had never been connected, so nothing was cached) | 20–50 GB a day of database egress → 0 |
+| Story requests slow, API near 1 vCPU under crawlers | Each request compared the story with about 3,000 others (a TF-IDF fit per request) | Related stories worked out once per run and stored; story responses cached | Median 5.0 s → 1.1 s; CPU 0.81 → 0.25 vCPU |
+| Vercel Hobby: 290K of 200K ISR writes a month | The header ticker tied every story page (two languages, about 8,000) to the 5-minute digest, and no two rebuilds of a page are byte for byte the same | Ticker and "next story" load in the browser; pages cached for a day (stories a week) and rebuilt only when a run changes them ([ADR 14](docs/adr/0014-cache-long-refresh-on-change.md)) | A story page went stale and was rebuilt 5 minutes after every rebuild; now it stays cached until its story changes |
+| Sitemap took 4.7–8 s on every crawler visit | About 8,000 URLs (4.1 MB) built per request | An index of cached sitemaps of about 260 KB each, refreshed by each run | Served from cache |
 
 ---
 
