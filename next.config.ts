@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-const pagesBasePath = process.env.PAGES_BASE_PATH ?? "";
-
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
   "http://localhost:8000";
@@ -50,9 +48,6 @@ const HTML_LIMITED_BOTS = new RegExp(
 
 const nextConfig: NextConfig = {
   htmlLimitedBots: HTML_LIMITED_BOTS,
-  ...(pagesBasePath
-    ? { basePath: pagesBasePath, assetPrefix: pagesBasePath }
-    : {}),
   images: {
     unoptimized: true,
   },
