@@ -95,9 +95,27 @@ def test_the_stage_stores_related_stories_for_recent_and_new_stories(db, make_cl
     draft = make_cluster(title="Claude Haiku 5.5 benchmarks draft", title_zh=None, last_seen_at=now - timedelta(days=1))
 
     summary = assign_related(db, now=now)
-    assert summary == {"stories": 4, "related": 3}
+    assert summary == {"stories": 4, "worked_out": 3, "changed": 3}
     for c in (haiku, bench, old, older, draft):
         db.refresh(c)
     assert haiku.related_ids == [str(bench.id)] and bench.related_ids == [str(haiku.id)]
     assert old.related_ids == ["kept"] and older.related_ids == [str(old.id)]
     assert draft.related_ids is None
+
+
+def test_the_stage_rewrites_only_stories_whose_related_stories_changed(db, make_cluster):
+    from sqlalchemy import delete
+
+    from app.models.cluster import Cluster
+    from app.services.related import assign_related
+
+    db.execute(delete(Cluster))
+    haiku = make_cluster(title="Anthropic launches Claude Haiku 5.5", summary="Anthropic's new small model.", last_seen_at=NOW - timedelta(days=1))
+    make_cluster(title="Claude Haiku 5.5 benchmarks: faster and cheaper", summary="Benchmarks of the new Haiku model.", last_seen_at=NOW - timedelta(days=2))
+    assert assign_related(db, now=NOW)["changed"] == 2
+    # Nothing new: every row would be rewritten with the same list (dead row versions, WAL)
+    assert assign_related(db, now=NOW) == {"stories": 2, "worked_out": 2, "changed": 0}
+    make_cluster(title="Claude Haiku 5.5 arrives on AWS Bedrock", summary="The new Haiku model on Bedrock.", last_seen_at=NOW - timedelta(hours=3))
+    assert assign_related(db, now=NOW)["changed"] == 3
+    db.refresh(haiku)
+    assert len(haiku.related_ids) == 2
