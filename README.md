@@ -207,7 +207,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Uptime | Every 30 minutes a GitHub Actions job checks the home page, a story page, `/zh`, the sitemaps, the API, and that the pipeline succeeded in the last 8 hours (`scripts/uptime.mjs`); a failure emails the owner |
 | CI on every pull request | Migrations on an empty Postgres + 373 pytest tests; typecheck, lint with zero warnings, 91 vitest tests; a production build read by the 141-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
-| Decisions | Fourteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
+| Decisions | Fifteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
 ## Hosting cost and caching
 
@@ -254,7 +254,7 @@ The site runs on Vercel (pages) and Railway (API, Postgres, Redis, the cron). In
 | Role personalization | PM / Developer / Student lenses with their own "why it matters" |
 | Bilingual | Title, summary, takeaways and why-it-matters translated into Chinese |
 | Ranking | By how big the news is, then recency: `score × e^(-0.15 × age_days)` ([ADR 5](docs/adr/0005-rank-by-story-size.md)) |
-| Email digest | Daily, to subscribers, on the 20:00 UTC run |
+| Email digest | Daily, on the 20:00 UTC run, to subscribers who confirmed their address; every email has a one-click unsubscribe ([ADR 15](docs/adr/0015-confirmed-subscribers-one-click-unsubscribe.md)) |
 | Home page | Four full-screen panels: the lead story, today's stories as a carousel, what the community is discussing, this week and the email |
 | Archive, topics, weekly | Every story by day with search; a page per company or model; a recap per week |
 | Share images | Generated per page with `next/og` (site, stories, topics, weeks) |
@@ -454,7 +454,7 @@ On startup `alembic upgrade head` runs in a background thread, so Railway's heal
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string (`postgresql+psycopg://...`) |
 | `OPENAI_API_KEY` | gpt-4o-mini: summaries, translation, radar |
-| `RESEND_API_KEY` | Email delivery |
+| `RESEND_API_KEY` | Email delivery: on the API service (sign-up confirmations) and the cron service (digest, alerts) |
 | `ALERT_EMAIL` | Operator emails: a failed stage, and a 24-hour summary on the 20:00 run (none while unset) |
 | `ANSWER_CHECKS_ENABLED` | The paid AI-answer check runs every Monday by default; `1` makes it daily, `off` stops it |
 | `MALLOC_ARENA_MAX` | `2` on the API service: one memory arena per thread let the API grow from about 0.6 to 1.5 GB a day (glibc; FastAPI runs sync endpoints on up to 40 threads) |
@@ -481,7 +481,9 @@ GET  /api/clusters/index               # every story id + last update (feeds the
 GET  /api/search?q=GPT-5&type=cluster  # full-text search
 GET  /api/radar?limit=40               # Trend Radar topics, rings, momentum, summaries, top posts, questions
 GET  /api/pipeline-runs?limit=20       # the run log
-POST /api/subscribe  {"email": "..."}  # email digest
+POST /api/subscribe  {"email": "...", "lang": "en"}  # emails a confirmation link
+POST /api/subscribe/confirm  {"token": "..."}     # the link was opened; the digest starts
+POST /api/unsubscribe?token=...                  # the footer page's button, and one-click unsubscribe
 GET  /docs                             # interactive docs
 ```
 

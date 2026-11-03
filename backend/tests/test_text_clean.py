@@ -54,11 +54,11 @@ def test_digest_email_decodes_titles_and_escapes_html():
         SimpleNamespace(representative_title="ChatGPT isn&#8217;t safe", summary="Kids <script> & parents"),
         SimpleNamespace(representative_title="A &lt;b&gt; tag", summary=None),
     ]
-    page = _build_html(stories, date(2026, 10, 15))
+    page = _build_html(stories, date(2026, 10, 15), unsubscribe="u")
     assert "ChatGPT isn’t safe" in page and "&#8217;" not in page
     assert "Kids &lt;script&gt; &amp; parents" in page and "<script>" not in page
     assert "A &lt;b&gt; tag" in page  # decoded once, then escaped for HTML
-    assert "FEATURED: ChatGPT isn’t safe" in _build_text(stories, date(2026, 10, 15))
+    assert "FEATURED: ChatGPT isn’t safe" in _build_text(stories, date(2026, 10, 15), unsubscribe="u")
 
 
 def test_digest_email_links_stories_at_their_story_address():
@@ -70,7 +70,7 @@ def test_digest_email_links_stories_at_their_story_address():
 
     sid = uuid.UUID("ac94574a-93c6-4a1e-9593-a6e17e04b56e")
     stories = [SimpleNamespace(id=sid, slug="replit-drops-anthropic-ac94574a", representative_title="Replit drops Anthropic", summary="s")]
-    assert 'href="https://www.sipply.dev/story/replit-drops-anthropic-ac94574a"' in _build_html(stories, date(2026, 10, 19))
-    assert "https://www.sipply.dev/story/replit-drops-anthropic-ac94574a" in _build_text(stories, date(2026, 10, 19))
-    assert "/cluster/" not in _build_html(stories, date(2026, 10, 19))
+    assert 'href="https://www.sipply.dev/story/replit-drops-anthropic-ac94574a"' in _build_html(stories, date(2026, 10, 19), unsubscribe="u")
+    assert "https://www.sipply.dev/story/replit-drops-anthropic-ac94574a" in _build_text(stories, date(2026, 10, 19), unsubscribe="u")
+    assert "/cluster/" not in _build_html(stories, date(2026, 10, 19), unsubscribe="u")
 

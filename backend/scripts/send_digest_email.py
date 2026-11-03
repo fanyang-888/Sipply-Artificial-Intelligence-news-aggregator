@@ -1,4 +1,4 @@
-"""Pipeline stage: send today's digest email to all subscribers.
+"""Pipeline stage: send today's digest email to every confirmed subscriber.
 
 Run from backend/:
     python -m scripts.send_digest_email
@@ -13,13 +13,11 @@ import argparse
 import logging
 import sys
 
-from sqlalchemy import select
-
 from app.crud.cluster import get_top_clusters
 from app.db import session_scope
 from app.logging_config import configure_logging
-from app.models.subscriber import Subscriber
 from app.services.email_service import send_digest_email
+from app.services.subscriptions import digest_recipients
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -43,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     with session_scope() as db:
         clusters = get_top_clusters(db, limit=args.limit)
-        subscribers = list(db.execute(select(Subscriber)).scalars().all())
+        subscribers = digest_recipients(db)
 
         logger.info(
             "send_digest_email: clusters=%d subscribers=%d dry_run=%s",

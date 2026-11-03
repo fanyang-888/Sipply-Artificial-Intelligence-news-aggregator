@@ -150,6 +150,11 @@ async function main() {
 
   const admin = await get("/admin/login");
   check("admin is noindex", /name="robots" content="noindex/.test(admin.body));
+  // Reached only from emails (backend/app/services/email_service.py)
+  for (const path of ["/subscribe/confirm", "/unsubscribe", "/zh/subscribe/confirm"]) {
+    const page = await get(path);
+    check(`${path} is noindex`, page.status === 200 && /name="robots" content="noindex/.test(page.body), `status ${page.status}`);
+  }
 
   const card = await get("/opengraph-image");
   check("site share image is a PNG", card.status === 200 && card.type.startsWith("image/png"), `${card.status} ${card.type}`);

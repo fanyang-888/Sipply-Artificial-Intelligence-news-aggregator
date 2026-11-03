@@ -18,3 +18,4 @@ Short records of decisions that shaped Sipply: the context, what was decided, an
 | [12](0012-a-url-per-language.md) | Each language has its own URL: English at the root, Chinese under /zh, both rendered on the server |
 | [13](0013-merge-duplicate-stories.md) | One event, one story: duplicates are merged by a model judge, and old addresses redirect |
 | [14](0014-cache-long-refresh-on-change.md) | Pages are cached for long and rebuilt when a pipeline run changes them |
+| [15](0015-confirmed-subscribers-one-click-unsubscribe.md) | Subscribers confirm their address, and leave with one click |
