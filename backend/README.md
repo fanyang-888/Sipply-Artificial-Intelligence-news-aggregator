@@ -99,7 +99,7 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | `articles` | Ingested articles — full text, scores, cluster assignment |
 | `ingest_url_states` | Per-URL fetch state (403 backoff counters, retry_at) |
 | `clusters` | Story clusters — summaries, takeaways, audience blocks (EN + ZH) |
-| `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written |
+| `drafts` | Retired LinkedIn-draft feature; table kept for its data, no longer read or written (no model; `migrations/env.py` keeps it out of autogenerate) |
 | `pipeline_runs` | Run history with per-stage timing and status |
 | `signals` | Trend Radar posts/news/videos with live engagement numbers |
 | `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run; summaries, reader question and the covering story carry over to the matching topic |
@@ -107,6 +107,12 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
 On Railway, migrations run automatically at startup in a background thread.
+
+The models and the migrations must describe the same schema: `tests/test_schema_drift.py`
+runs `alembic check` against the test database, so CI fails when they disagree (the
+next `alembic revision --autogenerate` would otherwise drop what the models don't
+mention). When a migration creates an index, declare it on the model too, partial
+`WHERE` clause included: autogenerate doesn't compare those, so check them by eye.
 
 ---
 

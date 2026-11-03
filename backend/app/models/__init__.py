@@ -7,6 +7,7 @@ from app.models.pipeline_run import PipelineRun
 from app.models.signal import Signal, SignalTopic
 from app.models.source import Source
 from app.models.story_redirect import StoryRedirect
+from app.models.subscriber import Subscriber
 
 __all__ = [
     "AnswerCheck",
@@ -19,4 +20,5 @@ __all__ = [
     "SignalTopic",
     "Source",
     "StoryRedirect",
+    "Subscriber",
 ]
