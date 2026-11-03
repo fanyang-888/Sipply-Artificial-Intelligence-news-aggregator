@@ -94,7 +94,8 @@ export async function fetchRadarAnswers(days = 30): Promise<ApiRadarAnswers> {
 // ---------------------------------------------------------------------------
 
 // backend/app/api/routes/subscribe.py: a sign-up gets a confirmation link; only a confirmed
-// address gets the digest, and every digest links to its own unsubscribe page.
+// address gets the digest, and every digest links to its own unsubscribe page. The browser
+// calls postSubscribe; the other two are called by the site's routes (lib/subscription.ts).
 
 /** Throws ApiError 503 when the confirmation email couldn't be sent. */
 export async function postSubscribe(email: string, lang: Lang): Promise<{ status: "confirm_sent" | "already_subscribed" }> {
@@ -106,8 +107,8 @@ export async function postConfirmSubscription(token: string): Promise<{ status: 
   return apiPost("/api/subscribe/confirm", { token });
 }
 
-/** Always "unsubscribed", also for a token that names no one. */
-export async function postUnsubscribe(token: string): Promise<{ status: "unsubscribed" }> {
+/** "not_subscribed" for a token that names no one (used already, or the address was removed). */
+export async function postUnsubscribe(token: string): Promise<{ status: "unsubscribed" | "not_subscribed" }> {
   return apiPost(`/api/unsubscribe?token=${encodeURIComponent(token)}`);
 }
 

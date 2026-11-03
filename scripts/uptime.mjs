@@ -72,6 +72,14 @@ const checks = [
     },
   ],
   [
+    "API can send sign-up emails",
+    async () => {
+      // Without RESEND_API_KEY on the API service, every sign-up fails (backend/app/api/routes/health.py)
+      const health = await get(`${API}/health`);
+      return JSON.parse(health.body).mail === true ? null : "no: set RESEND_API_KEY on the API service";
+    },
+  ],
+  [
     `pipeline ran in the last ${MAX_HOURS_SINCE_RUN} hours`,
     async () => {
       const r = await get(`${API}/api/pipeline-runs?limit=10`);

@@ -3,14 +3,18 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.services import mailer
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-def health() -> dict[str, str]:
-    """Lightweight liveness check — no DB dependency so Railway healthcheck passes fast."""
-    return {"status": "ok"}
+def health() -> dict[str, str | bool]:
+    """Lightweight liveness check — no DB dependency so Railway healthcheck passes fast.
+
+    "mail": whether this service can send email (RESEND_API_KEY). Sign-ups need it for their
+    confirmation link; scripts/uptime.mjs fails when it's false."""
+    return {"status": "ok", "mail": mailer.configured()}
 
 
 @router.get("/health/db")

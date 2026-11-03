@@ -8,8 +8,9 @@ import type { Lang } from "./types";
 
 export const LANGS: readonly Lang[] = ["en", "zh"];
 
-/** Public pages that exist in both languages. */
-const LOCALIZABLE = /^\/(?:$|(?:story|archive|radar|topics|weekly|daily)(?:\/|$))/;
+/** Pages that exist in both languages (also the pages subscribers reach from emails). Keep in
+ * step with HEAD_SCRIPT in components/layout/root-document.tsx. */
+const LOCALIZABLE = /^\/(?:$|(?:story|archive|radar|topics|weekly|daily|unsubscribe|subscribe\/confirm)(?:\/|$))/;
 
 export function isLocalizable(path: string): boolean {
   return LOCALIZABLE.test(path);

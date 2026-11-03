@@ -288,7 +288,8 @@ export type Translations = {
   /** The pages a subscriber reaches from an email: confirming, and unsubscribing. */
   subscription: {
     confirmTitle: string;
-    confirming: string;
+    confirmMessage: string;
+    confirmCta: string;
     confirmed: string;
     confirmedMessage: string;
     alreadyConfirmed: string;
@@ -296,12 +297,12 @@ export type Translations = {
     invalidMessage: string;
     missingToken: string;
     errorMessage: string;
-    retry: string;
     unsubscribeTitle: string;
     unsubscribeMessage: string;
     unsubscribeCta: string;
-    unsubscribing: string;
     unsubscribed: string;
     unsubscribedMessage: string;
+    notSubscribedTitle: string;
+    notSubscribedMessage: string;
   };
 };

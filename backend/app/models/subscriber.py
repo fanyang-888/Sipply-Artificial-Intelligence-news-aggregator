@@ -4,7 +4,7 @@ import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,3 +32,6 @@ class Subscriber(Base):
     # Only confirmed subscribers get the digest
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     confirm_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirm_sends: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # The language of the pages their links open ("en" or "zh"); the digest itself is English
+    lang: Mapped[str] = mapped_column(String(2), nullable=False, default="en", server_default="en")

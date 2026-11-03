@@ -15,7 +15,7 @@ import { websiteJsonLd } from "@/lib/seo/json-ld";
  * page to its /zh address (crawlers and readers without a choice stay on the page they asked
  * for). The path test is isLocalizable in lib/i18n/routing.ts.
  */
-const HEAD_SCRIPT = `try{var d=document.documentElement;d.setAttribute('data-theme',localStorage.getItem('sipply-theme')||'dark');var l=location,p=l.pathname;if(localStorage.getItem('pai-lang')==='zh'&&!/^\\/zh(\\/|$)/.test(p)&&/^\\/(?:$|(?:story|archive|radar|topics|weekly|daily)(?:\\/|$))/.test(p)){l.replace('/zh'+(p==='/'?'':p)+l.search+l.hash)}}catch(e){}`;
+const HEAD_SCRIPT = `try{var d=document.documentElement;d.setAttribute('data-theme',localStorage.getItem('sipply-theme')||'dark');var l=location,p=l.pathname;if(localStorage.getItem('pai-lang')==='zh'&&!/^\\/zh(\\/|$)/.test(p)&&/^\\/(?:$|(?:story|archive|radar|topics|weekly|daily|unsubscribe|subscribe\\/confirm)(?:\\/|$))/.test(p)){l.replace('/zh'+(p==='/'?'':p)+l.search+l.hash)}}catch(e){}`;
 
 /** The document every page shares: fonts, theme, ticker, nav, main column and footer. */
 export function RootDocument({ lang, children }: { lang: Lang; children: ReactNode }) {

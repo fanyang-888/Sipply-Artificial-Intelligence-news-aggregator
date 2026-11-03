@@ -63,9 +63,9 @@ def confirm_url(token: str, lang: str = "en") -> str:
     return f"{_SITE}{'/zh' if lang == 'zh' else ''}/subscribe/confirm?token={token}"
 
 
-def unsubscribe_url(token: str) -> str:
+def unsubscribe_url(token: str, lang: str = "en") -> str:
     """The page with the unsubscribe button: the link in the digest's footer."""
-    return f"{_SITE}/unsubscribe?token={token}"
+    return f"{_SITE}{'/zh' if lang == 'zh' else ''}/unsubscribe?token={token}"
 
 
 def one_click_unsubscribe_url(token: str) -> str:
@@ -174,7 +174,7 @@ def _build_text(clusters: list["Cluster"], today: date, *, unsubscribe: str) -> 
 
 def digest_message(clusters: list["Cluster"], subscriber: "Subscriber", today: date) -> mailer.Message:
     """Today's digest for one subscriber, with their own unsubscribe link."""
-    unsubscribe = unsubscribe_url(subscriber.token)
+    unsubscribe = unsubscribe_url(subscriber.token, subscriber.lang)
     return {
         "to": [subscriber.email],
         "subject": f"Sipply Digest — {today.strftime('%B %-d, %Y')}",
@@ -235,23 +235,24 @@ _CONFIRM_COPY = {
         "body": "Someone, hopefully you, asked for the Sipply daily digest at this address. "
         "To start getting it, confirm with the link below.",
         "button": "Confirm subscription",
-        "ignore": "If it wasn't you, ignore this email: nothing more is sent, and the address "
-        "is deleted within {days} days.",
+        "ignore": "If it wasn't you, ignore this email: without a click no digest is ever sent, "
+        "and the address is deleted within {days} days.",
     },
     "zh": {
         "subject": "请确认订阅 Sipply",
         "heading": "确认订阅",
         "body": "有人（希望是你）用这个邮箱订阅了 Sipply 每日摘要（摘要是英文的）。点下面的链接确认后，就会开始收到。",
         "button": "确认订阅",
-        "ignore": "如果不是你本人操作，忽略这封邮件即可：不会再收到任何邮件，这个地址会在 {days} 天内删除。",
+        "ignore": "如果不是你本人操作，忽略这封邮件即可：不点链接就不会收到任何摘要，这个地址会在 {days} 天内删除。",
     },
 }
 
 
-def confirmation_message(subscriber: "Subscriber", *, lang: str, forget_after_days: int) -> mailer.Message:
-    """The email with the link that confirms a sign-up."""
-    copy = _CONFIRM_COPY.get(lang, _CONFIRM_COPY["en"])
-    url = confirm_url(subscriber.token, lang if lang in _CONFIRM_COPY else "en")
+def confirmation_message(subscriber: "Subscriber", *, forget_after_days: int) -> mailer.Message:
+    """The email with the link that confirms a sign-up, in the language they signed up in."""
+    lang = subscriber.lang if subscriber.lang in _CONFIRM_COPY else "en"
+    copy = _CONFIRM_COPY[lang]
+    url = confirm_url(subscriber.token, lang)
     ignore = copy["ignore"].format(days=forget_after_days)
     page = f"""<!DOCTYPE html>
 <html lang="{'zh-CN' if lang == 'zh' else 'en'}">
@@ -273,6 +274,6 @@ def confirmation_message(subscriber: "Subscriber", *, lang: str, forget_after_da
     return {"to": [subscriber.email], "subject": copy["subject"], "html": page, "text": text}
 
 
-def send_confirmation_email(subscriber: "Subscriber", *, lang: str, forget_after_days: int) -> None:
+def send_confirmation_email(subscriber: "Subscriber", *, forget_after_days: int) -> None:
     """Raises if the email couldn't be sent (see mailer.send)."""
-    mailer.send(confirmation_message(subscriber, lang=lang, forget_after_days=forget_after_days))
+    mailer.send(confirmation_message(subscriber, forget_after_days=forget_after_days))

@@ -155,6 +155,11 @@ async function main() {
     const page = await get(path);
     check(`${path} is noindex`, page.status === 200 && /name="robots" content="noindex/.test(page.body), `status ${page.status}`);
   }
+  // Their buttons are plain forms in the HTML, so they work without JavaScript (ADR 15)
+  const unsubscribe = await get("/unsubscribe?token=smoke-test-token");
+  check("unsubscribe page has its form in the HTML", /<form[^>]*action="\/api\/unsubscribe"/.test(unsubscribe.body));
+  const confirm = await get("/zh/subscribe/confirm?token=smoke-test-token");
+  check("zh confirm page has its form in the HTML", /<form[^>]*action="\/api\/subscribe\/confirm"/.test(confirm.body) && confirm.body.includes("确认订阅"));
 
   const card = await get("/opengraph-image");
   check("site share image is a PNG", card.status === 200 && card.type.startsWith("image/png"), `${card.status} ${card.type}`);

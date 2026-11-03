@@ -1,12 +1,12 @@
 """Subscribing to the digest (app/services/subscriptions.py).
 
 POST /api/subscribe          {"email", "lang"}: emails a confirmation link
-POST /api/subscribe/confirm  {"token"}: the confirmation link was opened
-POST /api/unsubscribe?token= the unsubscribe page's button, and mail clients'
-                             one-click unsubscribe (through app/api/unsubscribe on the site)
+POST /api/subscribe/confirm  {"token"}: the confirm page's button
+POST /api/unsubscribe?token= the unsubscribe page's button, and mail clients' one-click unsubscribe
 
-Sign-ups are rate-limited: 5 requests/minute per IP. Unsubscribing isn't: one-click
-requests come from a few mail providers' servers, and a token can't be guessed.
+The site calls the last two from its own routes (app/api/subscribe/confirm and
+app/api/unsubscribe), so their requests come from a few servers; they aren't
+rate-limited, and a token can't be guessed. Sign-ups are: 5 requests/minute per IP.
 """
 
 import re
@@ -57,7 +57,7 @@ class ConfirmResponse(BaseModel):
 
 
 class UnsubscribeResponse(BaseModel):
-    status: Literal["unsubscribed"]
+    status: Literal["unsubscribed", "not_subscribed"]
 
 
 @router.post("/subscribe", response_model=SubscribeResponse, status_code=status.HTTP_200_OK)
@@ -79,9 +79,7 @@ def subscribe(
 
 
 @router.post("/subscribe/confirm", response_model=ConfirmResponse)
-@limiter.limit("30/minute")
 def confirm_subscription(
-    request: Request,
     req: ConfirmRequest,
     db: Session = Depends(get_db),
 ) -> ConfirmResponse:
@@ -96,8 +94,10 @@ def unsubscribe(
     token: str = Query(min_length=1, max_length=64),
     db: Session = Depends(get_db),
 ) -> UnsubscribeResponse:
-    """Always "unsubscribed": a token that names no one is no subscription either. The body
-    (a one-click "List-Unsubscribe=One-Click") is ignored."""
-    if subscriptions.unsubscribe(db, token):
-        logger.info("unsubscribe: removed")
+    """200 either way, so a mail client doesn't retry: "not_subscribed" when the token names no
+    one (used already, or the address was removed). The body ("List-Unsubscribe=One-Click")
+    is ignored."""
+    if not subscriptions.unsubscribe(db, token):
+        return UnsubscribeResponse(status="not_subscribed")
+    logger.info("unsubscribe: removed")
     return UnsubscribeResponse(status="unsubscribed")

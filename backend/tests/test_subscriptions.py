@@ -90,11 +90,12 @@ def test_signing_up_again_resends_the_link_at_most_every_15_minutes(client, db, 
     assert len(outbox) == 1  # the form can't be used to flood someone's inbox
 
     sub = db.query(Subscriber).filter_by(email="reader@example.com").one()
-    sub.confirm_sent_at -= timedelta(minutes=16)
-    db.flush()
-    client.post("/api/subscribe", json={"email": "reader@example.com"})
-    assert len(outbox) == 2
-    assert token_in(outbox[0], "/subscribe/confirm") == token_in(outbox[1], "/subscribe/confirm")
+    for expected in (2, 3, 3, 3):
+        sub.confirm_sent_at -= timedelta(minutes=16)
+        db.flush()
+        assert client.post("/api/subscribe", json={"email": "reader@example.com"}).json() == {"status": "confirm_sent"}
+        assert len(outbox) == expected  # three emails at most, however often it's asked
+    assert len({token_in(m, "/subscribe/confirm") for m in outbox}) == 1
 
 
 def test_when_the_confirmation_email_fails_the_reader_is_told_and_can_retry(client, db, outbox, monkeypatch):
@@ -163,8 +164,9 @@ def test_one_click_unsubscribe_stops_the_digest(client, db, outbox):
     )
     assert r.status_code == 200 and r.json() == {"status": "unsubscribed"}
     assert recipients(db) == []
-    # Clicked again, or a token that names no one: the same answer
-    assert client.post(f"/api/unsubscribe?token={token}").json() == {"status": "unsubscribed"}
+    # Clicked again, or a token that names no one: still 200, but it says nothing was removed
+    r = client.post(f"/api/unsubscribe?token={token}")
+    assert r.status_code == 200 and r.json() == {"status": "not_subscribed"}
 
 
 def test_addresses_never_confirmed_are_deleted_after_a_week(client, db, outbox):
@@ -176,16 +178,63 @@ def test_addresses_never_confirmed_are_deleted_after_a_week(client, db, outbox):
     confirmed(client, outbox, "kept@example.com")
     now = datetime.now(timezone.utc)
 
+    # A resend late in the week doesn't postpone the deletion
+    never = db.query(Subscriber).filter_by(email="never@example.com").one()
+    never.confirm_sent_at = now + timedelta(days=6)
+    db.flush()
+
     assert S.prune_unconfirmed(db, now=now + timedelta(days=6)) == 0
-    assert S.prune_unconfirmed(db, now=now + timedelta(days=8)) >= 1
+    assert S.prune_unconfirmed(db, now=now + timedelta(days=7, minutes=1)) >= 1
     left = {s.email for s in db.query(Subscriber).all()}
     assert "never@example.com" not in left and "kept@example.com" in left
 
 
 def test_alembic_sees_the_subscribers_table():
-    """migrations/env.py compares the database with app.models; a model missing there
-    makes `alembic revision --autogenerate` write a drop_table for it."""
-    import app.models  # noqa: F401
-    from app.db import Base
+    """migrations/env.py compares the database with what importing app.models registers; a
+    model missing there makes `alembic revision --autogenerate` write a drop_table for it.
+    Checked in a fresh interpreter: this test module has imported the model already."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
 
-    assert "subscribers" in Base.metadata.tables
+    probe = "from app.models import Article; from app.db import Base; print('subscribers' in Base.metadata.tables)"
+    env = {**os.environ, "DATABASE_URL": "postgresql+psycopg://unused@localhost:1/unused"}
+    out = subprocess.run([sys.executable, "-c", probe], cwd=Path(__file__).parents[1], env=env, capture_output=True, text=True)
+    assert out.stdout.strip() == "True", out.stderr
+
+
+def test_a_chinese_subscriber_gets_the_chinese_unsubscribe_page(client, db, outbox):
+    from datetime import date
+    from types import SimpleNamespace
+
+    from app.services.email_service import digest_message
+
+    client.post("/api/subscribe", json={"email": "reader@example.com", "lang": "zh"})
+    client.post("/api/subscribe/confirm", json={"token": token_in(outbox[-1], "/zh/subscribe/confirm")})
+    [sub] = [s for s in S.digest_recipients(db) if s.email == "reader@example.com"]
+
+    mail = digest_message([SimpleNamespace(representative_title="A story", summary=None)], sub, date(2026, 11, 3))
+    assert token_in(mail, "/zh/unsubscribe") == sub.token
+    assert mail["headers"]["List-Unsubscribe"] == f"<{SITE}/api/unsubscribe?token={sub.token}>"
+
+
+def test_a_sign_up_by_code_that_sets_no_token_still_gets_one(db):
+    """The previous release inserts only (id, email): it may still be serving while the
+    API's migration runs, so the database fills the token in."""
+    from sqlalchemy import text
+
+    db.execute(text("INSERT INTO subscribers (id, email) VALUES (gen_random_uuid(), 'old-code@example.com')"))
+    token, confirmed_at = db.execute(text("SELECT token, confirmed_at FROM subscribers WHERE email = 'old-code@example.com'")).one()
+    assert len(token) == 64 and confirmed_at is None
+
+
+def test_health_says_whether_the_api_can_send_email(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    assert TestClient(app).get("/health").json() == {"status": "ok", "mail": False}
+    monkeypatch.setenv("RESEND_API_KEY", "test-key")
+    assert TestClient(app).get("/health").json() == {"status": "ok", "mail": True}
