@@ -25,10 +25,10 @@ describe("language in the URL", () => {
   });
 
   it("knows which pages have a Chinese version", () => {
-    for (const path of ["/", "/story/x-1", "/archive", "/radar", "/topics", "/topics/openai", "/weekly", "/weekly/2026-W42", "/daily", "/daily/2026-10-18"]) {
+    for (const path of ["/", "/story/x-1", "/archive", "/radar", "/topics", "/topics/openai", "/weekly", "/weekly/2026-W42", "/daily", "/daily/2026-10-18", "/unsubscribe", "/subscribe/confirm"]) {
       expect(isLocalizable(path)).toBe(true);
     }
-    for (const path of ["/admin", "/feed.xml", "/cluster/abc", "/stories", "/radarx"]) {
+    for (const path of ["/admin", "/feed.xml", "/cluster/abc", "/stories", "/radarx", "/subscribe", "/api/unsubscribe"]) {
       expect(isLocalizable(path)).toBe(false);
     }
   });

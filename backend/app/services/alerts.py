@@ -1,7 +1,7 @@
 """Operator emails: a failed pipeline run, and once a day how the runs went.
 
-Both go to ALERT_EMAIL through Resend (RESEND_API_KEY, RESEND_FROM, the same
-account as the digest). With ALERT_EMAIL unset nothing is sent.
+Both go to ALERT_EMAIL through Resend (app/services/mailer.py, the same account
+as the digest). With ALERT_EMAIL unset nothing is sent.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models.cluster import Cluster
 from app.models.pipeline_run import PipelineRun
+from app.services import mailer
 
 logger = logging.getLogger(__name__)
 
@@ -31,20 +32,9 @@ def _recipient() -> str | None:
     return os.getenv("ALERT_EMAIL", "").strip() or None
 
 
-def _resend_sender(message: dict[str, Any]) -> None:
-    """Send through Resend; raises if the key is missing or the API refuses."""
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("RESEND_API_KEY not set")
-    import resend  # imported lazily, like the digest
-
-    resend.api_key = api_key
-    resend.Emails.send({"from": os.getenv("RESEND_FROM", "Sipply <digest@sipply.dev>"), **message})
-
-
 def _deliver(message: dict[str, Any], sender: Sender | None) -> str:
     try:
-        (sender or _resend_sender)(message)
+        (sender or mailer.send)(message)
     except Exception as exc:
         logger.warning("alert email not sent (%s: %s)", type(exc).__name__, str(exc)[:200])
         return "failed"

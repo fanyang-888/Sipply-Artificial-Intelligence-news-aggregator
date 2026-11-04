@@ -1,13 +1,15 @@
-"""Resend-backed email service for Sipply digest emails.
+"""The emails subscribers get: the daily digest, and the link that confirms a sign-up.
 
 Usage:
     from app.services.email_service import send_digest_email
 
     sent, failed = send_digest_email(clusters, subscribers)
 
-Requires:
-    RESEND_API_KEY   — Resend API key (https://resend.com)
-    RESEND_FROM      — Verified sender address (default: digest@sipply.dev)
+Sent through app/services/mailer.py (RESEND_API_KEY, RESEND_FROM). Every digest
+carries the subscriber's own unsubscribe link, in the footer and as a one-click
+List-Unsubscribe header (RFC 8058); sipply.dev receives no mail, so nothing asks
+the reader to reply. Links use SITE_URL, not the API's address: a link in an old
+email must keep working.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import os
 from datetime import date
 from typing import TYPE_CHECKING
 
+from app.services import mailer
 from app.services.headlines import story_slug, story_title
 
 if TYPE_CHECKING:
@@ -26,7 +29,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_FROM = os.getenv("RESEND_FROM", "Sipply <digest@sipply.dev>")
 # The canonical origin (the apex redirects to www): links land on the page in one hop
 _SITE = os.getenv("SITE_URL", "https://www.sipply.dev").rstrip("/")
 
@@ -56,7 +58,22 @@ def _story_url(cluster: "Cluster") -> str:
     return f"{_SITE}/story/{story_slug(cluster)}"
 
 
-def _build_html(clusters: list["Cluster"], today: date) -> str:
+def confirm_url(token: str, lang: str = "en") -> str:
+    """The page that confirms a sign-up, in the language the reader signed up in."""
+    return f"{_SITE}{'/zh' if lang == 'zh' else ''}/subscribe/confirm?token={token}"
+
+
+def unsubscribe_url(token: str, lang: str = "en") -> str:
+    """The page with the unsubscribe button: the link in the digest's footer."""
+    return f"{_SITE}{'/zh' if lang == 'zh' else ''}/unsubscribe?token={token}"
+
+
+def one_click_unsubscribe_url(token: str) -> str:
+    """Where a mail client POSTs "List-Unsubscribe=One-Click" (app/api/unsubscribe/route.ts)."""
+    return f"{_SITE}/api/unsubscribe?token={token}"
+
+
+def _build_html(clusters: list["Cluster"], today: date, *, unsubscribe: str) -> str:
     date_str = today.strftime("%B %-d, %Y")
 
     # Top cluster (featured)
@@ -127,7 +144,7 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
       <div style="padding:16px 32px;border-top:1px solid {_RULE};background:{_PAGE};">
         <p style="margin:0;font-family:{_SANS};font-size:12px;line-height:1.6;color:{_MUTED};">
           You're receiving this because you subscribed at <a href="{_SITE}" style="color:{_ACCENT};text-decoration:none;">sipply.dev</a>.
-          To unsubscribe, reply with "unsubscribe" in the subject.
+          <a href="{unsubscribe}" style="color:{_ACCENT};">Unsubscribe</a>
         </p>
       </div>
 
@@ -137,7 +154,7 @@ def _build_html(clusters: list["Cluster"], today: date) -> str:
 </html>"""
 
 
-def _build_text(clusters: list["Cluster"], today: date) -> str:
+def _build_text(clusters: list["Cluster"], today: date, *, unsubscribe: str) -> str:
     date_str = today.strftime("%B %-d, %Y")
     lines = [f"SIPPLY — Daily digest · {date_str}", "=" * 50, ""]
     for i, c in enumerate(clusters[:4]):
@@ -147,7 +164,7 @@ def _build_text(clusters: list["Cluster"], today: date) -> str:
             lines.append(c.summary[:200] + ("…" if len(c.summary) > 200 else ""))
         lines.append(_story_url(c))
         lines.append("")
-    lines += [f"Read more: {_SITE}", "", "---", "Unsubscribe: reply with 'unsubscribe' in subject"]
+    lines += [f"Read more: {_SITE}", "", "---", f"Unsubscribe: {unsubscribe}"]
     return "\n".join(lines)
 
 
@@ -155,19 +172,32 @@ def _build_text(clusters: list["Cluster"], today: date) -> str:
 # Send
 # ---------------------------------------------------------------------------
 
+def digest_message(clusters: list["Cluster"], subscriber: "Subscriber", today: date) -> mailer.Message:
+    """Today's digest for one subscriber, with their own unsubscribe link."""
+    unsubscribe = unsubscribe_url(subscriber.token, subscriber.lang)
+    return {
+        "to": [subscriber.email],
+        "subject": f"Sipply Digest — {today.strftime('%B %-d, %Y')}",
+        "html": _build_html(clusters, today, unsubscribe=unsubscribe),
+        "text": _build_text(clusters, today, unsubscribe=unsubscribe),
+        "headers": {
+            "List-Unsubscribe": f"<{one_click_unsubscribe_url(subscriber.token)}>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+    }
+
+
 def send_digest_email(
     clusters: list["Cluster"],
     subscribers: list["Subscriber"],
     *,
     today: date | None = None,
 ) -> tuple[int, int]:
-    """Send today's digest to all subscribers.
+    """Send today's digest to each subscriber (only confirmed ones are passed in).
 
-    Returns (sent_count, failed_count).
-    Requires RESEND_API_KEY env var; silently skips if not set.
+    Returns (sent_count, failed_count). Skips everything if RESEND_API_KEY is not set.
     """
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
-    if not api_key:
+    if not mailer.configured():
         logger.warning("email_service: RESEND_API_KEY not set — skipping digest email")
         return 0, 0
 
@@ -179,30 +209,71 @@ def send_digest_email(
         logger.warning("email_service: no clusters — skipping digest email")
         return 0, 0
 
-    import resend  # imported lazily so missing package never crashes import-time
-    resend.api_key = api_key
-
     today = today or date.today()
-    subject = f"Sipply Digest — {today.strftime('%B %-d, %Y')}"
-    html = _build_html(clusters, today)
-    text = _build_text(clusters, today)
-
     sent = 0
     failed = 0
     for sub in subscribers:
         try:
-            resend.Emails.send({
-                "from": _FROM,
-                "to": [sub.email],
-                "subject": subject,
-                "html": html,
-                "text": text,
-            })
+            mailer.send(digest_message(clusters, sub, today))
             sent += 1
-            logger.debug("email sent to %s", sub.email)
         except Exception:
-            logger.exception("email_service: failed to send to %s", sub.email)
+            logger.exception("email_service: failed to send the digest to subscriber %s", sub.id)
             failed += 1
 
     logger.info("email_service: sent=%d failed=%d", sent, failed)
     return sent, failed
+
+
+# ---------------------------------------------------------------------------
+# Confirmation
+# ---------------------------------------------------------------------------
+
+_CONFIRM_COPY = {
+    "en": {
+        "subject": "Confirm your Sipply subscription",
+        "heading": "Confirm your subscription",
+        "body": "Someone, hopefully you, asked for the Sipply daily digest at this address. "
+        "To start getting it, confirm with the link below.",
+        "button": "Confirm subscription",
+        "ignore": "If it wasn't you, ignore this email: without a click no digest is ever sent, "
+        "and the address is deleted within {days} days.",
+    },
+    "zh": {
+        "subject": "请确认订阅 Sipply",
+        "heading": "确认订阅",
+        "body": "有人（希望是你）用这个邮箱订阅了 Sipply 每日摘要（摘要是英文的）。点下面的链接确认后，就会开始收到。",
+        "button": "确认订阅",
+        "ignore": "如果不是你本人操作，忽略这封邮件即可：不点链接就不会收到任何摘要，这个地址会在 {days} 天内删除。",
+    },
+}
+
+
+def confirmation_message(subscriber: "Subscriber", *, forget_after_days: int) -> mailer.Message:
+    """The email with the link that confirms a sign-up, in the language they signed up in."""
+    lang = subscriber.lang if subscriber.lang in _CONFIRM_COPY else "en"
+    copy = _CONFIRM_COPY[lang]
+    url = confirm_url(subscriber.token, lang)
+    ignore = copy["ignore"].format(days=forget_after_days)
+    page = f"""<!DOCTYPE html>
+<html lang="{'zh-CN' if lang == 'zh' else 'en'}">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:{_PAGE};font-family:{_SANS};">
+  <div style="max-width:600px;margin:32px auto;padding:0 16px;">
+    <div style="background:#ffffff;border:1px solid {_RULE};border-radius:20px;padding:26px 32px 32px;">
+      <p style="margin:0;font-family:{_SERIF};font-size:24px;line-height:1;color:{_INK};">Sip<span style="color:{_ACCENT};">ply</span></p>
+      <h1 style="margin:26px 0 12px;font-family:{_SERIF};font-size:24px;font-weight:normal;line-height:1.2;color:{_INK};">{html.escape(copy["heading"])}</h1>
+      <p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:{_SOFT};">{html.escape(copy["body"])}</p>
+      <a href="{url}" style="display:inline-block;background:{_INK};color:{_PAGE};text-decoration:none;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:500;">{html.escape(copy["button"])}</a>
+      <p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:{_MUTED};word-break:break-all;">{url}</p>
+      <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:{_MUTED};">{html.escape(ignore)}</p>
+    </div>
+  </div>
+</body>
+</html>"""
+    text = "\n".join([copy["heading"], "", copy["body"], "", url, "", ignore])
+    return {"to": [subscriber.email], "subject": copy["subject"], "html": page, "text": text}
+
+
+def send_confirmation_email(subscriber: "Subscriber", *, forget_after_days: int) -> None:
+    """Raises if the email couldn't be sent (see mailer.send)."""
+    mailer.send(confirmation_message(subscriber, forget_after_days=forget_after_days))

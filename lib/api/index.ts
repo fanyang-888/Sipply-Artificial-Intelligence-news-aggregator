@@ -3,6 +3,7 @@
  * Components import from "@/lib/api" and never call fetch directly.
  */
 
+import type { Lang } from "@/lib/i18n";
 import { apiFetch, apiPost } from "./client";
 // Constants only: lib/api/server.ts's fetchers stay out of client bundles
 import { RUN_TAG, RUN_TTL } from "./cache-policy";
@@ -92,8 +93,23 @@ export async function fetchRadarAnswers(days = 30): Promise<ApiRadarAnswers> {
 // Subscribe
 // ---------------------------------------------------------------------------
 
-export async function postSubscribe(email: string): Promise<{ status: string }> {
-  return apiPost<{ status: string }>("/api/subscribe", { email });
+// backend/app/api/routes/subscribe.py: a sign-up gets a confirmation link; only a confirmed
+// address gets the digest, and every digest links to its own unsubscribe page. The browser
+// calls postSubscribe; the other two are called by the site's routes (lib/subscription.ts).
+
+/** Throws ApiError 503 when the confirmation email couldn't be sent. */
+export async function postSubscribe(email: string, lang: Lang): Promise<{ status: "confirm_sent" | "already_subscribed" }> {
+  return apiPost("/api/subscribe", { email, lang });
+}
+
+/** Throws ApiError 404 for a link that names no subscription. */
+export async function postConfirmSubscription(token: string): Promise<{ status: "confirmed" | "already_confirmed" }> {
+  return apiPost("/api/subscribe/confirm", { token });
+}
+
+/** "not_subscribed" for a token that names no one (used already, or the address was removed). */
+export async function postUnsubscribe(token: string): Promise<{ status: "unsubscribed" | "not_subscribed" }> {
+  return apiPost(`/api/unsubscribe?token=${encodeURIComponent(token)}`);
 }
 
 // Re-export types for convenience

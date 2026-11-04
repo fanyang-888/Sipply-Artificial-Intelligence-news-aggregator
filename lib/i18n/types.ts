@@ -280,9 +280,29 @@ export type Translations = {
     subheading: string;
     placeholder: string;
     cta: string;
-    successHeading: string;
-    successMessage: string;
+    sentHeading: string;
+    sentMessage: (email: string) => string;
     alreadySubscribed: string;
     errorMessage: string;
+  };
+  /** The pages a subscriber reaches from an email: confirming, and unsubscribing. */
+  subscription: {
+    confirmTitle: string;
+    confirmMessage: string;
+    confirmCta: string;
+    confirmed: string;
+    confirmedMessage: string;
+    alreadyConfirmed: string;
+    invalidTitle: string;
+    invalidMessage: string;
+    missingToken: string;
+    errorMessage: string;
+    unsubscribeTitle: string;
+    unsubscribeMessage: string;
+    unsubscribeCta: string;
+    unsubscribed: string;
+    unsubscribedMessage: string;
+    notSubscribedTitle: string;
+    notSubscribedMessage: string;
   };
 };

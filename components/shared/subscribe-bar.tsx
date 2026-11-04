@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { postSubscribe } from "@/lib/api";
 
-type State = "idle" | "loading" | "success" | "already" | "error";
+type State = "idle" | "loading" | "sent" | "already" | "subscribed" | "error";
 
 export function SubscribeBar() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const s = t.subscribe;
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>("idle");
@@ -17,8 +17,10 @@ export function SubscribeBar() {
     if (!email.trim() || state === "loading") return;
     setState("loading");
     try {
-      const res = await postSubscribe(email.trim());
-      setState(res.status === "already_subscribed" ? "already" : "success");
+      // A new address gets a confirmation link; the digest starts once it's clicked. Only
+      // "confirm_sent" means a link went out (an API from before confirmation said "subscribed").
+      const res = await postSubscribe(email.trim(), lang);
+      setState(res.status === "confirm_sent" ? "sent" : res.status === "already_subscribed" ? "already" : "subscribed");
     } catch {
       setState("error");
     }
@@ -26,13 +28,13 @@ export function SubscribeBar() {
 
   return (
     <section className="sp-glass px-6 py-8 text-center sm:px-8">
-      {state === "success" || state === "already" ? (
-        <div className="space-y-1">
+      {state === "sent" || state === "already" || state === "subscribed" ? (
+        <div className="space-y-1" role="status">
           <p className="text-base font-semibold text-foreground">
-            {state === "success" ? s.successHeading : s.alreadySubscribed}
+            {state === "sent" ? s.sentHeading : state === "already" ? s.alreadySubscribed : t.subscription.confirmed}
           </p>
-          {state === "success" && (
-            <p className="text-sm [color:var(--text-muted)]">{s.successMessage}</p>
+          {state === "sent" && (
+            <p className="text-sm [color:var(--text-muted)]">{s.sentMessage(email.trim())}</p>
           )}
         </div>
       ) : (

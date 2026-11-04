@@ -104,6 +104,7 @@ Keywords and per-source limits live in `app/signals/signal_sources.yaml`.
 | `signals` | Trend Radar posts/news/videos with live engagement numbers |
 | `signal_topics` | Trend Radar topics, rebuilt from `signals` on every run; summaries, reader question and the covering story carry over to the matching topic |
 | `answer_checks` | What an AI assistant with web search answered and cited for each radar question (kept 90 days) |
+| `subscribers` | Digest subscribers: address, secret token for their links, when they confirmed (unconfirmed ones deleted after 7 days) |
 
 Migrations live in `migrations/`. Run `alembic upgrade head` to apply.  
 On Railway, migrations run automatically at startup in a background thread.

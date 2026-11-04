@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from app.db import session_scope
 from app.logging_config import configure_logging
 from app.services.data_retention import prune_article_text
+from app.services.subscriptions import prune_unconfirmed
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,12 @@ logger = logging.getLogger(__name__)
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
     argparse.ArgumentParser(description="Trim data the site no longer needs").parse_args(argv)
+    now = datetime.now(timezone.utc)
     with session_scope() as db:
-        trimmed = prune_article_text(db, now=datetime.now(timezone.utc))
-    logger.info("prune_old_data article_text_trimmed=%d", trimmed)
-    print(f"Done — article texts trimmed={trimmed}")
+        trimmed = prune_article_text(db, now=now)
+        unconfirmed = prune_unconfirmed(db, now=now)
+    logger.info("prune_old_data article_text_trimmed=%d unconfirmed_subscribers_deleted=%d", trimmed, unconfirmed)
+    print(f"Done — article texts trimmed={trimmed}, unconfirmed subscribers deleted={unconfirmed}")
     return 0
 
 
