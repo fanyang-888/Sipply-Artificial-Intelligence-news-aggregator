@@ -25,7 +25,7 @@ class Cluster(Base):
     # "event" | "theme"
     type: Mapped[str] = mapped_column(String(32), nullable=False, default="event")
     # "new" | "ongoing" | "escalating" | "peaking" | "fading"
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new", index=True)
 
     representative_title: Mapped[str] = mapped_column(Text, nullable=False)
     # Sipply's own headline (written with the summary) and its translation; the source's title stays above
