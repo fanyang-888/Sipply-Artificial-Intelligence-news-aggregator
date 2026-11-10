@@ -287,3 +287,38 @@ def test_a_failed_read_fails_the_requests_waiting_on_it(db, monkeypatch):
         H._stories(db)
     monkeypatch.setattr(H, "_read_stories", lambda session: ("story",))
     assert H._stories(db) == ("story",)  # the next request reads again
+
+
+def test_requests_stop_waiting_on_a_stuck_read(db, monkeypatch):
+    """A read can hang (a dead database connection waits for hours). The requests that joined it give up
+    after SHARED_READ_WAIT and read on their own, and later ones don't join it; otherwise they would
+    fill the API's worker threads and stall every route, /health included."""
+    import threading
+    import time
+
+    stuck, release = threading.Event(), threading.Event()
+
+    def read(session):
+        if not stuck.is_set():
+            stuck.set()
+            release.wait(5)
+            return ("stale",)
+        return ("fresh",)
+
+    monkeypatch.setattr(H, "_read_stories", read)
+    monkeypatch.setattr(H, "SHARED_READ_WAIT", 0.2)
+    first = threading.Thread(target=H._stories, args=(db,))
+    first.start()
+    try:
+        assert stuck.wait(1)
+        got = []
+        joined = threading.Thread(target=lambda: got.append(H._stories(db)))
+        joined.start()
+        joined.join(2)
+        assert got == [("fresh",)]  # waited for the stuck read, then read on its own
+        time.sleep(0.25)
+        assert H._stories(db) == ("fresh",)  # too old to join: reads at once
+    finally:
+        release.set()
+        first.join(2)
+    assert H._reading is None

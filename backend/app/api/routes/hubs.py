@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 import uuid
 from collections import Counter, defaultdict
 from dataclasses import dataclass, fields
@@ -242,8 +243,15 @@ def _read_stories(db: Session) -> tuple[Story, ...]:
     return tuple(Story(*row, articles=tuple(articles.get(row[0], ()))) for row in rows)
 
 
+# A read takes well under a second. One still running after this many seconds is treated as stuck (a
+# dead database connection can hang for hours): nobody joins it, and the requests waiting on it read on
+# their own, as each request did before reads were shared.
+SHARED_READ_WAIT = 5.0
+
+
 class _Read:
     def __init__(self) -> None:
+        self.started = time.monotonic()
         self.done = threading.Event()
         self.stories: tuple[Story, ...] = ()
         self.error: BaseException | None = None
@@ -259,11 +267,14 @@ def _stories(db: Session) -> tuple[Story, ...]:
     pipeline run may have changed them."""
     global _reading
     with _reading_lock:
-        read, first = _reading, _reading is None
-        if read is None:
+        read = _reading
+        first = read is None or time.monotonic() - read.started >= SHARED_READ_WAIT
+        if first:
             read = _reading = _Read()
+    assert read is not None
     if not first:
-        read.done.wait()
+        if not read.done.wait(read.started + SHARED_READ_WAIT - time.monotonic()):
+            return _read_stories(db)  # stuck
         if read.error is not None:
             raise RuntimeError("reading the stories failed") from read.error
         return read.stories
@@ -274,7 +285,8 @@ def _stories(db: Session) -> tuple[Story, ...]:
         raise
     finally:
         with _reading_lock:
-            _reading = None
+            if _reading is read:  # a stuck read may have been replaced
+                _reading = None
         read.done.set()
     return read.stories
 
