@@ -72,7 +72,7 @@ def client(db, monkeypatch):
     from app.main import app
 
     monkeypatch.setattr(H, "cache_get", lambda key: None)
-    monkeypatch.setattr(H, "cache_set", lambda key, value: None)
+    monkeypatch.setattr(H, "cache_set", lambda key, value, **kw: None)
     app.dependency_overrides[get_db] = lambda: db
     try:
         yield TestClient(app)
@@ -196,3 +196,83 @@ def test_feed_lists_the_newest_stories_with_their_dates(client, stories):
     assert first["publishedAt"].startswith((NOW - timedelta(days=1)).date().isoformat())
     assert {"summary", "whyItMatters", "topicTag", "sourceNames", "updatedAt", "titleZh"} <= set(first)
     assert client.get("/api/feed", params={"limit": 500}).status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Memory: every hub page reads the whole archive
+# ---------------------------------------------------------------------------
+
+HUB_PATHS = ["/api/topics", "/api/topics/anthropic", "/api/weeks", "/api/days", "/api/feed"]
+
+
+def test_hub_pages_do_not_read_the_articles_text(client, stories, make_article, db):
+    """With each article's full text, reading the archive took about 15 KB a story, and bursts of
+    pages built at once took the API's memory to 1.3-1.9 GB on Railway (Oct 25 and Nov 4, 2026)."""
+    import tracemalloc
+
+    for c in stories.values():
+        make_article(cluster_id=c.id, organization_name="Anthropic", raw_text="r" * 1_000_000, cleaned_text="c" * 1_000_000)
+    db.expunge_all()  # read from the database, not the session's copies
+    this_week = H.week_key((NOW - timedelta(days=2)).date())
+    day = (NOW - timedelta(days=2)).date().isoformat()
+    for path in [*HUB_PATHS, f"/api/weeks/{this_week}", f"/api/days/{day}"]:
+        tracemalloc.start()
+        try:
+            assert client.get(path).status_code == 200, path
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert peak < 3_000_000, (path, peak)  # five stories carry 10 MB of article text
+
+
+def test_hub_pages_still_name_each_storys_sources(client, stories, make_article, make_source, db):
+    techcrunch = make_source(type="tech_press")
+    make_article(cluster_id=stories["haiku"].id, source=techcrunch, organization_name="TechCrunch")
+    make_article(cluster_id=stories["haiku"].id, organization_name="Anthropic")
+    db.expunge_all()
+    day = (NOW - timedelta(days=2)).date().isoformat()
+    assert client.get(f"/api/days/{day}").json()["stories"][0]["sourceNames"] == ["Anthropic", "TechCrunch"]
+    feed = {i["title"]: i for i in client.get("/api/feed").json()}
+    assert feed["Anthropic releases Claude Haiku 5.5"]["sourceNames"] == ["Anthropic", "TechCrunch"]
+
+
+def test_requests_that_arrive_together_read_the_archive_once(db, monkeypatch):
+    """After a pipeline run Vercel rebuilds dozens of hub pages at once (55 in flight on Nov 4, 16:19):
+    they share one read instead of holding one copy each."""
+    import threading
+    import time
+
+    reads = []
+
+    def slow_read(session):
+        reads.append(session)
+        time.sleep(0.3)
+        return ("story",)
+
+    monkeypatch.setattr(H, "_read_stories", slow_read)
+    start = threading.Barrier(8)
+    got = []
+
+    def request():
+        start.wait()
+        got.append(H._stories(db))
+
+    threads = [threading.Thread(target=request) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(reads) == 1 and got == [("story",)] * 8
+    # A request after that read reads again: a pipeline run may have changed the stories since
+    assert H._stories(db) == ("story",) and len(reads) == 2
+
+
+def test_a_failed_read_fails_the_requests_waiting_on_it(db, monkeypatch):
+    def broken(session):
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(H, "_read_stories", broken)
+    with pytest.raises(RuntimeError):
+        H._stories(db)
+    monkeypatch.setattr(H, "_read_stories", lambda session: ("story",))
+    assert H._stories(db) == ("story",)  # the next request reads again

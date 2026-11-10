@@ -7,14 +7,21 @@
 - GET /api/feed: the newest stories with their dates, for the RSS feed and the news sitemap.
 
 They give AI assistants and search engines stable pages to cite for "what's
-new with Anthropic", "AI news this week" or "AI news today". Cached until the
-next pipeline run.
+new with Anthropic", "AI news this week" or "AI news today". Cached for an hour;
+each pipeline run clears the cache.
+
+Every one of them reads the whole archive, so they read only the columns they
+show and each article's source (`_stories`), and requests that arrive together
+share one read.
 """
 
 from __future__ import annotations
 
 import re
+import threading
+import uuid
 from collections import Counter, defaultdict
+from dataclasses import dataclass, fields
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -22,12 +29,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.api.mappers import cluster_to_archive_row
 from app.api.schemas import ArchiveClusterRow, format_dt
 from app.cache import cache_get, cache_set
 from app.db import get_db
+from app.models.article import Article
 from app.models.cluster import Cluster
 from app.models.source import Source
 from app.models.signal import SignalTopic
@@ -50,6 +58,8 @@ WEEKS_LISTED = 26
 DAYS_LISTED = 60
 FEED_ITEMS = 50
 DAY_HEADLINES = 3
+# A story only changes on a pipeline run, which clears the ai_tool:* keys (as for a story's own page)
+HUB_CACHE_TTL = 3600
 _WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
 _DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -151,7 +161,7 @@ def week_bounds(key: str) -> tuple[date, date] | None:
     return monday, monday + timedelta(days=6)
 
 
-def _headline(c: Cluster) -> WeekHeadline:
+def _headline(c: Story) -> WeekHeadline:
     return WeekHeadline(id=str(c.id), slug=story_slug(c), title=story_title(c), titleZh=story_title_zh(c))
 
 
@@ -171,23 +181,104 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
-def _stories(db: Session) -> list[Cluster]:
+# ---------------------------------------------------------------------------
+# The archive, as the hub pages read it
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True, slots=True)
+class StoryArticle:
+    source_id: uuid.UUID
+    organization_name: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class Story:
+    """What the hub pages use of a story: what they show or sort by, and where its articles come from.
+
+    Not the Cluster with its articles, which carry their full text: about 15 KB a story. When
+    Vercel rebuilt dozens of these pages at once, each request held its own copy of the archive;
+    the API's memory rose to 1.9 GB (Oct 25, 2026) and the process kept most of it.
+    """
+
+    id: uuid.UUID
+    slug: str | None
+    representative_title: str
+    representative_title_zh: str | None
+    headline: str | None
+    headline_zh: str | None
+    summary: str | None
+    summary_zh: str | None
+    why_it_matters: str | None
+    tags: list[Any]
+    type: str
+    topic_tag: str | None
+    status: str
+    cluster_score: float | None
+    source_count: int
+    first_seen_at: datetime | None
+    last_seen_at: datetime | None
+    articles: tuple[StoryArticle, ...]
+
+
+_STORY_COLUMNS = tuple(getattr(Cluster, f.name) for f in fields(Story) if f.name != "articles")
+
+
+def _read_stories(db: Session) -> tuple[Story, ...]:
     """Translated stories (the same rule as the main listing), newest first."""
-    return list(
-        db.execute(
-            select(Cluster)
-            .options(selectinload(Cluster.articles))
-            .where(Cluster.representative_title_zh.isnot(None))
-            .order_by(Cluster.last_seen_at.desc().nullslast())
-        ).scalars().all()
-    )
+    translated = Cluster.representative_title_zh.isnot(None)
+    articles: dict[uuid.UUID, list[StoryArticle]] = defaultdict(list)
+    for cluster_id, source_id, organization_name in db.execute(
+        select(Article.cluster_id, Article.source_id, Article.organization_name)
+        .join(Cluster, Article.cluster_id == Cluster.id)
+        .where(translated)
+    ):
+        articles[cluster_id].append(StoryArticle(source_id, organization_name))
+    rows = db.execute(select(*_STORY_COLUMNS).where(translated).order_by(Cluster.last_seen_at.desc().nullslast()))
+    return tuple(Story(*row, articles=tuple(articles.get(row[0], ()))) for row in rows)
+
+
+class _Read:
+    def __init__(self) -> None:
+        self.done = threading.Event()
+        self.stories: tuple[Story, ...] = ()
+        self.error: BaseException | None = None
+
+
+_reading_lock = threading.Lock()
+_reading: _Read | None = None
+
+
+def _stories(db: Session) -> tuple[Story, ...]:
+    """The archive for one request. A request that arrives while another is reading it waits for
+    that read and shares it (the stories are never changed here); a later one reads again, since a
+    pipeline run may have changed them."""
+    global _reading
+    with _reading_lock:
+        read, first = _reading, _reading is None
+        if read is None:
+            read = _reading = _Read()
+    if not first:
+        read.done.wait()
+        if read.error is not None:
+            raise RuntimeError("reading the stories failed") from read.error
+        return read.stories
+    try:
+        read.stories = _read_stories(db)
+    except BaseException as exc:
+        read.error = exc
+        raise
+    finally:
+        with _reading_lock:
+            _reading = None
+        read.done.set()
+    return read.stories
 
 
 def _cached(key: str, build) -> Any:
     data = cache_get(key)
     if data is None:
         data = build()
-        cache_set(key, data)
+        cache_set(key, data, ttl=HUB_CACHE_TTL)
     return data
 
 
@@ -289,9 +380,9 @@ def _news_source_ids(db: Session) -> set[Any]:
     return set(db.execute(select(Source.id).where(Source.type.in_(NEWS_SOURCE_TYPES))).scalars().all())
 
 
-def _by_week(db: Session) -> dict[str, list[Cluster]]:
+def _by_week(db: Session) -> dict[str, list[Story]]:
     """Stories grouped by the ISO week they first appeared in."""
-    weeks: dict[str, list[Cluster]] = defaultdict(list)
+    weeks: dict[str, list[Story]] = defaultdict(list)
     for c in _stories(db):
         first = _aware(c.first_seen_at) or _aware(c.last_seen_at)
         if first:
@@ -299,7 +390,7 @@ def _by_week(db: Session) -> dict[str, list[Cluster]]:
     return weeks
 
 
-def _summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> WeekSummary:
+def _summary(key: str, stories: list[Story], news_source_ids: set[Any]) -> WeekSummary:
     start, end = week_bounds(key)  # type: ignore[misc]
     daily = [0] * 7
     for c in stories:
@@ -365,9 +456,9 @@ def get_week(week: str, db: Session = Depends(get_db)):
 # Days
 # ---------------------------------------------------------------------------
 
-def _by_day(db: Session) -> dict[str, list[Cluster]]:
+def _by_day(db: Session) -> dict[str, list[Story]]:
     """Stories grouped by the UTC day they first appeared."""
-    days: dict[str, list[Cluster]] = defaultdict(list)
+    days: dict[str, list[Story]] = defaultdict(list)
     for c in _stories(db):
         first = _aware(c.first_seen_at) or _aware(c.last_seen_at)
         if first:
@@ -377,7 +468,7 @@ def _by_day(db: Session) -> dict[str, list[Cluster]]:
 
 
 
-def _day_summary(key: str, stories: list[Cluster], news_source_ids: set[Any]) -> DaySummary:
+def _day_summary(key: str, stories: list[Story], news_source_ids: set[Any]) -> DaySummary:
     return DaySummary(
         date=key,
         storyCount=len(stories),
@@ -431,7 +522,7 @@ def get_day(day: str, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 def build_feed(db: Session, *, limit: int) -> list[dict[str, Any]]:
-    def first(c: Cluster) -> datetime:
+    def first(c: Story) -> datetime:
         return _aware(c.first_seen_at) or _aware(c.last_seen_at) or datetime.min.replace(tzinfo=timezone.utc)
 
     newest = sorted(_stories(db), key=first, reverse=True)[:limit]
