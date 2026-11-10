@@ -131,6 +131,17 @@ def test_topic_page_lists_stories_newest_first_and_radar(client, stories):
     assert client.get("/api/topics/not-a-company").status_code == 404
 
 
+def test_stories_seen_at_the_same_moment_list_the_best_first(client, stories, make_cluster):
+    # A run updates many stories at once: 2,198 of 3,749 shared a timestamp with another story
+    seen = stories["haiku"].last_seen_at  # score 90
+    for score in (31, 77, 12, 95, 64, 23, 45):
+        make_cluster(title=f"Anthropic note {score}", score=score, last_seen_at=seen, first_seen_at=seen)
+    titles = [s["title"] for s in client.get("/api/topics/anthropic").json()["stories"]]
+    assert titles[:8] == ["Anthropic note 95", "Anthropic releases Claude Haiku 5.5"] + [
+        f"Anthropic note {n}" for n in (77, 64, 45, 31, 23, 12)
+    ]
+
+
 def test_weeks_list_and_recap(client, stories):
     weeks = client.get("/api/weeks").json()
     keys = [w["week"] for w in weeks]

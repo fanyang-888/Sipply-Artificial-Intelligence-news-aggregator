@@ -223,8 +223,13 @@ class Story:
 _STORY_COLUMNS = tuple(getattr(Cluster, f.name) for f in fields(Story) if f.name != "articles")
 
 
+# Newest first. A run updates many stories at the same moment, so among those the best comes first;
+# without that their order was whatever Postgres's sort returned, and it changed with the query
+STORY_ORDER = (Cluster.last_seen_at.desc().nullslast(), Cluster.cluster_score.desc().nullslast(), Cluster.id)
+
+
 def _read_stories(db: Session) -> tuple[Story, ...]:
-    """Translated stories (the same rule as the main listing), newest first."""
+    """Translated stories (the same rule as the main listing), in STORY_ORDER."""
     translated = Cluster.representative_title_zh.isnot(None)
     articles: dict[uuid.UUID, list[StoryArticle]] = defaultdict(list)
     for cluster_id, source_id, organization_name in db.execute(
@@ -233,7 +238,7 @@ def _read_stories(db: Session) -> tuple[Story, ...]:
         .where(translated)
     ):
         articles[cluster_id].append(StoryArticle(source_id, organization_name))
-    rows = db.execute(select(*_STORY_COLUMNS).where(translated).order_by(Cluster.last_seen_at.desc().nullslast()))
+    rows = db.execute(select(*_STORY_COLUMNS).where(translated).order_by(*STORY_ORDER))
     return tuple(Story(*row, articles=tuple(articles.get(row[0], ()))) for row in rows)
 
 

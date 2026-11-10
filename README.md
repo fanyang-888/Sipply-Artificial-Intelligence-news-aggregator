@@ -24,7 +24,7 @@ Four times a day a pipeline reads 11 AI news feeds and 7 community platforms, sc
 | **Pipeline** | 4 runs a day, about 5 minutes each, no manual steps |
 | **Languages** | English and Chinese, on every page |
 | **LLM spend** | under $1 a day: scoring and grouping run on local models, gpt-4o-mini only writes |
-| **Tests** | 386 backend · 100 frontend · 146 smoke checks of the built site, all in CI |
+| **Tests** | 391 backend · 100 frontend · 146 smoke checks of the built site, all in CI |
 | **Lighthouse** (mobile) | Accessibility 100 · Best practices 100 · SEO 100 · Performance 94–99 |
 
 <sub>Numbers from 2026-10-16.</sub>
@@ -103,7 +103,7 @@ flowchart TB
     API -- "sign-up confirmations" --> RESEND
 ```
 
-Two paths meet in PostgreSQL. Readers and crawlers get pages from Next.js on Vercel, which reads the FastAPI service on Railway; the API is stateless and Redis holds its hot responses for five minutes. The cron job collects, writes and publishes into the same database, then clears the cache. Pages are rendered on the server, so readers and crawlers get the full content in the HTML and the client only re-ranks for the reader's role. Why it is split this way: [ADR 1](docs/adr/0001-two-hosts-one-api.md), [ADR 2](docs/adr/0002-server-html-for-crawlers.md).
+Two paths meet in PostgreSQL. Readers and crawlers get pages from Next.js on Vercel, which reads the FastAPI service on Railway; the API is stateless and Redis holds its hot responses (an hour for story and hub pages, five minutes for the rest). The cron job collects, writes and publishes into the same database, then clears the cache. Pages are rendered on the server, so readers and crawlers get the full content in the HTML and the client only re-ranks for the reader's role. Why it is split this way: [ADR 1](docs/adr/0001-two-hosts-one-api.md), [ADR 2](docs/adr/0002-server-html-for-crawlers.md).
 
 ## Pipeline
 
@@ -206,7 +206,7 @@ AI assistants and search engines should be able to read, find and cite Sipply:
 | Daily summary | The 20:00 run emails every run of the last 24 hours, new stories, and URLs sent to search engines |
 | Run log | `pipeline_runs` table, per-stage status and timing, shown at `/admin/pipeline-runs`; a run stopped mid-way (a redeploy, a crash) is closed and reported by the next one |
 | Uptime | Every 30 minutes a GitHub Actions job checks the home page, a story page, `/zh`, the sitemaps, the API, and that the pipeline succeeded in the last 8 hours (`scripts/uptime.mjs`); a failure emails the owner |
-| CI on every pull request | Migrations on an empty Postgres + 386 pytest tests; typecheck, lint with zero warnings, 100 vitest tests; a production build read by the 146-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
+| CI on every pull request | Migrations on an empty Postgres + 391 pytest tests; typecheck, lint with zero warnings, 100 vitest tests; a production build read by the 146-check smoke test, then loaded in Chrome on a throttled phone to check it shows at once and doesn't move |
 | Lighthouse (mobile, 2026-10-16) | Home, story, archive and radar: accessibility, best practices and SEO 100; performance 94–99; layout shift 0.001. Pages are readable before any JavaScript runs ([ADR 11](docs/adr/0011-visible-without-javascript.md)) |
 | Decisions | Fifteen [architecture decision records](docs/adr/README.md): context, decision and cost of each choice |
 
