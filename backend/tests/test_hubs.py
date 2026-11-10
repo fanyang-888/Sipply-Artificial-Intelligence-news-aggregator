@@ -72,7 +72,7 @@ def client(db, monkeypatch):
     from app.main import app
 
     monkeypatch.setattr(H, "cache_get", lambda key: None)
-    monkeypatch.setattr(H, "cache_set", lambda key, value: None)
+    monkeypatch.setattr(H, "cache_set", lambda key, value, **kw: None)
     app.dependency_overrides[get_db] = lambda: db
     try:
         yield TestClient(app)
@@ -129,6 +129,17 @@ def test_topic_page_lists_stories_newest_first_and_radar(client, stories):
     assert body["stories"][0]["title_zh"] == "Anthropic releases Claude Haiku 5.5（中文）"
     assert [(r["label"], r["ring"], r["rising"]) for r in body["radar"]] == [("Claude Haiku 5.5 benchmarks", 1, True)]
     assert client.get("/api/topics/not-a-company").status_code == 404
+
+
+def test_stories_seen_at_the_same_moment_list_the_best_first(client, stories, make_cluster):
+    # A run updates many stories at once: 2,198 of 3,749 shared a timestamp with another story
+    seen = stories["haiku"].last_seen_at  # score 90
+    for score in (31, 77, 12, 95, 64, 23, 45):
+        make_cluster(title=f"Anthropic note {score}", score=score, last_seen_at=seen, first_seen_at=seen)
+    titles = [s["title"] for s in client.get("/api/topics/anthropic").json()["stories"]]
+    assert titles[:8] == ["Anthropic note 95", "Anthropic releases Claude Haiku 5.5"] + [
+        f"Anthropic note {n}" for n in (77, 64, 45, 31, 23, 12)
+    ]
 
 
 def test_weeks_list_and_recap(client, stories):
@@ -196,3 +207,118 @@ def test_feed_lists_the_newest_stories_with_their_dates(client, stories):
     assert first["publishedAt"].startswith((NOW - timedelta(days=1)).date().isoformat())
     assert {"summary", "whyItMatters", "topicTag", "sourceNames", "updatedAt", "titleZh"} <= set(first)
     assert client.get("/api/feed", params={"limit": 500}).status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Memory: every hub page reads the whole archive
+# ---------------------------------------------------------------------------
+
+HUB_PATHS = ["/api/topics", "/api/topics/anthropic", "/api/weeks", "/api/days", "/api/feed"]
+
+
+def test_hub_pages_do_not_read_the_articles_text(client, stories, make_article, db):
+    """With each article's full text, reading the archive took about 15 KB a story, and bursts of
+    pages built at once took the API's memory to 1.3-1.9 GB on Railway (Oct 25 and Nov 4, 2026)."""
+    import tracemalloc
+
+    for c in stories.values():
+        make_article(cluster_id=c.id, organization_name="Anthropic", raw_text="r" * 1_000_000, cleaned_text="c" * 1_000_000)
+    db.expunge_all()  # read from the database, not the session's copies
+    this_week = H.week_key((NOW - timedelta(days=2)).date())
+    day = (NOW - timedelta(days=2)).date().isoformat()
+    for path in [*HUB_PATHS, f"/api/weeks/{this_week}", f"/api/days/{day}"]:
+        tracemalloc.start()
+        try:
+            assert client.get(path).status_code == 200, path
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert peak < 3_000_000, (path, peak)  # five stories carry 10 MB of article text
+
+
+def test_hub_pages_still_name_each_storys_sources(client, stories, make_article, make_source, db):
+    techcrunch = make_source(type="tech_press")
+    make_article(cluster_id=stories["haiku"].id, source=techcrunch, organization_name="TechCrunch")
+    make_article(cluster_id=stories["haiku"].id, organization_name="Anthropic")
+    db.expunge_all()
+    day = (NOW - timedelta(days=2)).date().isoformat()
+    assert client.get(f"/api/days/{day}").json()["stories"][0]["sourceNames"] == ["Anthropic", "TechCrunch"]
+    feed = {i["title"]: i for i in client.get("/api/feed").json()}
+    assert feed["Anthropic releases Claude Haiku 5.5"]["sourceNames"] == ["Anthropic", "TechCrunch"]
+
+
+def test_requests_that_arrive_together_read_the_archive_once(db, monkeypatch):
+    """After a pipeline run Vercel rebuilds dozens of hub pages at once (55 in flight on Nov 4, 16:19):
+    they share one read instead of holding one copy each."""
+    import threading
+    import time
+
+    reads = []
+
+    def slow_read(session):
+        reads.append(session)
+        time.sleep(0.3)
+        return ("story",)
+
+    monkeypatch.setattr(H, "_read_stories", slow_read)
+    start = threading.Barrier(8)
+    got = []
+
+    def request():
+        start.wait()
+        got.append(H._stories(db))
+
+    threads = [threading.Thread(target=request) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(reads) == 1 and got == [("story",)] * 8
+    # A request after that read reads again: a pipeline run may have changed the stories since
+    assert H._stories(db) == ("story",) and len(reads) == 2
+
+
+def test_a_failed_read_fails_the_requests_waiting_on_it(db, monkeypatch):
+    def broken(session):
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(H, "_read_stories", broken)
+    with pytest.raises(RuntimeError):
+        H._stories(db)
+    monkeypatch.setattr(H, "_read_stories", lambda session: ("story",))
+    assert H._stories(db) == ("story",)  # the next request reads again
+
+
+def test_requests_stop_waiting_on_a_stuck_read(db, monkeypatch):
+    """A read can hang (a dead database connection waits for hours). The requests that joined it give up
+    after SHARED_READ_WAIT and read on their own, and later ones don't join it; otherwise they would
+    fill the API's worker threads and stall every route, /health included."""
+    import threading
+    import time
+
+    stuck, release = threading.Event(), threading.Event()
+
+    def read(session):
+        if not stuck.is_set():
+            stuck.set()
+            release.wait(5)
+            return ("stale",)
+        return ("fresh",)
+
+    monkeypatch.setattr(H, "_read_stories", read)
+    monkeypatch.setattr(H, "SHARED_READ_WAIT", 0.2)
+    first = threading.Thread(target=H._stories, args=(db,))
+    first.start()
+    try:
+        assert stuck.wait(1)
+        got = []
+        joined = threading.Thread(target=lambda: got.append(H._stories(db)))
+        joined.start()
+        joined.join(2)
+        assert got == [("fresh",)]  # waited for the stuck read, then read on its own
+        time.sleep(0.25)
+        assert H._stories(db) == ("fresh",)  # too old to join: reads at once
+    finally:
+        release.set()
+        first.join(2)
+    assert H._reading is None
