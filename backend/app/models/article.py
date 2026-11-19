@@ -22,6 +22,19 @@ class Article(Base):
     """
 
     __tablename__ = "articles"
+    __table_args__ = (
+        # Partial indexes, as migrations w2d4 and w2d7 created them
+        sa.Index(
+            "ix_articles_canonical_url_present",
+            "canonical_url",
+            postgresql_where=text("canonical_url IS NOT NULL"),
+        ),
+        sa.Index(
+            "ix_articles_filter_keep",
+            "is_filtered_out",
+            postgresql_where=text("is_filtered_out = false"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -80,7 +93,11 @@ class Article(Base):
     # 0–100 composite signal score; NULL = not yet scored.
     signal_score: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
     # Per-dimension breakdown: {"source_credibility": 5.0, "recency": 4.0, ...}
-    score_components: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    score_components: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Per-dimension scores and weights used to compute signal_score",
+    )
     scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # ---------- Cluster ----------
